@@ -7,15 +7,15 @@ const ROW_WIDTH = 200;
 const ACTION_SLOT_WIDTH = 41;
 const ACTION_INLINE_END_OFFSET = 6;
 
-test("folder and team-space labels clear the complete logical-end action slot", async () => {
+test("folder labels clear the complete logical-end action slot", async () => {
   const { treeRowActionClearanceStyle } = await load();
   const cases = [
     { row: "folder", direction: "ltr", label: "Projects" },
     { row: "folder", direction: "rtl", label: "المشاريع" },
     { row: "folder", direction: "rtl", label: "مشاريع Project 2026" },
-    { row: "team-space", direction: "ltr", label: "فريق المنتج" },
-    { row: "team-space", direction: "rtl", label: "Engineering" },
-    { row: "team-space", direction: "rtl", label: "فريق Product" },
+    { row: "folder", direction: "ltr", label: "فريق المنتج" },
+    { row: "folder", direction: "rtl", label: "Engineering" },
+    { row: "folder", direction: "rtl", label: "فريق Product" },
   ];
 
   for (const { row, direction, label } of cases) {

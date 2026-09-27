@@ -37,15 +37,15 @@ function recordEvent(db, eventId, overrides = {}) {
   });
 }
 
-test("historical transcriptions reconcile in restart-safe account-neutral batches", (t) => {
+test("historical transcriptions reconcile in restart-safe batches", (t) => {
   const db = createDb(t);
   if (!db) return;
 
   const insertTranscription = db.db.prepare(
     `INSERT INTO transcriptions (
        text, raw_text, status, client_transcription_id, timestamp, created_at,
-       audio_duration_ms, provider, model, deleted_at
-     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+       audio_duration_ms, provider, model
+     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
   );
   insertTranscription.run(
     "enhanced text",
@@ -56,8 +56,7 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
     "2026-09-01 10:00:00",
     2_000,
     "local-whisper",
-    "small",
-    null
+    "small"
   );
   insertTranscription.run(
     "four five",
@@ -68,8 +67,7 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
     "2026-09-02 10:00:00",
     null,
     "deepgram-streaming",
-    "nova-3",
-    null
+    "nova-3"
   );
   insertTranscription.run(
     "ambiguous post-clear words",
@@ -78,7 +76,6 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
     "legacy-post-clear-ambiguous",
     "2026-09-03 10:00:00",
     "2026-09-03 10:00:00",
-    null,
     null,
     null,
     null
@@ -92,7 +89,6 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
     "2026-08-01 10:00:00",
     null,
     null,
-    null,
     null
   );
   insertTranscription.run(
@@ -102,7 +98,6 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
     "legacy-failed",
     "2026-09-03 10:00:00",
     "2026-09-03 10:00:00",
-    null,
     null,
     null,
     null
@@ -116,20 +111,7 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
     "not-a-time",
     null,
     null,
-    null,
     null
-  );
-  insertTranscription.run(
-    "deleted words",
-    null,
-    "completed",
-    "legacy-deleted",
-    "2026-09-03 10:00:00",
-    "2026-09-03 10:00:00",
-    null,
-    null,
-    null,
-    "2026-09-03 11:00:00"
   );
   insertTranscription.run(
     "existing words",
@@ -138,7 +120,6 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
     "legacy-existing",
     "2026-09-04 10:00:00",
     "2026-09-04 10:00:00",
-    null,
     null,
     null,
     null
@@ -152,12 +133,6 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
     wordCount: 2,
     occurredAt: "2026-09-04T10:00:00.000Z",
   });
-  db.db
-    .prepare(
-      "UPDATE analytics_events SET deleted_at = '2026-09-04T11:00:00.000Z' WHERE event_id = 'legacy-existing'"
-    )
-    .run();
-  db.setActiveAccountId("account-a");
 
   const batches = [];
   let afterId = 0;
@@ -171,29 +146,20 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
     batches.reduce((total, batch) => total + batch.inserted, 0),
     2
   );
-  assert.equal(db.getAnalyticsSummary().totalWords, 5);
-  assert.equal(db.getAnalyticsSummary().totalDictations, 2);
-  assert.equal(
-    db.db
-      .prepare(
-        "SELECT COUNT(*) AS count FROM analytics_events WHERE account_id IS NULL AND deleted_at IS NULL"
-      )
-      .get().count,
-    2,
-    "the active account does not adopt history"
-  );
+  // The two backfilled rows plus the counter that already existed.
+  assert.equal(db.getAnalyticsSummary().totalWords, 7);
+  assert.equal(db.getAnalyticsSummary().totalDictations, 3);
   assert.deepEqual(
     db.db
       .prepare(
-        `SELECT event_id, account_id, word_count, spoken_duration_ms, mode,
+        `SELECT event_id, word_count, spoken_duration_ms, mode,
                 counter_version, created_at
-         FROM analytics_events WHERE deleted_at IS NULL ORDER BY event_id`
+         FROM analytics_events WHERE event_id != 'legacy-existing' ORDER BY event_id`
       )
       .all(),
     [
       {
         event_id: "legacy-ambiguous",
-        account_id: null,
         word_count: 2,
         spoken_duration_ms: null,
         mode: "unknown",
@@ -202,7 +168,6 @@ test("historical transcriptions reconcile in restart-safe account-neutral batche
       },
       {
         event_id: "legacy-local",
-        account_id: null,
         word_count: 3,
         spoken_duration_ms: 2_000,
         mode: "local",
@@ -397,32 +362,6 @@ test("older eligibility changes rewind the durable analytics checkpoint", (t) =>
   assert.equal(db.getAnalyticsHistoryBackfillState().scannedThroughId, 0);
   assert.equal(reconcileThroughCheckpoint(db)[0].inserted, 1);
 
-  const unchanged = db.getTranscriptionById(Number(failed.lastInsertRowid));
-  db.upsertTranscriptionFromCloud({
-    id: "cloud-retry",
-    client_transcription_id: unchanged.client_transcription_id,
-    text: unchanged.text,
-    raw_text: unchanged.raw_text,
-    status: unchanged.status,
-    created_at: unchanged.created_at,
-  });
-  assert.equal(
-    db.getAnalyticsHistoryBackfillState().scannedThroughId,
-    3,
-    "an unchanged cloud replay must not rewind the cursor"
-  );
-
-  db.upsertTranscriptionFromCloud({
-    id: "cloud-retry",
-    client_transcription_id: unchanged.client_transcription_id,
-    text: "changed cloud text",
-    raw_text: unchanged.raw_text,
-    status: unchanged.status,
-    created_at: unchanged.created_at,
-  });
-  assert.equal(db.getAnalyticsHistoryBackfillState().scannedThroughId, 0);
-  reconcileThroughCheckpoint(db);
-
   db.updateTranscriptionText(Number(empty.lastInsertRowid), "now usable", null);
   assert.equal(db.getAnalyticsHistoryBackfillState().scannedThroughId, 2);
   assert.equal(reconcileThroughCheckpoint(db)[0].inserted, 1);
@@ -549,24 +488,22 @@ test("history the user cleared cannot come back through a mis-shaped timestamp",
   assert.equal(db.getAnalyticsSummary().totalDictations, 0);
 });
 
-// upsertTranscriptionFromCloud carries the cloud created_at but lets timestamp
-// default to the local pull, so trusting a naive timestamp would date every
-// pulled dictation to the day this device happened to sync.
-test("a cloud-pulled dictation is dated from its creation time, not the pull", (t) => {
+// A naive timestamp is a completion time, not an occurrence time.
+test("a row with a naive timestamp is dated from its creation time", (t) => {
   const db = createDb(t);
   if (!db) return;
 
-  db.upsertTranscriptionFromCloud({
-    client_transcription_id: "pulled-history",
-    id: "cloud-1",
-    text: "three pulled words",
-    status: "completed",
-    created_at: "2026-03-04 08:00:00",
-  });
+  db.db
+    .prepare(
+      `INSERT INTO transcriptions (text, status, client_transcription_id, timestamp, created_at)
+       VALUES ('three legacy words', 'completed', 'legacy-naive',
+               '2026-03-05 09:00:00', '2026-03-04 08:00:00')`
+    )
+    .run();
 
   assert.equal(db.backfillAnalyticsHistoryBatch().inserted, 1);
   assert.equal(
-    db.db.prepare("SELECT local_date FROM analytics_events WHERE event_id = 'pulled-history'").get()
+    db.db.prepare("SELECT local_date FROM analytics_events WHERE event_id = 'legacy-naive'").get()
       .local_date,
     localDateKey(new Date("2026-03-04T08:00:00Z"))
   );
@@ -621,9 +558,6 @@ test("analytics stays content-free and idempotent", (t) => {
   assert.equal(db.getAnalyticsSummary().totalWords, 5);
   assert.equal(db.getAnalyticsSummary().totalDictations, 1);
 
-  db.setActiveAccountId("account-a");
-  assert.equal(db.getAnalyticsSummary().totalWords, 5, "guest activity stays visible on-device");
-
   recordEvent(db, "event-2");
   const { counter_version: counterVersion } = db.db
     .prepare("SELECT counter_version FROM analytics_events WHERE event_id = 'event-2'")
@@ -631,128 +565,38 @@ test("analytics stays content-free and idempotent", (t) => {
   assert.equal(counterVersion, 2, "new rows identify the Unicode-aware counting rule");
 });
 
-test("clearing history and deleting account data both erase analytics rows", (t) => {
+test("clearing history erases analytics rows and later events count again", (t) => {
   const db = createDb(t);
   if (!db) return;
 
   recordEvent(db, "event-1");
-  db.clearTranscriptions();
+  db.saveTranscription("some words", null);
+  assert.equal(db.clearTranscriptions().cleared, 1);
   assert.equal(db.getAnalyticsSummary().totalDictations, 0);
+  assert.equal(db.db.prepare("SELECT COUNT(*) AS n FROM analytics_events").get().n, 0);
+  assert.equal(db.db.prepare("SELECT COUNT(*) AS n FROM transcriptions").get().n, 0);
+
   const { cleared_through: deviceClearedThrough } = db.db
     .prepare("SELECT cleared_through FROM analytics_device_clear_state WHERE id = 1")
     .get();
-  const afterClear = new Date(Date.parse(deviceClearedThrough) + 1_000).toISOString();
-
-  db.setActiveAccountId("account-a");
-  recordEvent(db, "event-2", { occurredAt: afterClear });
-  db.setActiveAccountId("account-b");
-  recordEvent(db, "event-3", { occurredAt: afterClear });
-  db.deleteAccountData("account-b");
-
-  const remaining = db.db.prepare("SELECT event_id FROM analytics_events").all();
-  assert.deepEqual(
-    remaining.map((row) => row.event_id),
-    ["event-2"],
-    "only the deleted account's rows go"
-  );
+  recordEvent(db, "event-2", {
+    occurredAt: new Date(Date.parse(deviceClearedThrough) + 1_000).toISOString(),
+  });
+  assert.equal(db.getAnalyticsSummary().totalDictations, 1);
 });
 
-test("signed-out clearing is device-only and preserves queued account deletions", (t) => {
+test("a late event from before the clear stays cleared", (t) => {
   const db = createDb(t);
   if (!db) return;
 
-  db.setActiveAccountId("account-a");
-  recordEvent(db, "live-account-event");
-  recordEvent(db, "pending-account-delete");
-  db.db
-    .prepare(
-      "UPDATE analytics_events SET deleted_at = datetime('now') WHERE event_id = 'pending-account-delete'"
-    )
-    .run();
-  db.setActiveAccountId(null);
-
+  recordEvent(db, "live-event");
   db.clearTranscriptions();
 
-  assert.equal(db.getAnalyticsSummary().totalDictations, 0);
   const { cleared_through: deviceClearedThrough } = db.db
     .prepare("SELECT cleared_through FROM analytics_device_clear_state WHERE id = 1")
     .get();
-  recordEvent(db, "late-guest-event", {
+  recordEvent(db, "late-event", {
     occurredAt: new Date(Date.parse(deviceClearedThrough) - 1).toISOString(),
   });
   assert.equal(db.getAnalyticsSummary().totalDictations, 0);
-  assert.equal(
-    db.db
-      .prepare("SELECT COUNT(*) AS count FROM analytics_events WHERE event_id = ?")
-      .get("pending-account-delete").count,
-    1
-  );
-});
-
-test("a dictation pulled from the cloud is dated when it was spoken, not when it synced", (t) => {
-  const db = createDb(t);
-  if (!db) return;
-
-  // The history list sorts on timestamp. Leaving cloud rows to default it makes
-  // a whole pull land at "now" and sort above dictations spoken since, so an
-  // old archive arrives on top of this morning's work.
-  db.upsertTranscriptionFromCloud({
-    client_transcription_id: "from-cloud",
-    id: "cloud-1",
-    text: "spoken last spring",
-    created_at: "2026-04-01T09:00:00.000Z",
-  });
-
-  const [row] = db.getTranscriptions(10);
-  assert.equal(row.client_transcription_id, "from-cloud");
-  assert.equal(row.timestamp, "2026-04-01 09:00:00.000Z");
-});
-
-test("a cloud pull sorts by when it was spoken, in the shape the API actually sends", (t) => {
-  const db = createDb(t);
-  if (!db) return;
-
-  // The API serializes transcriptions.created_at, a timestamptz, straight to
-  // JSON, so it arrives ISO 8601 with a "T". The history list sorts timestamp
-  // as TEXT and "T" (0x54) outranks the space (0x20) every locally written row
-  // uses, so an unnormalized cloud value jumps above everything spoken on the
-  // device that day regardless of the hour.
-  db.saveTranscription("spoken here tonight", null, {
-    clientTranscriptionId: "local-late",
-    analyticsOccurredAt: "2026-04-01T23:00:00.000Z",
-  });
-  db.upsertTranscriptionFromCloud({
-    client_transcription_id: "cloud-early",
-    id: "cloud-2",
-    text: "spoken elsewhere this morning",
-    created_at: "2026-04-01T02:00:00.000Z",
-  });
-
-  assert.deepEqual(
-    db.getTranscriptions(10).map((row) => row.client_transcription_id),
-    ["local-late", "cloud-early"],
-    "newest first, whichever writer stored the row"
-  );
-});
-
-test("a cloud pull does not overwrite the local recording time it already has", (t) => {
-  const db = createDb(t);
-  if (!db) return;
-
-  // The device that made the dictation recorded when speech started; the cloud
-  // only knows when the row was created. The local value is the better one.
-  db.saveTranscription("spoken here", null, {
-    clientTranscriptionId: "local-first",
-    analyticsOccurredAt: "2026-04-01T09:00:00.000Z",
-  });
-  db.upsertTranscriptionFromCloud({
-    client_transcription_id: "local-first",
-    id: "cloud-2",
-    text: "spoken here, cleaned",
-    created_at: "2026-04-02 17:30:00",
-  });
-
-  const [row] = db.getTranscriptions(10);
-  assert.equal(row.timestamp, "2026-04-01 09:00:00.000Z");
-  assert.equal(row.text, "spoken here, cleaned", "the pull still updates the transcript");
 });

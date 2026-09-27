@@ -137,21 +137,6 @@
     "screenRecording": "此平台不提供屏幕录制设置。",
     "loginItems": "此平台不支持登录项设置。"
   },
-  "upgradePrompt": {
-    "paymentFailed": "我们无法处理你的付款",
-    "weeklyLimit": "你已达到本周的使用上限",
-    "pastDueDescription": "你目前使用的是免费版——别担心，每周仍有 {{limit}} 个词的额度。\n更新支付方式即可恢复无限制的 Pro 版。",
-    "limitDescription": "已使用 {{used}} / {{limit}} 个词。\n你的转录已保存并粘贴。",
-    "updatePayment": "更新支付方式",
-    "updatePaymentDescription": "恢复无限制的 Pro 版转录。",
-    "upgradeToPro": "升级到 Pro",
-    "upgradeDescription": "无限转录，每月最低 $8 起。",
-    "useApiKey": "使用自己的 API Key",
-    "useApiKeyDescription": "使用你自己的密钥，无限制使用。",
-    "switchToLocal": "切换到本地模式",
-    "switchToLocalDescription": "离线转录，无使用限制。",
-    "rollingWeeklyLimit": "滚动周限额"
-  },
   "windowControls": {
     "minimize": "最小化",
     "maximize": "最大化",
@@ -163,7 +148,6 @@
   },
   "common": {
     "continue": "继续",
-    "add": "添加",
     "retry": "重试",
     "back": "返回",
     "logout": "退出登录",
@@ -175,7 +159,6 @@
     "cancel": "取消",
     "recommended": "推荐",
     "active": "已激活",
-    "freeAccountRequired": "需要免费账户",
     "comingSoon": "即将推出",
     "cloud": "云端",
     "local": "本地",
@@ -191,18 +174,11 @@
     "close": "关闭",
     "dismiss": "忽略",
     "save": "保存",
-    "saving": "保存中…",
-    "create": "创建",
-    "delete": "删除",
     "actions": "操作",
     "error": "出了点问题",
     "unknownError": "发生未知错误",
-    "copy": "复制",
     "copied": "已复制",
-    "done": "完成",
-    "skip": "跳过",
-    "managedConfigLoading": "正在检查您组织的托管设置。请稍候再试。",
-    "managedConfigUnavailable": "托管企业访问不可用。请重新登录或联系管理员。"
+    "skip": "跳过"
   },
   "onboarding": {
     "rehaul": {
@@ -309,18 +285,6 @@
         "titleLineOne": "选择你的",
         "titleLineTwo": "OpenWhispr 设置",
         "description": "选择最适合你工作方式的方案。",
-        "cloud": {
-          "title": "OpenWhispr Cloud",
-          "description": "每周获得 2,000 个免费字数。你的设置会在各设备间保持同步。",
-          "continue": "免费继续",
-          "signIn": "登录以使用云端",
-          "features": {
-            "fast": "最快，无需设置",
-            "privacy": "Privacy-focused processing",
-            "sync": "设置在各设备间同步",
-            "features": "面向笔记和操作的 AI 功能"
-          }
-        },
         "byok": {
           "title": "API 服务商",
           "description": "使用你自己的 API Key。"
@@ -359,7 +323,6 @@
             }
           }
         },
-        "useCloud": "改用云端",
         "continueSetup": "继续设置",
         "showMore": "显示更多选项",
         "moreOptions": {
@@ -553,7 +516,8 @@
         "step2": "打开 Corti 控制台并创建 API 凭据",
         "step3": "在下方粘贴 Client ID 和 Secret"
       }
-    }
+    },
+    "welcomeSubtitle": "你的声音，由你掌控。"
   },
   "streaming": {
     "errors": {
@@ -569,19 +533,9 @@
     }
   },
   "controlPanel": {
-    "limit": {
-      "weeklyTitle": "已达到周限额",
-      "weeklyDescription": "你的额度按滚动方式重置。升级到 Pro 或使用自己的 API Key 可不受限制。"
-    },
     "accessibilityMissing": {
       "title": "需要辅助功能权限",
       "description": "我们检测到 OpenWhispr 需要辅助功能权限才能正常工作。请在下方启用。"
-    },
-    "billing": {
-      "pastDueTitle": "我们无法处理你的付款",
-      "pastDueDescription": "别担心——你目前使用的是免费版。在设置中更新支付方式即可恢复 Pro 版。",
-      "bannerDescription": "你目前使用的是免费版——每周仍有 {{limit}} 个词的额度。更新支付方式即可恢复 Pro 版。",
-      "updatePayment": "更新支付方式"
     },
     "history": {
       "couldNotLoadTitle": "无法加载历史记录",
@@ -613,8 +567,7 @@
       "failedOffline": "离线",
       "clearAll": "全部清除",
       "clearAllTitle": "清除所有转录",
-      "clearAllDescription": "所有转录、音频文件和 Insights 统计数据都将从此设备和你的账户中永久删除。",
-      "clearAllDescriptionDevice": "所有转录、音频文件和 Insights 统计数据都将从此设备中永久删除。已同步到账户的统计数据不受影响。",
+      "clearAllDescription": "所有转录、音频文件和 Insights 统计数据都将从此设备中永久删除。",
       "clearAllSuccess": "历史记录已清除",
       "clearAllErrorTitle": "无法清除历史记录",
       "clearAllErrorDescription": "出了点问题，请重试。",
@@ -711,41 +664,8 @@
       "endpointHelp": "指向本地网络中兼容 OpenAI 的服务器（例如 Ollama、LM Studio、vLLM 或 llama-server）。"
     },
     "enterprise": {
-      "title": "企业级提供商",
-      "description": "使用你组织的凭据连接云端提供商。",
-      "testConnection": "测试连接",
-      "testing": "测试中…",
-      "testSuccess": "已连接",
-      "testFailed": "连接失败",
-      "authMode": "认证方式",
-      "ssoProfile": "SSO 配置文件",
-      "accessKeys": "访问密钥",
-      "adc": "Application Default Credentials",
-      "apiKeyMode": "API 密钥",
-      "region": "区域",
-      "profile": "配置文件名称",
-      "accessKeyId": "Access Key ID",
-      "secretAccessKey": "Secret Access Key",
-      "sessionToken": "Session Token（可选）",
-      "endpoint": "端点 URL",
-      "deploymentName": "部署名称",
-      "apiVersion": "API 版本",
-      "projectId": "项目 ID",
-      "location": "位置",
-      "customModelId": "自定义模型 ID",
-      "customModelPlaceholder": "输入模型 ID 或部署名称",
-      "suggestedModels": "推荐模型",
-      "browseModels": "浏览全部模型",
-      "loadingModels": "正在获取模型...",
-      "allModels": "{{region}} 的全部模型",
-      "modelListError": "无法加载模型。",
-      "bedrock": {
-        "ssoHelp": "使用你的 AWS CLI SSO 配置。请确保已运行 'aws sso login'。",
-        "keysHelp": "输入你的 AWS IAM 访问密钥。"
-      },
       "errors": {
         "bedrock": {
-          "temporaryAccessExpired": "AWS 临时访问权限已过期。",
           "ssoExpired": "AWS SSO 会话已过期。",
           "credentialsRejected": "AWS 拒绝了这些凭证。请检查访问密钥 ID、密钥和会话令牌。",
           "accessDenied": "AWS Bedrock 拒绝了此请求。请让 AWS 管理员授予在区域 {{region}} 中调用所选模型的权限。",
@@ -758,7 +678,6 @@
           "network": "无法连接到 AWS Bedrock。请检查互联网连接并重试。",
           "unknown": "AWS Bedrock 错误：{{error}}",
           "actions": {
-            "refreshManagedAccess": "请退出并重新登录以刷新公司访问权限，然后重试。",
             "reauthenticate": "请在终端中运行以下命令以重新进行身份验证："
           }
         }
@@ -771,14 +690,6 @@
         "underlyingError": "底层错误",
         "copy": "复制技术详情",
         "copyCommand": "复制恢复命令"
-      },
-      "azure": {
-        "endpointHelp": "你的 Azure OpenAI 资源端点（例如 https://myresource.openai.azure.com）。",
-        "deploymentHelp": "Azure OpenAI 中的模型部署名称。"
-      },
-      "vertex": {
-        "adcHelp": "使用 Application Default Credentials。请执行：gcloud auth application-default login",
-        "apikeyHelp": "从 Google AI Studio 获取的 Vertex AI Express Mode API 密钥。"
       }
     },
     "tinfoil": {
@@ -868,8 +779,6 @@
         "screenContextSkipped": "截图无法发送，因此已在没有屏幕上下文的情况下执行你的命令。",
         "customEndpointInvalid": "自定义转写端点未配置或其 URL 无效。请在“设置 → 语音转文字”中更新。",
         "managedTranscriptionUnavailable": "托管转录目前不可用。请稍候再试。",
-        "managedRouteInvalid": "由于配置不匹配，托管转录无法启动。请重试或联系管理员。",
-        "managedAuthRejected": "您组织的托管转录凭证被拒绝。请联系管理员。",
         "streamingOnlyProvider": "该服务商仅支持实时转录。请为文件上传和重试选择其他服务商。",
         "providerKeyMissing": "尚未为您的转录服务商设置 API 密钥。请在“设置 → 语音转文字”中添加。",
         "cleanupTruncated": "AI 模型的输出长度达到上限，未能完成听写清理。",
@@ -1034,85 +943,6 @@
       }
     }
   },
-  "auth": {
-    "cloudNotConfigured": "云端未配置",
-    "common": {
-      "back": "返回",
-      "continue": "继续",
-      "or": "或"
-    },
-    "emailStep": {
-      "checkingEmail": "正在检查您的邮箱...",
-      "continueWithEmail": "使用邮箱继续",
-      "continueWithoutAccount": "无需账户，继续使用",
-      "emailLabel": "邮箱",
-      "emailPlaceholder": "you@example.com",
-      "useDifferentEmail": "使用其他邮箱"
-    },
-    "errors": {
-      "accountExistsSignIn": "此邮箱已注册账户，请直接登录。",
-      "accountNotFoundCreate": "未找到此邮箱的账户，请先注册。",
-      "authNotConfigured": "身份验证未配置",
-      "createAccountFailed": "创建账户失败",
-      "failedProviderSignIn": "使用 {{provider}} 登录失败",
-      "failedUserCheck": "检查用户账户失败",
-      "generic": "出了点问题，请重试。",
-      "invalidCredentials": "邮箱或密码无效",
-      "invalidEmail": "请输入有效的邮箱地址"
-    },
-    "getStarted": "开始使用",
-    "legal": {
-      "and": "和",
-      "prefix": "继续即表示你同意我们的",
-      "privacy": "隐私政策",
-      "suffix": "",
-      "terms": "服务条款"
-    },
-    "passwordForm": {
-      "createAccount": "创建账户",
-      "createAccountButton": "使用邮箱继续",
-      "createAccountLink": "创建账户",
-      "createPasswordPlaceholder": "创建密码",
-      "creatingAccount": "正在创建账户...",
-      "enterPasswordPlaceholder": "输入密码",
-      "forgotPassword": "忘记密码？",
-      "fullNamePlaceholder": "填写你的姓名",
-      "nameLabel": "姓名",
-      "passwordLabel": "密码",
-      "haveAccount": "已有账户？",
-      "newHere": "新用户？",
-      "passwordMinLength": "密码至少需要 8 个字符",
-      "signIn": "使用邮箱继续",
-      "signInLink": "登录",
-      "signingIn": "正在登录...",
-      "welcomeBack": "欢迎回来"
-    },
-    "signedIn": {
-      "welcomeBack": "欢迎回来",
-      "notYou": "不是你？退出登录"
-    },
-    "sso": {
-      "continueWithSSO": "使用 SSO 登录",
-      "workEmailLabel": "工作邮箱",
-      "emailPlaceholder": "添加您的邮箱",
-      "emailRequired": "输入您的工作邮箱以使用 SSO。",
-      "failed": "单点登录失败，请重试。",
-      "companySignInTitle": "使用公司登录",
-      "requiredDescription": "{{domain}} 要求通过 SSO 登录 OpenWhispr。",
-      "availableDescription": "您的 {{domain}} 账户已可使用公司 SSO。",
-      "useEmailInstead": "改用邮箱和密码"
-    },
-    "social": {
-      "completeInBrowser": "在浏览器中完成登录",
-      "continueWithApple": "使用 Apple 继续",
-      "continueWithGoogle": "使用 Google 继续",
-      "continueWithMicrosoft": "使用 Microsoft 继续",
-      "protocolUnavailable": "无法通过浏览器登录 — 请在系统的“默认应用”设置中重新注册 openwhispr:// 协议。"
-    },
-    "welcomeSubtitle": "你的声音，由你掌控。",
-    "welcomeTitle": "欢迎使用 OpenWhispr",
-    "sessionExpired": "会话已过期，请重新登录。"
-  },
   "cleanupPrompt": "文本整理",
   "developerSection": {
     "currentLogFile": "当前日志文件",
@@ -1181,18 +1011,7 @@
   },
   "dictionarySuffix": "词典后缀",
   "emailVerification": {
-    "checkEmailDescription": "我们已向你的邮箱发送了验证链接：",
-    "checkEmailTitle": "验证邮件已发送",
-    "errors": {
-      "resendFailed": "无法重新发送邮件，请重试。",
-      "serverUnreachable": "无法连接到服务器，请检查网络连接后重试。"
-    },
-    "resendButton": "重新发送验证邮件",
-    "resendIn": "{{seconds}} 秒后可重新发送",
-    "verifiedDescription": "你的账户已准备就绪。",
-    "verifiedTitle": "已验证",
-    "waiting": "正在等待验证",
-    "backToSignIn": "返回登录"
+    "verifiedDescription": "你的账户已准备就绪。"
   },
   "errorBoundary": {
     "description": "发生了意外错误，请重新加载后重试。",
@@ -1200,21 +1019,7 @@
     "title": "出了点问题"
   },
   "forgotPassword": {
-    "back": "返回",
-    "backToSignIn": "返回登录",
-    "emailPlaceholder": "输入你的邮箱",
-    "goBack": "返回",
-    "notConfigured": "身份验证尚未配置。",
-    "sendResetLink": "发送重置链接",
-    "sending": "正在发送...",
-    "subtitle": "输入你的邮箱，我们将发送重置链接",
-    "success": {
-      "description": "我们已将密码重置链接发送至",
-      "help": "没有收到邮件？请检查垃圾邮件文件夹或重试。",
-      "title": "查看你的邮箱",
-      "tryAnother": "尝试其他邮箱"
-    },
-    "title": "重置密码"
+    "back": "返回"
   },
   "actionPrompt": "动作提示词",
   "hotkeyGuidance": {
@@ -1408,20 +1213,11 @@
   },
   "settingsModal": {
     "groups": {
-      "account": "账户",
       "app": "应用",
       "aiModels": "AI 模型",
       "system": "系统"
     },
     "sections": {
-      "account": {
-        "description": "个人资料与登录",
-        "label": "个人资料"
-      },
-      "plansBilling": {
-        "description": "套餐、用量与账单",
-        "label": "套餐与账单"
-      },
       "general": {
         "description": "外观、声音与启动",
         "label": "偏好设置"
@@ -1445,261 +1241,11 @@
       "system": {
         "description": "更新、存储与开发者工具",
         "label": "系统"
-      },
-      "workspace": {
-        "description": "成员、团队空间和 API 密钥",
-        "label": "工作区"
       }
     },
     "title": "设置"
   },
   "settingsPage": {
-    "unifiedBilling": {
-      "workspaceTitle": "工作区账单",
-      "workspaceDescription": "每个工作区都有自己的套餐、席位和账单负责人。",
-      "billableSeat": "您的席位需计费",
-      "nonBillableSeat": "仅管理员访问 · 无付费席位",
-      "managedBy": "账单由 {{owner}} 管理。",
-      "addSeat": "添加席位",
-      "seatUpdated_one": "工作区容量已更新为 {{count}} 个席位",
-      "seatUpdated_other": "工作区容量已更新为 {{count}} 个席位",
-      "seatUpdateFailed": "无法更新工作区席位",
-      "businessWorkspaceOnly": "适用于工作区",
-      "personalPlanTitle": "个人套餐",
-      "providedBy": "个人套餐：免费版 · 付费权限由 {{workspaces}} 提供",
-      "confirmSeats": {
-        "title": "要添加工作区席位吗？",
-        "description_one": "将 {{workspace}} 增加到 {{count}} 个席位。Stripe 将按比例计费。",
-        "description_other": "将 {{workspace}} 增加到 {{count}} 个席位。Stripe 将按比例计费。",
-        "newCapacity": "新容量",
-        "chargeToday": "今日收费",
-        "confirm": "添加席位"
-      }
-    },
-    "account": {
-      "badges": {
-        "free": "免费版",
-        "limitReached": "已达上限",
-        "pastDue": "逾期未付",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "试用"
-      },
-      "billing": {
-        "couldNotOpenDescription": "打开账单页面时出错，请重试。",
-        "couldNotOpenTitle": "无法打开账单",
-        "manageBilling": "管理账单",
-        "opening": "正在打开...",
-        "updatePaymentMethod": "更新支付方式",
-        "contactOwnerTitle": "请联系工作区所有者",
-        "contactOwnerDescription": "只有工作区所有者才能更新该工作区的账单。"
-      },
-      "checkout": {
-        "couldNotOpenDescription": "打开结账页面时出错，请重试。",
-        "couldNotOpenTitle": "无法打开结账页",
-        "opening": "正在打开...",
-        "upgradeToPro": "升级到 Pro"
-      },
-      "disabled": "已禁用",
-      "featuresDisabled": "账户功能已禁用",
-      "featuresDisabledDescription": "在 .env 文件中设置 VITE_AUTH_URL 以启用账户功能。",
-      "notConfigured": "身份验证未配置",
-      "notSignedIn": "未登录",
-      "notSignedInDescription": "创建账户以解锁高级功能。",
-      "offline": "离线",
-      "pastDue": {
-        "description": "你目前使用的是免费版。更新支付方式即可恢复 Pro 版。",
-        "title": "我们无法处理你的付款"
-      },
-      "planDescriptions": {
-        "freeUsage": "本周已使用 {{used}} / {{limit}} 个词",
-        "nextBilling": "下次扣费：{{date}}",
-        "pastDue": "本周 {{used}} / {{limit}} 免费词数——更新支付方式以恢复 Pro",
-        "trial": "剩余 {{days}} 天——无限转录",
-        "unlimited": "无限制"
-      },
-      "planLabels": {
-        "free": "免费版",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "试用"
-      },
-      "rollingWeeklyLimit": "滚动周限额",
-      "signOut": {
-        "failedDescription": "退出登录时出错，请重试。",
-        "failedTitle": "无法退出登录",
-        "signOut": "退出登录",
-        "signingOut": "正在退出..."
-      },
-      "title": "账户",
-      "toasts": {
-        "approachingLimit": {
-          "description": "本周已使用 {{used}} / {{limit}} 个免费词数。升级到 Pro 可享受无限使用。",
-          "title": "即将达到周限额"
-        }
-      },
-      "trialCta": {
-        "button": "免费创建账户",
-        "description": "无限转录、优先处理等更多功能。",
-        "title": "免费试用 Pro 版 7 天"
-      },
-      "pricing": {
-        "title": "套餐",
-        "billedYearly": "按年计费",
-        "free": {
-          "name": "Free",
-          "price": "$0",
-          "period": "永久",
-          "features": [
-            "## OpenWhispr Cloud",
-            "每周 2,000 字转录",
-            "每月 5 小时会议录制",
-            "## 永久免费",
-            "无限本地 AI 模型",
-            "使用自己的 API 密钥无限云端转录",
-            "支持 100+ 种语言",
-            "自定义词典",
-            "零数据留存",
-            "社区支持"
-          ]
-        },
-        "pro": {
-          "name": "Pro",
-          "monthlyPrice": "$8",
-          "monthlyPeriod": "/月",
-          "annualPrice": "$80",
-          "annualPeriod": "/年",
-          "annualEquivalent": "$6.67",
-          "includesPrefix": "所有 Free 功能 +",
-          "features": [
-            "无限云端转录",
-            "每月 20 小时会议录制",
-            "跨设备同步",
-            "通过公开链接分享笔记",
-            "个人 API 访问",
-            "在所有应用中集成 MCP",
-            "移动应用",
-            "邮件支持"
-          ],
-          "cta": "开始使用",
-          "switchToAnnual": "切换为年付"
-        },
-        "business": {
-          "name": "Business",
-          "monthlyPrice": "$16",
-          "monthlyPeriod": "/月",
-          "annualPrice": "$160",
-          "annualPeriod": "/年",
-          "annualEquivalent": "$13.33",
-          "includesPrefix": "所有 Pro 功能 +",
-          "badge": "最受欢迎",
-          "features": [
-            "无限会议录制",
-            "工作区角色与成员管理",
-            "助手模式",
-            "与您的数据对话",
-            "优先支持"
-          ],
-          "cta": "开始使用",
-          "switchToAnnual": "切换为年付"
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "自定义",
-          "subtitle": "提供高级安全保障与支持",
-          "includesPrefix": "所有 Business 功能 +",
-          "features": [
-            "托管 API 额度",
-            "跨设备云端同步",
-            "团队功能与管理",
-            "SSO 与合规",
-            "专属支持"
-          ],
-          "cta": "联系销售",
-          "upgradeCta": "升级到 Enterprise",
-          "askOwner": "请 {{name}} 升级您的工作区。"
-        },
-        "currentPlan": "当前套餐",
-        "coveredByWorkspace": "已包含在您的工作区套餐中",
-        "upgrade": "升级",
-        "downgrade": "降级",
-        "planSwitched": "套餐已成功更新",
-        "confirmSwitch": {
-          "title": "确认更换套餐",
-          "description": "切换至 {{plan}}（{{interval}}）",
-          "monthly": "月付",
-          "yearly": "年付",
-          "chargeToday": "今日收费",
-          "accountCredit": "账户余额",
-          "newPrice": "新价格",
-          "nextBilling": "下次计费",
-          "mo": "月",
-          "yr": "年",
-          "cancel": "取消",
-          "confirm": "确认"
-        }
-      },
-      "signedOutPlans": {
-        "button": "免费创建账户"
-      },
-      "user": "用户",
-      "wordsRemaining": "剩余 {{remaining}} 个词",
-      "deleteAccount": {
-        "label": "删除账户",
-        "labelDescription": "永久删除您的账户和个人云端数据。其他本地用户和工作区所有的内容将被保留。",
-        "button": "删除我的账户",
-        "deleting": "正在删除...",
-        "title": "删除您的账户？",
-        "description": "这将永久删除您的 OpenWhispr 账户和个人数据。工作区所有的内容及其他本地用户的数据会保留在此设备上。",
-        "confirmText": "删除账户",
-        "eraseDeviceLabel": "同时清除此设备上的所有数据",
-        "eraseDeviceDescription": "删除所有本地用户的笔记和工作区缓存、已下载模型、设置、日历连接、凭据和录音。",
-        "eraseDeviceWarning": "此设备级清除无法撤销，并会影响所有本地用户。",
-        "successTitle": "账户已删除",
-        "successDescription": "您的账户和个人数据已删除。其他本地用户、工作区、模型和设备设置均已保留。",
-        "partialCleanupDescription": "您的账户已删除，但部分本地清理未能完成。其他用户和工作区所有的内容均已保留。",
-        "failedTitle": "删除失败",
-        "failedDescription": "无法完成账户删除。未启动设备级清除。请重试。"
-      },
-      "profile": {
-        "name": {
-          "label": "显示名称",
-          "placeholder": "您的姓名",
-          "save": "保存",
-          "saving": "保存中...",
-          "saved": "显示名称已更新",
-          "error": "无法更新您的姓名"
-        },
-        "password": {
-          "label": "密码",
-          "description": "更改您用于登录的密码。",
-          "change": "更改密码",
-          "dialogTitle": "更改密码",
-          "dialogDescription": "输入您的当前密码并设置新密码。",
-          "currentLabel": "当前密码",
-          "newLabel": "新密码",
-          "confirmLabel": "确认新密码",
-          "minLength": "密码至少需要 8 个字符",
-          "mismatch": "两次输入的密码不一致",
-          "revokeOthers": "在其他设备上退出登录",
-          "submit": "更新密码",
-          "saving": "更新中...",
-          "cancel": "取消",
-          "saved": "密码已更新"
-        },
-        "errors": {
-          "invalidPassword": "您的当前密码不正确。",
-          "passwordTooShort": "密码至少需要 8 个字符。",
-          "passwordTooLong": "密码过长。",
-          "noPassword": "此账户未设置密码。",
-          "generic": "出了点问题，请重试。"
-        }
-      },
-      "planUnavailable": {
-        "title": "无法获取方案",
-        "description": "暂时无法加载你的方案，你的使用权限不受影响。"
-      }
-    },
     "agentConfig": {
       "agentName": "助手名称",
       "description": "为你的 AI 助手取个名字，这样你就能在听写时直接呼唤它",
@@ -1728,11 +1274,9 @@
       "enableTextCleanup": "启用文本整理",
       "enableTextCleanupDescription": "AI 去除语气词，修正语法和标点",
       "modes": {
-        "openwhispr": "OpenWhispr Cloud",
         "providers": "云服务商",
         "local": "本地",
         "selfHosted": "自托管",
-        "openwhisprDesc": "准确可靠，无需设置。",
         "providersDesc": "使用你自己的 API Key。",
         "localDesc": "设备端模型，完全私密。",
         "selfHostedDesc": "你的服务器，在你的网络上。"
@@ -1765,15 +1309,6 @@
           "title": "企业级",
           "description": "正在使用你组织的云账号。"
         }
-      },
-      "managedEnterprise": {
-        "errorTitle": "托管企业 AI 需要处理",
-        "title": "由您的组织管理",
-        "description": "登录后会自动获取短期访问权限，无需云密钥或 CLI 配置。",
-        "usePersonalSetup": "使用个人配置",
-        "availableTitle": "可使用组织配置",
-        "availableDescription": "使用 {{provider}}，无需管理凭据。",
-        "useManaged": "使用托管配置"
       }
     },
     "developer": {
@@ -2023,11 +1558,6 @@
       "troubleshootingTitle": "问题排查"
     },
     "privacy": {
-      "cloudBackup": "云端备份",
-      "cloudBackupDescription": "将转录记录和笔记备份到云端，实现跨设备无缝访问。",
-      "cloudBackupTeamCaveat": "团队空间中的笔记和您已分享的笔记会始终同步，不受此设置影响。",
-      "cloudNotesMigration": "正在备份笔记… {{done}} / {{total}}",
-      "cloudNotesMigrationDone": "所有笔记已备份",
       "description": "控制哪些数据会离开你的设备。默认全部关闭。",
       "title": "隐私",
       "dataRetention": "数据保留",
@@ -2035,10 +1565,6 @@
       "transcriptRetention": "转录保留",
       "transcriptRetentionDescription": "在此期限后自动删除已保存的转录、其音频及其 Insights 计数。",
       "transcriptRetentionForever": "永久",
-      "hoursAgo": "{{count}}小时前",
-      "justNow": "刚刚",
-      "lastSynced": "上次同步 {{time}}",
-      "minutesAgo": "{{count}}分钟前",
       "audioRetention": "音频保留",
       "audioRetentionDescription": "在本地存储听写音频以便重新转录和下载。文件会在保留期过后自动删除。会议音频绝不会被存储。",
       "audioRetentionDisabled": "已禁用",
@@ -2087,11 +1613,9 @@
       "customSetupDescription": "使用你自己的服务商和 API Key。",
       "description": "选择 OpenWhispr 转录语音的方式",
       "modes": {
-        "openwhispr": "OpenWhispr Cloud",
         "providers": "云服务商",
         "local": "本地",
         "selfHosted": "自托管",
-        "openwhisprDesc": "准确可靠，无需设置。",
         "providersDesc": "使用你自己的 API Key。",
         "localDesc": "设备端模型，完全私密。",
         "selfHostedDesc": "你的服务器，在你的网络上。"
@@ -2192,234 +1716,6 @@
       "endpointUrl": "端点 URL",
       "serverUrl": "服务器 URL",
       "apiKeyOptional": "API Key（可选）"
-    },
-    "workspace": {
-      "title": "工作区",
-      "description": "在一处与同事协作、共享笔记并管理工作区访问权限。",
-      "empty": {
-        "title": "创建你的第一个工作区",
-        "description": "工作区让你与同事协作并共享笔记。",
-        "create": "创建工作区"
-      },
-      "loadError": {
-        "title": "无法加载工作区",
-        "description": "请检查网络连接后重试。",
-        "retry": "重试"
-      },
-      "tab": {
-        "general": "常规",
-        "members": "成员",
-        "teams": "群组",
-        "developer": "开发者"
-      },
-      "role": {
-        "owner": "所有者",
-        "admin": "管理员",
-        "member": "成员"
-      },
-      "general": {
-        "nameLabel": "工作区名称",
-        "saved": "工作区已更新",
-        "dangerTitle": "删除工作区",
-        "dangerDescription": "所有共享笔记、文件夹和集成都将被删除。此操作无法撤销。",
-        "delete": "删除工作区",
-        "confirmTitle": "删除 {{name}}？",
-        "confirmDescription": "这将取消订阅并永久删除工作区的所有数据。",
-        "deleting": "删除中…",
-        "deleted": "工作区已删除",
-        "leaveTitle": "退出工作区",
-        "leaveDescription": "你将失去对此工作区及其共享笔记的访问权限。",
-        "leave": "退出工作区",
-        "leaving": "退出中…",
-        "leaveConfirm": {
-          "title": "退出 {{name}}？",
-          "description": "你将立即失去访问权限。管理员可以重新邀请你。"
-        },
-        "left": "你已退出 {{name}}"
-      },
-      "members": {
-        "title": "成员",
-        "description": "已使用 {{count}}/{{seats}} 个席位。",
-        "invite": "邀请",
-        "empty": "暂无成员。",
-        "loadError": "无法加载成员。",
-        "roleUpdated": "角色已更新",
-        "removed": "已移除 {{name}}",
-        "promote": "设为管理员",
-        "demote": "设为成员",
-        "transferOwnership": "转让所有权",
-        "remove": "从工作区移除",
-        "removeConfirm": {
-          "title": "移除此成员？",
-          "description": "{{name}} 将立即失去对 {{workspace}} 的访问权限。"
-        },
-        "transferConfirm": {
-          "title": "转让所有权？",
-          "description": "{{name}} 将成为 {{workspace}} 的所有者。你的角色将变为管理员，只有新所有者才能转回所有权。"
-        }
-      },
-      "joinRequests": {
-        "title": "加入申请",
-        "approve": "批准",
-        "deny": "拒绝",
-        "approved": "{{name}} 已加入工作区",
-        "denied": "已拒绝申请",
-        "errorTitle": "无法更新申请"
-      },
-      "teams": {
-        "title": "群组",
-        "description": "可一次性获得团队空间访问权限的工作区成员群组。",
-        "new": "新建群组",
-        "empty": "还没有群组。",
-        "createFirst": "创建你的第一个群组",
-        "addMembersLabel": "添加成员",
-        "createTitle": "创建群组",
-        "nameLabel": "群组名称",
-        "memberCount_one": "{{count}} 名成员",
-        "memberCount_other": "{{count}} 名成员",
-        "membersButton": "成员",
-        "grantsAccessToSpaces_one": "授予 {{count}} 个空间的访问权限",
-        "grantsAccessToSpaces_other": "授予 {{count}} 个空间的访问权限",
-        "couldNotCreate": "无法创建群组",
-        "created": "已创建 {{team}}",
-        "deleted": "已删除 {{team}}",
-        "deleteConfirmTitle": "删除 {{team}}？",
-        "deleteConfirmDescription": "这将归档该群组。其成员将失去它授予的访问权限。",
-        "deleteConfirmSpaceAccess_one": "该群组授予 {{count}} 个空间的访问权限。其成员将失去该访问权限。",
-        "deleteConfirmSpaceAccess_other": "该群组授予 {{count}} 个空间的访问权限。其成员将失去该访问权限。",
-        "members": {
-          "title": "{{team}} 的成员",
-          "removeConfirm": "将 {{name}} 从 {{team}} 移除？",
-          "leave": "退出群组",
-          "leftTeam": "你已退出 {{team}}",
-          "leaveConfirm": "退出 {{team}}？",
-          "leaveConfirmDescription": "除非你被直接添加或其他群组包含你，否则你将失去通过该群组获得的空间访问权限。"
-        }
-      },
-      "invites": {
-        "title": "待处理的邀请",
-        "expiresIn_one": "{{count}} 天后过期",
-        "expiresIn_other": "{{count}} 天后过期",
-        "expired": "已过期",
-        "loadError": "无法加载邀请。",
-        "resend": "重新发送",
-        "resending": "重新发送中…",
-        "revoke": "撤销",
-        "resent": "邀请已重新发送",
-        "resentNoEmail": "邀请已更新，但邮件无法送达。",
-        "revoked": "邀请已撤销",
-        "revokeFailed": "无法撤销邀请",
-        "revokeConfirm": {
-          "title": "撤销此邀请？",
-          "description": "发送给 {{email}} 的邀请链接将失效。"
-        }
-      },
-      "billing": {
-        "plan": "套餐",
-        "seats": "席位",
-        "ownerOnly": "只有工作区所有者可以管理订阅。",
-        "nextInvoice": "下一张账单",
-        "manageStripe": "在 Stripe 中管理",
-        "startSubscription": "开始订阅",
-        "planLabel": {
-          "business": "Business",
-          "pro": "Pro",
-          "free": "免费版",
-          "enterprise": "Enterprise"
-        },
-        "status": {
-          "active": "生效中",
-          "trialing": "试用中",
-          "past_due": "逾期未付",
-          "canceled": "已取消",
-          "incomplete": "未完成",
-          "unpaid": "未支付"
-        }
-      },
-      "developer": {
-        "title": "API 密钥",
-        "description": "仅限此工作区的编程访问。",
-        "empty": "暂无 API 密钥。创建一个即可与此工作区集成。",
-        "loadError": "无法加载 API 密钥。",
-        "new": "新建密钥",
-        "create": "创建密钥",
-        "createTitle": "创建 API 密钥",
-        "createDescription": "选择此密钥所需的权限。你可以随时撤销。",
-        "nameLabel": "密钥名称",
-        "namePlaceholder": "生产环境集成",
-        "revoke": "撤销密钥",
-        "revoked": "已撤销密钥 {{name}}",
-        "lastUsed": "上次使用于 {{date}}",
-        "neverUsed": "从未使用",
-        "keyCreatedTitle": "API 密钥已创建",
-        "keyCreatedDescription": "请立即复制此密钥——之后将无法再次查看。",
-        "revokeConfirm": {
-          "title": "撤销此密钥？",
-          "description": "{{name}} 将立即失效。使用它的所有集成都将开始报错。"
-        },
-        "scopes": {
-          "notes": {
-            "title": "笔记",
-            "read": "读取笔记",
-            "write": "写入笔记"
-          },
-          "folders": {
-            "title": "文件夹",
-            "read": "读取文件夹",
-            "write": "写入文件夹"
-          },
-          "transcriptions": {
-            "title": "转录",
-            "read": "读取转录"
-          },
-          "members": {
-            "title": "成员",
-            "read": "读取成员",
-            "write": "管理成员"
-          },
-          "billing": {
-            "title": "账单",
-            "read": "读取账单"
-          },
-          "full": {
-            "title": "完全访问",
-            "admin": "工作区管理员"
-          }
-        }
-      },
-      "enterpriseConsole": {
-        "title": "Enterprise 控制台",
-        "description": "在网页端管理 SSO、策略和成员",
-        "open": "打开控制台"
-      }
-    },
-    "enterpriseCheckout": {
-      "title": "升级到 Enterprise",
-      "description": "选择工作区、席位数量和计费周期。付款将在 Stripe Checkout 中完成。",
-      "allSubscribed": "您拥有的工作区已在 Enterprise 方案或无法在此更改。如需更改方案，请联系销售。",
-      "workspaceLabel": "工作区",
-      "seatsLabel": "席位",
-      "seatsHint_one": "当前已使用 {{count}} 个席位",
-      "seatsHint_other": "当前已使用 {{count}} 个席位",
-      "intervalLabel": "计费周期",
-      "interval": {
-        "monthly": "按月",
-        "annual": "按年"
-      },
-      "proratedCharge": "按比例费用",
-      "prorationNote": "按比例计算的差额将计入下一张账单。",
-      "errors": {
-        "previewFailed": "无法加载升级预览。",
-        "alreadyEnterprise": "该工作区已在 Enterprise 计划中。",
-        "subscriptionInactive": "该工作区的订阅未激活。请更新账单信息后重试。",
-        "priceNotConfigured": "Enterprise 价格暂不可用。请联系销售。"
-      },
-      "priceNote": "最终价格将在结账时显示。",
-      "continueCta": "继续结账",
-      "upgradeDescription": "将 {{workspace}} 从{{plan}}升级到 Enterprise。席位和计费周期保持不变，更改立即生效。",
-      "upgradeCta": "立即升级",
-      "upgradedTitle": "已升级到 Enterprise",
-      "upgradedDescription": "{{workspace}} 现已升级到 Enterprise。"
     }
   },
   "models": {
@@ -2584,143 +1880,12 @@
     },
     "spaces": {
       "privateSpaces": "私人笔记",
-      "teamSpaces": "Teamspaces",
       "personal": "个人",
-      "privateTooltip": "只有你可以看到你的个人空间",
-      "newSpace": "新建团队空间",
-      "newSpaceInWorkspace": "在 {{workspace}} 中新建团队空间",
-      "createTitle": "创建团队空间",
-      "createDescription": "工作区内的共享区域，供你添加的人员和群组访问。",
-      "nameAndIconLabel": "名称和图标",
-      "create": "创建",
-      "couldNotCreate": "无法创建空间",
-      "created": "已创建 {{space}}",
-      "changeEmoji": "更改表情符号",
-      "settings": "设置",
-      "settingsTitle": "空间设置",
-      "couldNotRename": "无法重命名空间",
-      "couldNotChangeEmoji": "无法更改表情",
-      "deleteSpace": "删除空间",
-      "deleteHintTeam": "为所有人移除此空间，其群组会保留。",
-      "deleteHintLocal": "永久删除此空间以及此设备上的文件夹和笔记。",
-      "leaveTitle": "退出空间",
-      "leaveDescription": "你的笔记仍可供其他成员访问。",
-      "leave": "退出空间",
-      "leaveConfirmTitle": "退出 {{space}}？",
-      "leaveConfirmDescription": "你将从 {{teams}} 中移除，并失去这些群组可访问的其他空间的权限。",
-      "leaveDirectDescription": "你将失去对此空间的访问权限。",
-      "leaveKeepsGroupAccess": "你将保留通过 {{groups}} 的访问权限。",
-      "left": "已退出 {{space}}",
-      "stillViaGroups": "你仍可通过 {{groups}} 访问 {{space}}。",
-      "couldNotLeave": "无法退出空间",
-      "deleteConfirmTitle": "删除空间？",
-      "deleteConfirmDescription": "这将从此设备永久删除 {{space}} 及其所有文件夹和笔记。",
-      "deleteConfirmTeamDescription": "这将为所有人删除 {{space}}。群组会保留，但成员将失去对其所有文件夹和笔记的访问权限。",
-      "deleteTypeName": "输入 {{space}} 以确认",
-      "couldNotDelete": "无法删除空间",
-      "deleted": "已删除 {{space}}",
-      "moveTo": "移动到",
-      "moveToSpace": "移动到空间…",
-      "searchSpaces": "搜索空间...",
-      "noSpacesFound": "未找到空间",
-      "spaceRoot": "空间根目录",
-      "moveConfirm": "移动",
-      "confirmMoveInTitle": "移动到 {{space}}？",
-      "confirmMoveIn": "{{space}} 中的所有人都将能查看和编辑此笔记。此后笔记将无法移出团队空间。",
-      "confirmMoveInFolder": "{{space}} 中的所有人都将能查看和编辑此文件夹及其笔记。此后文件夹及其笔记将无法移出团队空间。",
-      "cantMoveOut": "笔记无法移出团队空间。",
-      "cantMoveTeammate": "只有笔记所有者或工作区管理员才能将其移至其他空间。",
       "moved": "已将“{{title}}”移动到 {{target}}",
-      "couldNotMove": "无法移动文件夹",
       "couldNotMoveNote": "无法移动笔记",
-      "folderNameTaken": "无法移动“{{name}}”：该位置已存在同名文件夹",
       "undo": "撤销",
-      "emptySpace": "还没有笔记。这里的笔记对 {{space}} 中的所有人可见。",
-      "emptyTeamHint": "与你共享的空间将显示在这里。",
       "noteCount_one": "{{count}} 条笔记",
-      "noteCount_other": "{{count}} 条笔记",
-      "accessRevoked": "你已无法访问 {{space}}",
-      "accessRevokedActiveNote": "你已无法访问 {{space}} — “{{title}}”在此设备上不再可用",
-      "movedToPersonal": "你已无法访问 {{space}}，“{{title}}”已移至你的个人空间",
-      "updateDeniedNote": "你没有权限更改“{{title}}”——未同步的编辑已作为副本保存到你的个人空间",
-      "deleteDeniedNote": "“{{title}}”未被删除——只有笔记所有者或管理员才能删除它",
-      "updateDeniedFolder": "你没有权限更改“{{name}}”——未同步的内容已保存到你的个人空间",
-      "deleteDeniedFolder": "“{{name}}”未被删除——只有管理员才能删除空间文件夹",
-      "conflictBanner": "此笔记存在更新的版本。",
-      "conflictRefresh": "刷新",
-      "conflictKeep": "继续编辑",
-      "editedBy": "由 {{name}} 编辑 · {{time}}",
-      "members": {
-        "addPeople": "添加成员",
-        "addedToTeam": "已将 {{name}} 添加到 {{team}}",
-        "removedFromTeam": "已将 {{name}} 从 {{team}} 移除",
-        "stillViaGroups": "{{name}} 仍可通过 {{groups}} 访问",
-        "roleUpdated": "角色已更新",
-        "you": "你",
-        "addFailed": "{{total}} 人中有 {{failed}} 人无法添加",
-        "searchPlaceholder": "搜索成员…",
-        "noResults": "未找到成员",
-        "roleAdmin": "管理员",
-        "roleMember": "成员",
-        "roleAdminDescription": "管理成员和设置。",
-        "roleMemberDescription": "可以查看和编辑笔记。",
-        "remove": "移除",
-        "removeConfirm": "将 {{name}} 从 {{space}} 中移除？",
-        "removeConfirmDescription": "对方将无法再访问此空间的所有笔记。",
-        "removeKeepsGroupAccess": "他们将保留通过 {{groups}} 的访问权限。",
-        "inviteFooter": "邀请 {{email}} 加入工作区…",
-        "empty": "尚未添加任何成员",
-        "viaGroup": "通过 {{group}}",
-        "managedByGroup": "通过 {{group}} 添加。请在该群组中移除。",
-        "roleFromGroup": "通过 {{group}} 获得管理员身份，请在该群组中更改。",
-        "invited": "已向 {{email}} 发送邀请"
-      },
-      "invitedTo_one": "你将加入 {{count}} 个团队空间",
-      "invitedTo_other": "你将加入 {{count}} 个团队空间",
-      "invitedToSpaces": "你将加入 {{spaces}}",
-      "teamsMembers": {
-        "title": "{{space}} 的成员",
-        "noTeams": "尚无群组可访问此空间。",
-        "addTeamLabel": "向此空间添加群组",
-        "chooseTeam": "选择群组…",
-        "teamAdded": "已将 {{team}} 添加到 {{space}}",
-        "teamRemoved": "已将 {{team}} 从 {{space}} 移除",
-        "removeTeamFromSpace": "从空间移除",
-        "removeTeamConfirm": "将 {{team}} 从 {{space}} 移除？",
-        "removeTeamConfirmDescription": "除非这些成员被直接添加或其他已分配的群组包含他们，否则他们将失去对此空间的访问权限。",
-        "accessLabel": "空间访问权限",
-        "accessAdmin": "管理员",
-        "accessMember": "成员",
-        "accessChanged": "已更新 {{team}} 的访问权限",
-        "accessHint": "仅当访问权限设为“管理员”时，{{team}} 的管理员才能管理此空间。"
-      },
-      "teams": {
-        "newTeam": "新建群组",
-        "loadError": "无法加载群组。"
-      },
-      "groups": {
-        "title": "有访问权限的群组",
-        "optional": "群组（可选）"
-      }
-    },
-    "structureIntro": {
-      "title": "笔记存放在哪里",
-      "description": "OpenWhispr 将个人想法与协作内容分开，让合适的人看到合适的笔记。",
-      "personal": {
-        "title": "个人空间",
-        "description": "只有你能看到这里的文件夹和笔记。"
-      },
-      "workspace": {
-        "title": "工作区",
-        "description": "集中管理工作区的成员、角色和团队空间。"
-      },
-      "teamSpace": {
-        "title": "团队空间",
-        "description": "工作区内的共享区域。添加人员或群组以授予访问权限。"
-      },
-      "contents": "每个空间都可以包含文件夹和笔记。",
-      "done": "知道了",
-      "reopen": "了解空间的组织方式"
+      "noteCount_other": "{{count}} 条笔记"
     },
     "folders": {
       "defaults": {
@@ -2744,7 +1909,6 @@
       "newNote": "新建笔记",
       "untitled": "无标题",
       "untitledNote": "无标题笔记",
-      "shared": "已分享",
       "timeNow": "刚刚",
       "minutesAgo": "{{count}} 分钟前",
       "hoursAgo": "{{count}} 小时前",
@@ -2753,7 +1917,6 @@
     "createMenu": {
       "note": "笔记",
       "assistantChat": "助手聊天",
-      "teamSpace": "团队空间",
       "chooseType": "选择要创建的内容"
     },
     "editor": {
@@ -2831,7 +1994,6 @@
       "dropToUpload": "拖放以上传",
       "transcribe": "转录",
       "cancel": "取消",
-      "transcribingCloud": "正在通过云端转录...",
       "transcribingLocal": "正在本地转录...",
       "transcribingProvider": "正在通过 {{provider}} 转录...",
       "cancelTranscription": "取消转录",
@@ -2847,7 +2009,6 @@
       "newFolder": "新建文件夹",
       "folderName": "文件夹名称",
       "create": "创建",
-      "openwhisprCloud": "OpenWhispr Cloud",
       "custom": "自定义",
       "selectFolder": "选择文件夹",
       "transcriptionFailed": "转录失败",
@@ -2856,18 +2017,8 @@
       "noProviderTitle": "尚未设置转录服务商",
       "noProviderDescription": "添加 API Key 或下载本地模型以开始转录。",
       "noProviderAction": "打开转录设置",
-      "fileTooLarge": "此文件超过了 500 MB 的大小限制。",
-      "largeFileNote": "大文件将被分割并平行转录。",
-      "chunkProgress": "正在转录第 {{completed}} 部分，共 {{total}} 部分...",
-      "paidPlanRequired": "超过 25 MB 的文件需要付费计划才能使用云端转录。大文件通过 OpenWhispr Cloud 处理，确保可靠、高质量的结果。",
       "byokTooLarge": "第三方 API 密钥仅支持 {{size}} MB 以内的文件。",
       "byokTooLargeDetail": "超过 {{size}} MB 的文件由 OpenWhispr Cloud 负责分割、并行处理和重组——无需依赖第三方服务限制，即可获得可靠的结果。",
-      "byokTooLargeNeedsAccount": "创建账户并升级到付费计划，即可使用 OpenWhispr Cloud 转录更大的文件。",
-      "byokTooLargeNeedsUpgrade": "升级到付费计划，即可使用 OpenWhispr Cloud 转录更大的文件。",
-      "switchToCloudForLargeFiles": "切换到 OpenWhispr Cloud 来转录此文件。",
-      "createAccount": "创建账户",
-      "upgrade": "升级",
-      "switchToCloud": "OpenWhispr Cloud",
       "orDivider": "或",
       "urlPlaceholder": "粘贴 YouTube 或音频 URL",
       "urlDownloading": "正在下载音频...",
@@ -2897,7 +2048,6 @@
       "batchSaveFailed": "保存笔记失败",
       "batchUnknownError": "未知错误",
       "removeFromQueue": "从队列中移除",
-      "diarizationRunsLocally": "说话人检测在您的设备上本地运行。",
       "urlSubmit": "添加链接",
       "urlsSkipped": "部分链接无法添加（{{n}} 个）",
       "queueFailed": "{{n}} 个失败",
@@ -3076,22 +2226,17 @@
     },
     "overview": {
       "subtitle": {
-        "team": "此空间中的所有成员都可以查看这些笔记。",
         "private": "只有你可以查看这些笔记。"
       },
       "meta": {
         "folders_one": "{{count}} 个文件夹",
-        "folders_other": "{{count}} 个文件夹",
-        "members_one": "{{count}} 位成员",
-        "members_other": "{{count}} 位成员"
+        "folders_other": "{{count}} 个文件夹"
       },
       "banner": {
         "title": {
-          "team": "你的团队空间",
           "private": "你的私人空间"
         },
         "body": {
-          "team": "把对话变成共享知识。将用户访谈、销售通话和团队会议发布到大家都能找到的地方。",
           "private": "将会议笔记、想法和草稿集中在一处，并随时询问此空间中的任何内容。"
         },
         "dismiss": "关闭"
@@ -3104,12 +2249,8 @@
           "inFlight": "显示进行中的项目"
         }
       },
-      "invite": "邀请",
       "list": {
         "empty": "这里还没有笔记"
-      },
-      "author": {
-        "you": "你"
       }
     }
   },
@@ -3190,7 +2331,7 @@
     "activityMore": "较多",
     "dayTooltip_one": "{{date}}：{{count}} 字",
     "dayTooltip_other": "{{date}}：{{count}} 字",
-    "dataRetentionDisabled": "数据保留已关闭，因此新的听写不会计入统计——本设备和你的账户都不会计数。已同步的计数会保留在你的账户中。",
+    "dataRetentionDisabled": "数据保留已关闭，因此新的听写不会计入统计。",
     "onDevice": "仅在本设备",
     "onDevicePrivacy": "这些分析数据会在此设备上计算，以保护你的隐私。",
     "emptyTitle": "还没有听写记录",
@@ -3203,21 +2344,9 @@
     "notes": "笔记",
     "upload": "上传",
     "dictionary": "词典",
-    "inviteTeam": "邀请你的团队",
     "settings": "设置",
     "support": "支持",
-    "limitReached": "已达每周上限",
-    "limitReachedDescription": "升级到 Pro 即可无限转录。",
-    "viewPlans": "查看套餐",
-    "upgradeTitle": "升级到 Pro",
-    "upgradeDescription": "无限量、更准确、更快速的转录。",
-    "upgradeInstantSetup": "即时设置",
-    "upgradeZeroRetention": "零数据保留",
-    "upgradeEnterpriseSecurity": "企业级安全 SOC 2 Type II, HIPAA, ISO27001",
-    "learnMore": "了解更多",
     "integrations": "集成",
-    "defaultUser": "用户",
-    "notSignedIn": "未登录",
     "chat": "聊天",
     "collapse": "折叠侧边栏",
     "expand": "展开侧边栏"
@@ -3347,8 +2476,6 @@
       "relaunchHint": "屏幕录制权限是在 OpenWhispr 运行期间授予的。请退出并重新打开 OpenWhispr 以开始捕获屏幕截图。"
     },
     "modes": {
-      "openwhispr": "OpenWhispr Cloud",
-      "openwhisprDesc": "使用 OpenWhispr 托管的助手，无需 API Key。",
       "providers": "使用自己的 API Key",
       "providersDesc": "用你自己的 API Key 连接 OpenAI、Anthropic、Gemini 或 Groq。",
       "local": "本地",
@@ -3367,11 +2494,9 @@
       "systemPromptDescription": "助手的自定义指令",
       "systemPromptPlaceholder": "输入自定义系统提示词...",
       "modes": {
-        "openwhispr": "OpenWhispr Cloud",
         "providers": "云服务商",
         "local": "本地",
         "selfHosted": "自托管",
-        "openwhisprDesc": "准确可靠，无需设置。",
         "providersDesc": "使用自己的 API 密钥。",
         "localDesc": "设备端模型，完全私密。",
         "selfHostedDesc": "你自己网络上的服务器。"
@@ -3414,9 +2539,7 @@
       "create_noteStatus": "正在创建笔记...",
       "update_noteStatus": "正在更新笔记...",
       "copiedToClipboard": "已复制到剪贴板",
-      "openNote": "打开笔记",
-      "unknownTool": "未知工具：{{name}}",
-      "invalidArgs": "{{name}} 的工具参数无效"
+      "openNote": "打开笔记"
     }
   },
   "assistant": {
@@ -3470,16 +2593,9 @@
       "learnMore": "查看文档",
       "copyDocsLink": "复制文档链接",
       "docsLinkCopied": "已复制文档链接",
-      "viewPlans": "查看套餐",
       "local": {
         "label": "本地",
-        "freeBadge": "免费",
         "description": "直接读取你的本地笔记。无需登录或 API 密钥 — 在 OpenWhispr 运行时即可使用。"
-      },
-      "cloud": {
-        "label": "云端",
-        "description": "使用 API 密钥在多台设备之间同步。",
-        "proRequired": "升级到付费计划以在云端模式下使用 CLI。"
       }
     },
     "plan": {
@@ -3489,7 +2605,6 @@
       "freeLimit": "每月5次会议",
       "essential": "Essential",
       "essentialLimit": "每月20次会议",
-      "pro": "Pro",
       "proLimit": "无限",
       "upgrade": "升级"
     },
@@ -3567,51 +2682,8 @@
     "deleteConfirmDescription": "此笔记将被永久删除，无法恢复。",
     "deleteConfirm": "删除",
     "share": {
-      "button": "分享",
       "dialog": {
-        "title": "分享笔记",
-        "description": "通过电子邮件邀请他人，或分享此笔记的链接。",
-        "searchPlaceholder": "搜索人员、文件夹或邮箱",
-        "noResults": "未找到匹配结果",
-        "emailLabel": "人员、文件夹或邮箱",
-        "shareButton": "分享",
-        "createLink": "创建链接",
-        "copyLink": "复制链接",
-        "copied": "已复制",
-        "export": "导出",
-        "owner": "所有者",
-        "editor": "可编辑",
-        "viewer": "可查看",
-        "teamAudience": "此团队空间中的所有人",
-        "pending": "待处理",
-        "accepted": "已获得访问权限",
-        "resend": "重新发送邀请",
-        "revoke": "移除",
-        "invitationActions": "邀请操作",
-        "resendSent": "邀请已发送",
-        "resendThrottled": "邀请刚刚发送过，请一分钟后再试。",
-        "syncPrompt": "分享会在你的 OpenWhispr 云端保留此笔记的副本。在你选择分享对象之前，只有你能看到它。",
-        "syncAndShare": "同步笔记",
-        "visibility": {
-          "label": "可见性",
-          "private": "私密",
-          "privateOption": "私密 — 仅自己",
-          "link": "拥有链接的任何人",
-          "domain": "{{domain}} 内拥有链接的所有人",
-          "invited": "仅受邀者"
-        },
-        "error": {
-          "invalidEmail": "请输入有效的电子邮件地址",
-          "alreadyInvited": "{{email}} 已经被邀请",
-          "inviteFailed": "无法发送邀请。请重试。",
-          "visibilityFailed": "无法更新分享设置。请重试。",
-          "copyFailed": "无法复制链接。请重试。",
-          "revokeFailed": "无法移除邀请。请重试。",
-          "resendFailed": "无法重新发送邀请。请重试。",
-          "syncFailed": "无法同步此笔记。请重试。",
-          "loadFailed": "无法加载分享设置",
-          "retry": "重试"
-        }
+        "export": "导出"
       }
     }
   },
@@ -3631,23 +2703,6 @@
       "navigate": "导航",
       "open": "打开",
       "dismiss": "关闭"
-    }
-  },
-  "emojiPicker": {
-    "search": "搜索表情…",
-    "recent": "最近使用",
-    "noResults": "未找到表情",
-    "remove": "移除",
-    "groups": {
-      "smileys": "表情与情感",
-      "people": "人物与身体",
-      "animals": "动物与自然",
-      "food": "食物与饮料",
-      "travel": "旅行与地点",
-      "activities": "活动",
-      "objects": "物品",
-      "symbols": "符号",
-      "flags": "旗帜"
     }
   },
   "permissionsGate": {
@@ -3682,82 +2737,6 @@
       "others": "其他人"
     },
     "missingAudio": "[音频缺失 {{from}}-{{to}}]"
-  },
-  "workspaces": {
-    "switcher": {
-      "workspaces": "工作区",
-      "create": "创建工作区…"
-    },
-    "create": {
-      "title": "创建工作区",
-      "description": "工作区集中管理组织的成员和账单。你可以在其中创建团队空间来共享笔记。",
-      "nameLabel": "工作区名称",
-      "namePlaceholder": "Acme Corp",
-      "submit": "创建工作区",
-      "submitting": "创建中…",
-      "errorTitle": "无法创建工作区"
-    },
-    "created": {
-      "title": "工作区已创建",
-      "description": "你现在是 {{name}} 的所有者。"
-    },
-    "invite": {
-      "title": "邀请加入 {{workspace}}",
-      "description": "通过电子邮件添加同事。他们将收到加入链接。",
-      "emailLabel": "电子邮件",
-      "emailPlaceholder": "teammate@example.com",
-      "roleLabel": "角色",
-      "seatUsage": "已使用 {{used}}/{{seats}} 个席位",
-      "seatCost": "接受邀请后将为你的方案增加一个席位 · 预计按比例收取 {{amount}}。",
-      "submit": "发送邀请",
-      "submitting": "发送中…",
-      "sentTitle": "邀请已发送",
-      "sentDescription": "我们已向 {{email}} 发送邀请。",
-      "sentNoEmailTitle": "邀请已创建，但未发送邮件",
-      "sentNoEmailDescription": "已邀请 {{email}}，但邮件无法送达。请稍后重新发送，或通过其他方式分享邀请链接。",
-      "errorTitle": "无法发送邀请",
-      "role": {
-        "admin": "管理员",
-        "member": "成员"
-      },
-      "roleDescription": {
-        "admin": "管理成员和账单",
-        "member": "使用工作区"
-      }
-    },
-    "join": {
-      "title": "加入你的团队",
-      "domainTitle": "你的团队已在 OpenWhispr",
-      "description": "这些工作区中有与你相同邮箱域名的成员。",
-      "invitedDescription": "有人邀请你加入一个工作区。",
-      "invitedBy": "{{inviter}} 邀请你担任{{role}}",
-      "memberCount_one": "{{count}} 位成员",
-      "memberCount_other": "{{count}} 位成员",
-      "join": "加入",
-      "requestErrorTitle": "无法发送申请",
-      "requestedDescription": "{{workspace}} 的管理员会进行审核。",
-      "requestedTitle": "申请已发送",
-      "requested": "已申请",
-      "request": "申请加入",
-      "notNow": "暂不",
-      "successTitle": "已加入",
-      "successDescription": "你现在是 {{workspace}} 的成员。",
-      "errorTitle": "无法加入"
-    },
-    "accept": {
-      "title": "加入工作区",
-      "description": "{{inviter}} 邀请你以{{role}}身份加入 {{workspace}}。",
-      "loading": "正在加载邀请…",
-      "accept": "接受邀请",
-      "accepting": "接受中…",
-      "signInToAccept": "登录以接受",
-      "switchAccount": "切换账号",
-      "successTitle": "你已加入",
-      "successDescription": "你已成为 {{name}} 的成员。可在设置 → 工作区中管理。",
-      "errorTitle": "无法接受邀请",
-      "sentTo": "邀请已发送至 {{email}}",
-      "wrongAccount": "此邀请发送给了 {{email}}，而你当前登录的是 {{current}}。"
-    }
   },
   "dictationTranslation": {
     "title": "听写翻译",

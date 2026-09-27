@@ -40,7 +40,7 @@ export const enterpriseProvider: InferenceProvider = {
         provider: enterpriseId,
         supportsTemperature,
         timeoutMs: getLlmRequestTimeoutSeconds({ scope: config.inferenceScope }) * 1000,
-        ...getEnterpriseCallSettings(enterpriseId, config.inferenceScope || "dictationCleanup"),
+        ...getEnterpriseCallSettings(enterpriseId),
       }
     );
 

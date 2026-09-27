@@ -48,8 +48,6 @@ import type {
   ChatAgentSettings,
 } from "../hooks/useSettings";
 import type { Snippet } from "../utils/snippets";
-import type { EnterpriseSetupMode } from "../types/enterpriseIdentity";
-import { getManagedScopeResolution } from "./enterpriseIdentityStore";
 
 let _ReasoningService: typeof import("../services/ReasoningService").default | null = null;
 
@@ -198,21 +196,63 @@ function migrateMicrophoneSelectionMode() {
 
 migrateMicrophoneSelectionMode();
 
-// Settings for features this build no longer has. Dropping them keeps stale
-// values from lingering in localStorage.
+// Settings and account state for features this build no longer has. Dropping
+// them keeps stale values (and account identifiers) from lingering in localStorage.
 const RETIRED_SETTING_KEYS = [
+  "activeWorkspaceId",
+  "authenticationSkipped",
   "autoUpdatesEnabled",
+  "cloudBackupEnabled",
+  "enterpriseSetupMode",
+  "enterpriseTranscriptionSetupMode",
+  "folderUpdate404Counts",
   "gcalAccounts",
   "gcalPrimaryOnly",
   "insightsSyncEnabled",
+  "isSignedIn",
+  "lastSyncedAt",
   "mcalAccounts",
   "mcalPrimaryOnly",
+  "noteConflicts.clientIds",
+  "noteUpdate404Counts",
+  "notesStructureIntroVersion",
+  "openwhispr:accountScopePurgeRequired",
+  "openwhispr:accountScopeUserId",
+  "openwhispr:accountScopeValidated",
+  "openwhispr:lastSignInTime",
+  "openwhispr:usageAccountId",
+  "pendingInvitationToken",
+  "purgedSpaceIds",
+  "purgedTeamIds",
+  "signInPromptedAt",
+  "skipAuth",
+  "teamOnlyPass.emptyStreak",
+  "teamOnlyPass.lastAt",
+  "teamSpacesCapability",
+  "teamSpacesCapability.probedAt",
   "telemetryEnabled",
+  "upgradeProDismissed",
+];
+
+// Retired keys that carried an account, workspace or sync-kind suffix.
+const RETIRED_SETTING_KEY_PREFIXES = [
+  "lastSyncedAt.",
+  "leaderboardLeavePending:",
+  "managedEnterpriseScopes:",
+  "workspaces.joinPromptDismissed.",
 ];
 
 function removeRetiredSettingKeys() {
   if (!isBrowser) return;
   for (const key of RETIRED_SETTING_KEYS) localStorage.removeItem(key);
+  const prefixed: string[] = [];
+  for (let index = 0; index < localStorage.length; index++) {
+    const key = localStorage.key(index);
+    if (key && RETIRED_SETTING_KEY_PREFIXES.some((prefix) => key.startsWith(prefix))) {
+      prefixed.push(key);
+    }
+  }
+  for (const key of prefixed) localStorage.removeItem(key);
 }
 
 removeRetiredSettingKeys();
@@ -232,7 +272,6 @@ const BOOLEAN_SETTINGS = new Set([
   "useDictationTranslation",
   "translationDisableThinking",
   "preferBuiltInMic",
-  "cloudBackupEnabled",
   "audioCuesEnabled",
   "pauseMediaOnDictation",
   "floatingIconAutoHide",
@@ -242,7 +281,6 @@ const BOOLEAN_SETTINGS = new Set([
   "dictationSileroEnabled",
   "noteRecordingSileroEnabled",
   "meetingSileroEnabled",
-  "isSignedIn",
   "autoPasteEnabled",
   "keepTranscriptionInClipboard",
   "dataRetentionEnabled",
@@ -933,8 +971,6 @@ function migrateToLocalOnlyModes(storage: Storage): void {
     finalConfig[scope] = { mode: target ?? mode ?? "local" };
   }
 
-  // Managed enterprise configuration never applies here.
-  storage.setItem("enterpriseSetupMode", "manual");
   storage.setItem(LOCAL_ONLY_MODES_MIGRATED_KEY, "1");
 }
 
@@ -951,7 +987,6 @@ export interface SettingsState
     PrivacySettings,
     ThemeSettings,
     ChatAgentSettings {
-  isSignedIn: boolean;
   audioCuesEnabled: boolean;
   pauseMediaOnDictation: boolean;
   floatingIconAutoHide: boolean;
@@ -1200,8 +1235,6 @@ export interface SettingsState
   setCortiTenant: (value: string) => void;
 
   // Enterprise providers
-  enterpriseSetupMode: EnterpriseSetupMode;
-  enterpriseTranscriptionSetupMode: EnterpriseSetupMode;
   bedrockAuthMode: string;
   bedrockRegion: string;
   bedrockProfile: string;
@@ -1217,8 +1250,6 @@ export interface SettingsState
   vertexLocation: string;
   vertexApiKey: string;
   setBedrockAuthMode: (value: string) => void;
-  setEnterpriseSetupMode: (value: EnterpriseSetupMode) => void;
-  setEnterpriseTranscriptionSetupMode: (value: EnterpriseSetupMode) => void;
   setBedrockRegion: (value: string) => void;
   setBedrockProfile: (value: string) => void;
   setBedrockAccessKeyId: (key: string) => void;
@@ -1250,7 +1281,6 @@ export interface SettingsState
   setMicWarmHoldSeconds: (seconds: number) => void;
 
   setTheme: (value: "light" | "dark" | "auto") => void;
-  setCloudBackupEnabled: (value: boolean) => void;
   setAudioRetentionDays: (days: number) => void;
   setTranscriptRetentionDays: (days: number) => void;
   setDataRetentionEnabled: (value: boolean) => void;
@@ -1280,7 +1310,6 @@ export interface SettingsState
   setKeepTranscriptionInClipboard: (value: boolean) => void;
   setNoteFilesEnabled: (value: boolean) => void;
   setNoteFilesPath: (value: string) => void;
-  setIsSignedIn: (value: boolean) => void;
 
   setChatAgentModel: (value: string) => void;
   setChatAgentProvider: (value: string) => void;
@@ -1534,13 +1563,6 @@ function createSecretSetter(
 
 export const MAX_TRANSLATION_TARGETS = 5;
 
-// Kick the matching cloud push once a local write has landed in SQLite.
-function syncAfterLocalWrite(method: "syncDictionaryNow" | "syncSnippetsNow"): void {
-  void import("../services/SyncService.js").then(({ syncService }) => {
-    if (syncService.canSync()) void syncService[method]();
-  });
-}
-
 export const useSettingsStore = create<SettingsState>()((set, get) => ({
   uiLanguage: normalizeUiLanguage(
     isBrowser ? localStorage.getItem("uiLanguage") || i18n.language : null
@@ -1610,16 +1632,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   cleanupCustomApiKey: "",
 
   // Enterprise providers
-  enterpriseSetupMode: (() => {
-    const v = readString("enterpriseSetupMode", "manual");
-    if (v === "auto" || v === "managed" || v === "manual") return v;
-    return "manual" as EnterpriseSetupMode;
-  })(),
-  enterpriseTranscriptionSetupMode: (() => {
-    const v = readString("enterpriseTranscriptionSetupMode", "auto");
-    if (v === "auto" || v === "managed" || v === "manual") return v;
-    return "auto" as EnterpriseSetupMode;
-  })(),
   bedrockAuthMode: readString("bedrockAuthMode", "sso"),
   bedrockRegion: readString("bedrockRegion", "us-east-1"),
   bedrockProfile: readString("bedrockProfile", ""),
@@ -1665,7 +1677,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     if (v === "light" || v === "dark" || v === "auto") return v;
     return "auto" as const;
   })(),
-  cloudBackupEnabled: readBoolean("cloudBackupEnabled", false),
   audioRetentionDays: readNumber("audioRetentionDays", 30),
   transcriptRetentionDays: readNumber("transcriptRetentionDays", 0),
   dataRetentionEnabled: readBoolean("dataRetentionEnabled", true),
@@ -1713,7 +1724,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   keepTranscriptionInClipboard: readBoolean("keepTranscriptionInClipboard", false),
   noteFilesEnabled: readBoolean("noteFilesEnabled", false),
   noteFilesPath: readString("noteFilesPath", ""),
-  isSignedIn: readBoolean("isSignedIn", false),
 
   transcriptionMode: (() => {
     const v = readString("transcriptionMode", "local");
@@ -2096,16 +2106,13 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setCustomDictionary: (words: string[]) => {
     if (isBrowser) localStorage.setItem("customDictionary", JSON.stringify(words));
     set({ customDictionary: words });
-    window.electronAPI
-      ?.setDictionary(words)
-      .then(() => syncAfterLocalWrite("syncDictionaryNow"))
-      .catch((err) => {
-        logger.warn(
-          "Failed to sync dictionary to SQLite",
-          { error: (err as Error).message },
-          "settings"
-        );
-      });
+    window.electronAPI?.setDictionary(words).catch((err) => {
+      logger.warn(
+        "Failed to sync dictionary to SQLite",
+        { error: (err as Error).message },
+        "settings"
+      );
+    });
   },
 
   updateCustomDictionary: ({ add = [], remove = [] }) => {
@@ -2137,7 +2144,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
           if (isBrowser) localStorage.setItem("customDictionary", JSON.stringify(stored));
           set({ customDictionary: stored });
         }
-        syncAfterLocalWrite("syncDictionaryNow");
       })
       .catch((err) => {
         logger.warn(
@@ -2157,16 +2163,13 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setSnippets: (snippets: Snippet[]) => {
     if (isBrowser) localStorage.setItem("snippets", JSON.stringify(snippets));
     set({ snippets });
-    window.electronAPI
-      ?.setSnippets?.(snippets)
-      .then(() => syncAfterLocalWrite("syncSnippetsNow"))
-      .catch((err) => {
-        logger.warn(
-          "Failed to sync snippets to SQLite",
-          { error: (err as Error).message },
-          "settings"
-        );
-      });
+    window.electronAPI?.setSnippets?.(snippets).catch((err) => {
+      logger.warn(
+        "Failed to sync snippets to SQLite",
+        { error: (err as Error).message },
+        "settings"
+      );
+    });
   },
 
   // For broadcasts from main process — DB is already authoritative, only update UI.
@@ -2227,12 +2230,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   },
 
   // Enterprise provider setters
-  setEnterpriseSetupMode: createStringSetter("enterpriseSetupMode") as (
-    value: EnterpriseSetupMode
-  ) => void,
-  setEnterpriseTranscriptionSetupMode: createStringSetter("enterpriseTranscriptionSetupMode") as (
-    value: EnterpriseSetupMode
-  ) => void,
   setBedrockAuthMode: (value: string) => {
     if (isBrowser) localStorage.setItem("bedrockAuthMode", value);
     set({ bedrockAuthMode: value });
@@ -2388,7 +2385,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     set({ theme: value });
   },
 
-  setCloudBackupEnabled: createBooleanSetter("cloudBackupEnabled"),
   setMicWarmHoldSeconds: (value: number) => {
     const snapped = snapMicWarmHold(value);
     if (isBrowser) localStorage.setItem("micWarmHoldSeconds", String(snapped));
@@ -2524,11 +2520,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setKeepTranscriptionInClipboard: createBooleanSetter("keepTranscriptionInClipboard"),
   setNoteFilesEnabled: createBooleanSetter("noteFilesEnabled"),
   setNoteFilesPath: createStringSetter("noteFilesPath"),
-
-  setIsSignedIn: (value: boolean) => {
-    if (isBrowser) localStorage.setItem("isSignedIn", String(value));
-    set({ isSignedIn: value });
-  },
 
   setChatAgentModel: createStringSetter("chatAgentModel"),
   setChatAgentProvider: createStringSetter("chatAgentProvider"),
@@ -2703,31 +2694,19 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 
 // --- Selectors (derived state, not stored) ---
 
-export const selectIsCloudCleanupMode = (state: SettingsState) =>
-  state.isSignedIn && state.cleanupMode === "openwhispr" && state.cleanupCloudMode === "openwhispr";
+// OpenWhispr Cloud modes need an OpenWhispr account, which this build does not
+// have, so no scope ever resolves to the cloud.
+export const selectIsCloudCleanupMode = (_state: SettingsState) => false;
 
-export const selectEffectiveCleanupProvider = (state: SettingsState) =>
-  selectIsCloudCleanupMode(state) ? "openwhispr" : state.cleanupProvider;
+export const selectEffectiveCleanupProvider = (state: SettingsState) => state.cleanupProvider;
 
-export const selectIsCloudChatAgentMode = (state: SettingsState) =>
-  state.isSignedIn &&
-  state.chatAgentMode === "openwhispr" &&
-  state.chatAgentCloudMode === "openwhispr";
+export const selectIsCloudChatAgentMode = (_state: SettingsState) => false;
 
-export const selectIsCloudDictationAgentMode = (state: SettingsState) =>
-  state.isSignedIn &&
-  state.dictationAgentMode === "openwhispr" &&
-  state.dictationAgentCloudMode === "openwhispr";
+export const selectIsCloudDictationAgentMode = (_state: SettingsState) => false;
 
-export const selectIsCloudTranslationMode = (state: SettingsState) =>
-  state.isSignedIn &&
-  state.translationMode === "openwhispr" &&
-  state.translationCloudMode === "openwhispr";
+export const selectIsCloudTranslationMode = (_state: SettingsState) => false;
 
-export const selectIsCloudNoteFormattingMode = (state: SettingsState) => {
-  const cfg = selectResolvedNoteFormatting(state);
-  return state.isSignedIn && cfg.mode === "openwhispr" && cfg.cloudMode === "openwhispr";
-};
+export const selectIsCloudNoteFormattingMode = (_state: SettingsState) => false;
 
 export interface ResolvedMeetingTranscription {
   useLocalWhisper: boolean;
@@ -2877,7 +2856,7 @@ export const selectResolvedLLMConfig = (
   const disableThinkingKey = def.storeKeys.disableThinking;
   const disableThinking = disableThinkingKey ? (state[disableThinkingKey] as boolean) : true;
 
-  const localConfig: ResolvedLLMConfig = {
+  return {
     scope,
     mode: state[def.storeKeys.mode] as InferenceMode,
     provider: read("provider") || fallback?.provider || "",
@@ -2890,17 +2869,6 @@ export const selectResolvedLLMConfig = (
     // belongs on the request path — see selectResolvedNoteFormatting.
     customApiKey: read("customApiKey"),
     disableThinking,
-  };
-  const managed = getManagedScopeResolution(scope, state.enterpriseSetupMode);
-  if (managed.kind === "error") {
-    return { ...localConfig, mode: "enterprise", provider: "", model: "" };
-  }
-  if (managed.kind !== "managed") return localConfig;
-  return {
-    ...localConfig,
-    mode: "enterprise",
-    provider: managed.provider,
-    model: managed.model,
   };
 };
 

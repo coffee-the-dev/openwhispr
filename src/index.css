@@ -389,24 +389,6 @@ body.dark:has(.onboarding-canvas) {
   --onboarding-scrim: rgb(0 0 0 / 0.55);
 }
 
-/* Authentication also appears in the control-panel sign-in dialog. Give that
-   embedded version the same semantic names without applying onboarding's page
-   chrome or overriding the dialog's existing theme. */
-.onboarding-embedded-auth {
-  --onboarding-accent: var(--color-primary);
-  --onboarding-accent-foreground: var(--color-primary-foreground);
-  --onboarding-text-primary: var(--color-foreground);
-  --onboarding-text-secondary: var(--color-muted-foreground);
-  --onboarding-text-tertiary: color-mix(in srgb, var(--color-muted-foreground) 75%, transparent);
-  --onboarding-control-border: var(--color-border);
-  --onboarding-surface: var(--color-background);
-  --onboarding-surface-secondary: var(--color-muted);
-  --onboarding-surface-tertiary: var(--color-secondary);
-  --onboarding-surface-hover: var(--color-surface-1);
-  --onboarding-inverse-surface: var(--color-foreground);
-  --onboarding-inverse-text: var(--color-background);
-}
-
 /* Remaps the app-wide shadcn tokens onto the onboarding palette, so any shared
    ui/ primitive dropped into a step (Button, Input, Select) picks up the
    onboarding theme instead of the control panel's. Bound to the --onboarding-*
@@ -1720,26 +1702,4 @@ a:hover {
 
 .dark .rich-text-editor-content p.is-editor-empty:first-child::before {
   color: oklch(0.7 0 0 / 0.2);
-}
-
-/* Colour emoji fonts per platform. Keep in sync with EMOJI_FONT_FAMILY in
-   src/lib/emojiData.ts, which probes emoji support with the same stack. */
-.font-emoji {
-  font-family: "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji", sans-serif;
-}
-
-/* Styling the scrollbar makes Chromium draw a fixed-width classic bar on every
-   platform, so the emoji grid keeps one width whether or not the OS uses overlay
-   scrollbars. */
-.emoji-picker-scroll::-webkit-scrollbar {
-  width: 8px;
-}
-
-.emoji-picker-scroll::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.emoji-picker-scroll::-webkit-scrollbar-thumb {
-  border-radius: 8px;
-  background-color: var(--color-border);
 }

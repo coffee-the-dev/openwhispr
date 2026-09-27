@@ -342,11 +342,7 @@ test("an unmount mid-stream persists the partial reply without delivering it", a
         completionCalls += 1;
       },
     });
-    for (
-      let i = 0;
-      i < 50 && !getMessages().some((m) => m.content === "Partial reply");
-      i++
-    ) {
+    for (let i = 0; i < 50 && !getMessages().some((m) => m.content === "Partial reply"); i++) {
       await waitForFlush();
     }
   });
@@ -409,46 +405,4 @@ test("cancelling a tool-ineligible raw stream after reading starts shows no erro
   assert.equal(message.content, "");
   assert.equal(message.isStreaming, false);
   assert.equal(getResponseContentCalls(), 0, "a user cancellation must not announce an error");
-});
-
-test("cloud screen context is sent without claiming the screenshot is already attached", async (t) => {
-  let streamEndListener;
-  let streamOptions;
-  const electronAPI = {
-    onAgentStreamChunk() {
-      return () => {};
-    },
-    onAgentStreamError() {
-      return () => {};
-    },
-    onAgentStreamEnd(listener) {
-      streamEndListener = listener;
-      return () => {};
-    },
-    startAgentStream(requestId, _messages, options) {
-      streamOptions = options;
-      streamEndListener({ requestId });
-    },
-    cancelAgentStream() {},
-  };
-  const { captured } = await renderChatStreaming(t, {
-    electronAPI,
-    settings: {
-      chatAgentMode: "openwhispr",
-      chatAgentCloudMode: "openwhispr",
-      isSignedIn: true,
-    },
-  });
-
-  await captured.sendToAI(
-    "What is on screen?",
-    [{ id: "user-1", role: "user", content: "What is on screen?", isStreaming: false }],
-    { attachment: { image: "base64-image", mediaType: "image/png" } }
-  );
-
-  assert.deepEqual(streamOptions.screenContext, {
-    data: "base64-image",
-    mediaType: "image/png",
-  });
-  assert.doesNotMatch(streamOptions.systemPrompt, /SCREEN CONTEXT:/);
 });

@@ -153,7 +153,7 @@ export default function CompactPermissionsStep({
   };
 
   return (
-    <CompactOnboardingFrame showLegalNotice={false}>
+    <CompactOnboardingFrame>
       <div className="onboarding-shell-scroll relative flex h-full flex-col overflow-y-auto px-5 pb-6 pt-45 text-center">
         {/* text-balance evens the two lines out ("Set up OpenWhispr" / "in 3
             minutes") instead of leaving one word stranded. Preferred over a
@@ -163,7 +163,7 @@ export default function CompactPermissionsStep({
           {t("onboarding.rehaul.permissions.title")}
         </h1>
         <p className="mt-2 text-sm text-[var(--onboarding-text-secondary)]">
-          {t("auth.welcomeSubtitle")}
+          {t("onboarding.welcomeSubtitle")}
         </p>
 
         <div className="mt-3 rounded-[1.35rem] bg-[var(--onboarding-surface-secondary)] px-3 py-1">

@@ -4,10 +4,8 @@ import App from "./App.jsx";
 import AgentDictationPillOverlay from "./components/dictation/AgentDictationPillOverlay.tsx";
 import MeetingNotificationOverlay from "./components/MeetingNotificationOverlay.tsx";
 import BackgroundModelDownloadTray from "./components/onboarding/BackgroundModelDownloadTray.tsx";
-import { useAuth } from "./hooks/useAuth";
 import { useControlPanelWindowDrag } from "./hooks/useControlPanelWindowDrag";
 import { useTheme } from "./hooks/useTheme";
-import { mirrorActiveAccountScope } from "./lib/accountScopeMirror";
 import { resolveSettledControlPanelWindowMode } from "./utils/controlPanelWindowMode.ts";
 import { isControlPanelWindow } from "./utils/windowContext.ts";
 
@@ -30,8 +28,6 @@ export default function AppRouter() {
 }
 
 function MainApp() {
-  const { isLoaded: authLoaded } = useAuth();
-
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [postOnboardingSettingsSection, setPostOnboardingSettingsSection] = useState(undefined);
@@ -49,24 +45,7 @@ function MainApp() {
         import("./components/OnboardingFlow.tsx").catch(() => {});
       }
     }
-
-    // Sync starts only after auth settles, so a new bearer token cannot touch
-    // the previous account's rows while validation is still running. A failed
-    // (guest/offline) resolution also counts as settled: canSync() then no-ops
-    // because no validated auth context exists.
-    if (authLoaded) {
-      import("./services/SyncService.js")
-        .then(({ syncService }) => syncService.startAutoSync())
-        .catch(() => {});
-    }
-  }, [authLoaded, isControlPanel]);
-
-  useEffect(() => {
-    // The dictation window cannot resolve a session (see mirrorActiveAccountScope),
-    // so its managed identity follows the main process's account scope.
-    if (!isDictationPanel) return;
-    return mirrorActiveAccountScope();
-  }, [isDictationPanel]);
+  }, [isControlPanel]);
 
   useEffect(() => {
     const resolved = localStorage.getItem("onboardingCompleted") === "true";

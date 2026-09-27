@@ -66,8 +66,8 @@ const TRANSCRIPTION_ERROR_KEYS: Record<string, string> = {
 };
 
 // A coded failure arrives either as a returned result (BYOK, local) or as a
-// thrown error — OpenWhispr Cloud rethrows it through withSessionRefresh — so
-// every call site resolves the key from whichever shape it is holding.
+// thrown error, so every call site resolves the key from whichever shape it is
+// holding.
 export function transcriptionErrorKey(failure: unknown): string | undefined {
   const code = (failure as { code?: string } | null | undefined)?.code;
   return code ? TRANSCRIPTION_ERROR_KEYS[code] : undefined;
@@ -82,16 +82,14 @@ export function shouldOfferMeetingSummary({
   isRecording,
   hasTranscriptSegments,
   hasSummary,
-  canEdit,
   isProcessingAction,
 }: {
   isRecording: boolean;
   hasTranscriptSegments: boolean;
   hasSummary: boolean;
-  canEdit: boolean;
   isProcessingAction: boolean;
 }): boolean {
-  return !isRecording && hasTranscriptSegments && !hasSummary && canEdit && !isProcessingAction;
+  return !isRecording && hasTranscriptSegments && !hasSummary && !isProcessingAction;
 }
 
 // Folder scopes get the folder-specific empty title; space roots keep the generic one.

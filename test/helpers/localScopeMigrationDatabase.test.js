@@ -98,7 +98,6 @@ function createDatabaseManager() {
 
   const manager = Object.create(DatabaseManager.prototype);
   manager.db = sqlite;
-  manager.activeAccountId = null;
   return { manager, sqlite };
 }
 
@@ -166,17 +165,11 @@ test("re-home moves every account and team row into the local private space", (t
   assert.equal(sqlite.prepare("SELECT COUNT(*) AS n FROM space_accounts").get().n, 0);
 });
 
-test("re-homed rows are visible in the local scope and a rerun changes nothing", (t) => {
+test("a re-home rerun changes nothing", (t) => {
   const { manager, sqlite } = createDatabaseManager();
   t.after(() => sqlite.close());
 
   manager._rehomeAccountScopedRowsToLocal();
-  const scope = manager._accountScopeCondition("notes");
-  const visible = sqlite
-    .prepare(`SELECT COUNT(*) AS n FROM notes WHERE ${scope.sql}`)
-    .get(...scope.params).n;
-  assert.equal(visible, 7);
-
   const before = sqlite.prepare("SELECT * FROM folders ORDER BY id").all();
   manager._rehomeAccountScopedRowsToLocal();
   assert.deepEqual(sqlite.prepare("SELECT * FROM folders ORDER BY id").all(), before);

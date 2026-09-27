@@ -23,7 +23,6 @@ import {
   TINFOIL_PROXY_REQUIRED_ERROR,
   type TranscriptionProviderBaseUrl,
 } from "../services/transcriptionBaseUrl.ts";
-import type { ManagedEnterpriseRequestContext } from "../types/enterpriseIdentity.ts";
 
 const BYOK_FILE_SIZE_LIMIT = 25 * 1024 * 1024;
 
@@ -69,27 +68,11 @@ export interface TranscriptionRouteSettings {
   preferredLanguage?: string;
 }
 
-/**
- * Outcome of managed enterprise STT resolution, computed by the caller
- * (renderer: enterpriseIdentityStore; main: enterpriseIdentityManager). The
- * context is identity metadata for main-process re-validation, never a secret.
- */
-export type ManagedTranscriptionResolution =
-  | {
-      kind: "managed";
-      provider: "azure";
-      deployment: string;
-      context: ManagedEnterpriseRequestContext;
-    }
-  | { kind: "error"; message: string; code: string; messageKey?: string };
-
 export interface TranscriptionRouteInput {
   /** Scope-resolved snapshot — the resolver never re-maps selections. */
   settings: TranscriptionRouteSettings;
   /** Provider registry, for the Tinfoil-host guard. Renderer passes ModelRegistry, main the raw JSON. */
   providers?: readonly TranscriptionProviderBaseUrl[];
-  /** Managed enterprise STT outcome; when present it outranks every personal setting. */
-  managed?: ManagedTranscriptionResolution | null;
   /**
    * Whether the selected provider's BYOK key is present — a presence flag, never
    * the key. Consulted only for realtime-only providers: the recorder skips
@@ -124,16 +107,6 @@ export type TranscriptionRoute =
       model: string | null;
       auth: { scheme: "bearer" | "azure-api-key" | "none"; keyRef: string | null };
       sizeCapBytes: number | null;
-      language?: string;
-    }
-  | {
-      // Workspace-managed Azure STT. Executed only in the main process, which
-      // re-validates the context and holds the Entra token.
-      transport: "managed";
-      provider: "azure";
-      deployment: string;
-      context: ManagedEnterpriseRequestContext;
-      sizeCapBytes: number;
       language?: string;
     };
 
@@ -225,7 +198,6 @@ function customEndpointError(): TranscriptionRoute {
 export function resolveTranscriptionRoute({
   settings,
   providers = [],
-  managed: managedResolution,
   hasProviderKey,
   request,
 }: TranscriptionRouteInput): TranscriptionRoute {
@@ -236,24 +208,8 @@ export function resolveTranscriptionRoute({
       ? undefined
       : s.preferredLanguage.split("-")[0]);
 
-  // Managed enterprise STT outranks every personal setting.
-  if (managedResolution) {
-    if (managedResolution.kind === "error") {
-      return error(managedResolution.message, managedResolution.code, managedResolution.messageKey);
-    }
-    return {
-      transport: "managed",
-      provider: managedResolution.provider,
-      deployment: managedResolution.deployment,
-      context: managedResolution.context,
-      sizeCapBytes: BYOK_FILE_SIZE_LIMIT,
-      language,
-    };
-  }
-
-  // An "enterprise" selection with no managed resolution means
-  // the managed config has not resolved (loading, evicted, or absent). Never
-  // fall through to a personal lane in that state.
+  // An "enterprise" selection was only ever served by managed enterprise
+  // transcription. Never fall through to a personal lane for it.
   if (s.transcriptionMode === "enterprise") {
     return error(
       "Managed transcription is not available right now. Try again in a moment.",

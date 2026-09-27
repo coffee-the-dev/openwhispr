@@ -23,9 +23,6 @@ async function loadFileTranscription(t) {
   const { window } = installBrowserGlobals(t);
   const vite = await createRendererServer(t, {
     cachePrefix: "openwhispr-file-diarization-warning-test-",
-    mockModules: {
-      "/lib/auth": "export const withSessionRefresh = (fn) => fn();",
-    },
   });
   const mod = await vite.ssrLoadModule("/services/fileTranscription.ts");
   window.electronAPI.transcribeAudioFile = async () => ({

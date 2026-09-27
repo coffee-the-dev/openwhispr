@@ -22,7 +22,7 @@ function createDatabase(t, { migrate = true, filename = ":memory:" } = {}) {
   sqlite.exec(`
     CREATE TABLE IF NOT EXISTS notes (
       id INTEGER PRIMARY KEY, title TEXT, content TEXT, enhanced_content TEXT,
-      space_id INTEGER, folder_id INTEGER, deleted_at TEXT, account_id TEXT,
+      space_id INTEGER, folder_id INTEGER, deleted_at TEXT,
       updated_at TEXT
     );
   `);
@@ -148,15 +148,11 @@ test("full reindex refreshes revisions and preserves deletion tombstones", (t) =
   );
 });
 
-test("indexing reads current notes across accounts including soft deletion", (t) => {
+test("indexing reads the current note row", (t) => {
   const manager = createDatabase(t);
-  manager.activeAccountId = "first-account";
-  manager.db.exec(
-    "INSERT INTO notes (id, title, account_id, deleted_at) VALUES (1, 'Other', 'other-account', '2026-09-21')"
-  );
-  const note = manager.getNoteForVectorIndex(1);
-  assert.equal(note.title, "Other");
-  assert.equal(note.deleted_at, "2026-09-21");
+  manager.db.exec("INSERT INTO notes (id, title) VALUES (1, 'Current')");
+  assert.equal(manager.getNoteForVectorIndex(1).title, "Current");
+  assert.equal(manager.getNoteForVectorIndex(2), null);
 });
 
 test("pending deletions and acknowledged revisions survive database restart", (t) => {

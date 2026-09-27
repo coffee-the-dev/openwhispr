@@ -13,6 +13,10 @@ function installBrowserGlobals(t, { initialStorage = {}, window: windowProps = {
     setItem: (key, value) => values.set(key, String(value)),
     removeItem: (key) => values.delete(key),
     clear: () => values.clear(),
+    key: (index) => [...values.keys()][index] ?? null,
+    get length() {
+      return values.size;
+    },
   };
   globalThis.localStorage = storage;
   globalThis.window = {

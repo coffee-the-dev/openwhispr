@@ -5,18 +5,13 @@ import {
   GalleryVerticalEnd,
   KeyRound,
   Laptop,
-  MonitorSmartphone,
   Server,
-  ShieldCheck,
-  WandSparkles,
   WifiOff,
-  Zap,
 } from "../icons";
 import { useTranslation } from "react-i18next";
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from "../ui/dialog";
 import { getParakeetModelInfo } from "../../models/ModelRegistry";
 import type { OnboardingSetupMode } from "./flow";
-import { BrandMark } from "./OnboardingShell";
 import { LOCAL_ASR_ORGANIZATIONS } from "../../helpers/localASROrganization";
 import { getProviderIcon, isMonochromeProvider } from "@/utils/providerIcons";
 import { cn } from "../lib/utils";
@@ -25,18 +20,15 @@ import { cn } from "../lib/utils";
 import warningBackdrop from "../../assets/onboarding-setup-warning-hero.webp";
 import apiSetupHero from "../../assets/onboarding-api-setup-hero.webp";
 
-type SetupMode = Exclude<OnboardingSetupMode, null>;
-type AdvancedSetupMode = Exclude<SetupMode, "cloud">;
+type SetupMode = Exclude<OnboardingSetupMode, null | "cloud">;
 // Local opens the warning dialog; BYOK is selected directly from the
 // more-options modal, so a "byok" pending state is unreachable.
-type WarningSetupMode = Exclude<AdvancedSetupMode, "byok">;
+type WarningSetupMode = Exclude<SetupMode, "byok">;
 
 const REFERENCE_LOCAL_MODEL_ID = "nemotron-3.5-asr-streaming-0.6b";
 
 interface SetupChoiceStepProps {
-  isSignedIn: boolean;
   onSelect: (mode: SetupMode, options?: { selfHosted?: boolean }) => void;
-  onRequestAuthentication: () => void;
 }
 
 interface MoreSetupOption {
@@ -46,29 +38,17 @@ interface MoreSetupOption {
   description: string;
 }
 
-// Figma "Frame 49"–"Frame 52": row, gap 8, a 14px mark beside 14/140% body.
-// The mark is tertiary grey on the self-serve cards and the brand accent on the
-// cloud card, which is the only visual weighting between them.
+// Figma "Frame 49"–"Frame 52": row, gap 8, a tertiary 14px mark beside 14/140% body.
 //
 // strokeWidth stays at the icon set's default 2 rather than the 1.16667 the
 // export shows. Both describe the same line: Figma exports these at viewBox
 // 0 0 14 14, so its 1.16667 is already in 14px space, while the icons draw in a
 // 24 viewBox scaled down to 14 — 2 x (14/24) = 1.1667 device px, exactly the
 // spec. Passing 1.167 here applies the scale twice and renders a 0.68px hairline.
-function Feature({
-  icon: Icon,
-  accent = false,
-  children,
-}: {
-  icon: typeof Zap;
-  accent?: boolean;
-  children: string;
-}) {
+function Feature({ icon: Icon, children }: { icon: typeof Laptop; children: string }) {
   return (
     <li className="flex items-center gap-1.5 text-xs leading-[1.4] text-[var(--onboarding-text-primary)]">
-      <Icon
-        className={`size-3 shrink-0 ${accent ? "text-[var(--onboarding-accent)]" : "text-[var(--onboarding-text-tertiary)]"}`}
-      />
+      <Icon className="size-3 shrink-0 text-[var(--onboarding-text-tertiary)]" />
       {children}
     </li>
   );
@@ -109,11 +89,7 @@ const CardAction = forwardRef<
   );
 });
 
-export default function SetupChoiceStep({
-  isSignedIn,
-  onSelect,
-  onRequestAuthentication,
-}: SetupChoiceStepProps) {
+export default function SetupChoiceStep({ onSelect }: SetupChoiceStepProps) {
   const { t } = useTranslation();
   const [pending, setPending] = useState<WarningSetupMode | null>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
@@ -131,19 +107,14 @@ export default function SetupChoiceStep({
   );
   const minimumLocalSpaceGb = Math.max(2, Math.ceil((localReferenceModel?.sizeMb ?? 0) / 1000));
 
-  const chooseCloud = () => {
-    if (isSignedIn) onSelect("cloud");
-    else onRequestAuthentication();
-  };
-
   const confirmPending = () => {
     if (!pending) return;
     onSelect(pending);
     setPending(null);
   };
 
-  // Radix otherwise focuses the first action (the Cloud escape hatch). Keep
-  // Enter aligned with the mode the user just selected by focusing Proceed.
+  // Radix otherwise focuses the first action (Cancel). Keep Enter aligned with
+  // the mode the user just selected by focusing Proceed.
   const handleWarningAutoFocus = (event: Event) => {
     event.preventDefault();
     confirmRef.current?.focus();
@@ -242,60 +213,6 @@ export default function SetupChoiceStep({
           </div>
           <CardAction onClick={() => setPending("local")}>
             {t("onboarding.rehaul.setupChoice.local.download")}
-          </CardAction>
-        </SetupCard>
-
-        <SetupCard>
-          {/* "Vector 1": a 343x183 wash pinned to the bottom of the cloud card.
-              Approximated with a gradient — the Figma vector was not exported. */}
-          <div
-            className="pointer-events-none absolute inset-x-0 bottom-0 h-[183px] bg-gradient-to-t from-[color-mix(in_srgb,var(--onboarding-accent)_12%,transparent)] to-transparent"
-            aria-hidden="true"
-          />
-          <div className="relative z-10 flex flex-col gap-4">
-            <div className="flex items-center justify-between">
-              {/* Frame 48: 40px mark on the brand gradient. */}
-              <span className="flex size-9 items-center justify-center rounded-full bg-gradient-to-b from-[#4079ed] to-[#244587] text-white">
-                <BrandMark className="size-6" />
-              </span>
-              {/* Frame 49: the "Recommended" chip. Figma has white text on a
-                  glass fill over the card's background artwork ("Vector 1",
-                  which was not exported) — on plain white that would be
-                  invisible, so it takes the brand fill until the art lands. */}
-              <span className="rounded-[47px] bg-[var(--onboarding-accent)] px-[9px] py-1 text-[10px] leading-[1.4] text-[var(--onboarding-accent-foreground)]">
-                {t("common.recommended")}
-              </span>
-            </div>
-
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <h2 className="onboarding-card-title text-[var(--onboarding-text-primary)]">
-                  {t("onboarding.rehaul.setupChoice.cloud.title")}
-                </h2>
-                <p className="text-sm leading-[1.4] text-[var(--onboarding-text-secondary)]">
-                  {t("onboarding.rehaul.setupChoice.cloud.description")}
-                </p>
-              </div>
-              <ul className="flex flex-col gap-2">
-                <Feature icon={Zap} accent>
-                  {t("onboarding.rehaul.setupChoice.cloud.features.fast")}
-                </Feature>
-                <Feature icon={ShieldCheck} accent>
-                  {t("onboarding.rehaul.setupChoice.cloud.features.privacy")}
-                </Feature>
-                <Feature icon={MonitorSmartphone} accent>
-                  {t("onboarding.rehaul.setupChoice.cloud.features.sync")}
-                </Feature>
-                <Feature icon={WandSparkles} accent>
-                  {t("onboarding.rehaul.setupChoice.cloud.features.features")}
-                </Feature>
-              </ul>
-            </div>
-          </div>
-          <CardAction brand onClick={chooseCloud}>
-            {isSignedIn
-              ? t("onboarding.rehaul.setupChoice.cloud.continue")
-              : t("onboarding.rehaul.setupChoice.cloud.signIn")}
           </CardAction>
         </SetupCard>
       </div>
@@ -461,17 +378,11 @@ export default function SetupChoiceStep({
               with font-semibold and an outline variant whose border did not
               render against white. */}
           {/* Frame 2147259003: row, gap 10, both actions growing equally. */}
-          {/* The escape hatch is secondary on the left; proceeding with the mode
-              the user selected is primary on the right. */}
+          {/* Cancelling is secondary on the left; proceeding with the mode the
+              user selected is primary on the right. */}
           <div className="flex gap-2.5">
-            <CardAction
-              className="flex-1"
-              onClick={() => {
-                setPending(null);
-                chooseCloud();
-              }}
-            >
-              {t("onboarding.rehaul.setupChoice.useCloud")}
+            <CardAction className="flex-1" onClick={() => setPending(null)}>
+              {t("common.cancel")}
             </CardAction>
             <CardAction ref={confirmRef} brand className="flex-1" onClick={confirmPending}>
               {pending

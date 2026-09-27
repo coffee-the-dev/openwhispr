@@ -154,18 +154,6 @@ test("only offline local engines get a tap", async (t) => {
   assert.equal(taps({ useLocalWhisper: false, cloudTranscriptionMode: "openwhispr" }), false);
 });
 
-test("managed enterprise transcription gets no tap even with local settings", async (t) => {
-  const { createManager } = await loadWithSettings(t, offlineLocal, {
-    "/services/managedTranscription.ts": `
-      export const getManagedTranscriptionResolution = () => ({ kind: "managed" });
-      export const isManagedTranscriptionActive = () => true;
-    `,
-  });
-  const manager = createManager({ getWorkletBlobUrl: () => "blob:worklet" });
-
-  assert.equal(manager._startPcmTap(), null);
-});
-
 function startingManager(AudioManager, { prepared, tap, events }) {
   const stream = { getAudioTracks: () => [], getTracks: () => [] };
   return Object.assign(Object.create(AudioManager.prototype), {

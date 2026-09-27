@@ -1762,10 +1762,8 @@ if (typeof window !== "undefined") {
           "meeting"
         );
       }
-      // No note means no safe base to merge into, and writing to a deleted one
-      // would resurrect its tombstone in the sidebar, cloud mirror, and vector
-      // index.
-      if (!persisted || persisted.deleted_at) {
+      // No note means no safe base to merge into.
+      if (!persisted) {
         publish([]);
         return;
       }
@@ -1813,24 +1811,16 @@ if (typeof window !== "undefined") {
 }
 
 // Registered once at module load, like the diarization listener above: the
-// note can be deleted from the sidebar while the recording runs on. A team-note
-// delete the server denies revives the same row, and the snapshot pull that
-// follows re-syncs it live, so saves resume. A pull never clears deleted_at, so
-// one racing a real delete re-syncs the tombstone and the guard holds.
+// note can be deleted from the sidebar while the recording runs on.
 if (typeof window !== "undefined") {
   window.electronAPI?.onNoteDeleted?.(({ id }) => {
     if (isRecordingFlag && id === useMeetingRecordingStore.getState().recordingNoteId) {
       recordingNoteDeleted = true;
     }
   });
-  window.electronAPI?.onNoteSynced?.((note) => {
-    if (!note.deleted_at && note.id === useMeetingRecordingStore.getState().recordingNoteId) {
-      recordingNoteDeleted = false;
-    }
-  });
 }
 
-// A reload (Sign in, SSO completion, the crash screen's Reload) replaces this
+// A reload (the crash screen's Reload) replaces this
 // page mid-recording: main's owner-loss teardown ends the session, and this
 // module's state goes with the page before stopRecording can save what was said
 // since the last 30-second save. beforeunload runs first, for location.reload()

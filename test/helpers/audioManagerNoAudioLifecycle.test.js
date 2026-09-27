@@ -65,21 +65,3 @@ test("dictionary-echo silence keeps the recording but shares the settled outcome
   assert.deepEqual(order, ["idle", "no-audio"]);
   assert.deepEqual(saved, [{ message: "No audio detected", code: DICTIONARY_ECHO_CODE }]);
 });
-
-test("Cloud finding no speech is the no-audio outcome and keeps the recording", async (t) => {
-  const AudioManager = await loadManagerClass(t, {
-    useLocalWhisper: false,
-    cloudTranscriptionMode: "openwhispr",
-    isSignedIn: true,
-  });
-  // cloud-transcribe's shape for the API's 422 (ipcHandlers.js).
-  const failure = Object.assign(new Error("No speech detected in audio"), {
-    code: "NO_SPEECH_DETECTED",
-  });
-  const { manager, order, saved } = createManager(AudioManager, failure);
-
-  await manager.processAudio({ size: 256, type: "audio/webm" });
-
-  assert.deepEqual(order, ["idle", "no-audio"]);
-  assert.deepEqual(saved, [{ message: "No speech detected in audio", code: "NO_SPEECH_DETECTED" }]);
-});

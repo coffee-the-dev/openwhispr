@@ -70,8 +70,6 @@ const MOCKS = {
   "/hooks/useNotesOnboarding": `
     export const useNotesOnboarding = () => ({ isComplete: true, complete() {} });
   `,
-  "/hooks/useTeamSpacesCapability": `export const useTeamSpacesCapability = () => false;`,
-  "/hooks/useAuth": `export const useAuth = () => ({ isSignedIn: false, user: null });`,
   // Just enough of the note store for setActiveNoteId to drive note switches.
   "/stores/noteStore": `
     import { useSyncExternalStore } from "react";

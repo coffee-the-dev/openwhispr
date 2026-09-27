@@ -334,25 +334,7 @@ test("an unreachable Voice Assistant scope falls the panel back to the Chat scop
   assert.equal(attachScreenContext, true, "the fallback is gated on Chat's model, not the agent's");
 });
 
-test("a signed-in cloud Voice Assistant scope is reachable without a model and takes screenshots", () => {
-  const { config, attachScreenContext } = panel(
-    {
-      ...panelSettings,
-      isSignedIn: true,
-      dictationAgentMode: "openwhispr",
-      dictationAgentCloudMode: "openwhispr",
-      dictationAgentProvider: "openwhispr",
-      dictationAgentModel: "",
-    },
-    { hasScreenContext: true }
-  );
-
-  assert.equal(config.scope, "dictationAgent");
-  assert.equal(config.mode, "openwhispr");
-  assert.equal(attachScreenContext, true, "cloud vision-routes server-side");
-});
-
-test("a signed-out cloud Voice Assistant scope is unreachable and falls back to Chat", () => {
+test("an OpenWhispr Cloud Voice Assistant scope is unreachable and falls back to Chat", () => {
   const { config } = panel({
     ...panelSettings,
     dictationAgentMode: "openwhispr",

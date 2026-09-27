@@ -46,7 +46,7 @@ function createDb(t) {
   }
 }
 
-test("snippets diff trims, dedupes, updates, and preserves synced no-ops", (t) => {
+test("snippets diff trims, dedupes, and updates in place", (t) => {
   const db = createDb(t);
   if (!db) return;
   db.setSnippets([
@@ -55,149 +55,28 @@ test("snippets diff trims, dedupes, updates, and preserves synced no-ops", (t) =
   ]);
 
   assert.deepEqual(db.getSnippets(), [{ trigger: "signoff", replacement: "Regards" }]);
-  const [created] = db.getPendingSnippets();
-  assert.ok(created.client_snippet_id);
+  const { id } = db.db.prepare("SELECT id FROM snippets").get();
 
-  db.markSnippetSynced(created.id, "cloud-1", "2026-07-01T10:00:00.000Z");
-  db.setSnippets([{ trigger: "signoff", replacement: "Regards" }]);
-  assert.equal(db.getPendingSnippets().length, 0);
-
-  db.setSnippets([{ trigger: "signoff", replacement: "Best regards" }]);
-  const [updated] = db.getPendingSnippets();
-  assert.equal(updated.id, created.id);
-  assert.equal(updated.replacement, "Best regards");
+  db.setSnippets([{ trigger: "Signoff", replacement: "Cheers" }]);
+  assert.deepEqual(db.getSnippets(), [{ trigger: "Signoff", replacement: "Cheers" }]);
+  assert.equal(db.db.prepare("SELECT id FROM snippets").get().id, id);
 });
 
-test("snippet removals hard-delete unsynced rows and tombstone synced rows", (t) => {
+test("snippet removals delete the rows", (t) => {
   const db = createDb(t);
   if (!db) return;
+  db.setSnippets([
+    { trigger: "keep", replacement: "Kept" },
+    { trigger: "drop", replacement: "Dropped" },
+  ]);
 
-  db.setSnippets([{ trigger: "temp", replacement: "Temporary" }]);
-  db.setSnippets([]);
-  assert.equal(db.db.prepare("SELECT COUNT(*) AS count FROM snippets").get().count, 0);
+  db.setSnippets([{ trigger: "keep", replacement: "Kept" }]);
 
-  db.setSnippets([{ trigger: "synced", replacement: "Synced" }]);
-  const [created] = db.getPendingSnippets();
-  db.markSnippetSynced(created.id, "cloud-2", "2026-07-01T10:00:00.000Z");
-
-  db.setSnippets([]);
-  assert.deepEqual(db.getSnippets(), []);
-  const [deleted] = db.getPendingSnippetDeletes();
-  assert.equal(deleted.id, created.id);
-  assert.equal(deleted.cloud_id, "cloud-2");
+  assert.deepEqual(db.getSnippets(), [{ trigger: "keep", replacement: "Kept" }]);
+  assert.equal(db.db.prepare("SELECT COUNT(*) AS n FROM snippets").get().n, 1);
 });
 
-test("cloud snippets upsert by client id, cloud id, then trigger", (t) => {
-  const db = createDb(t);
-  if (!db) return;
-
-  const first = db.upsertSnippetFromCloud({
-    id: "cloud-1",
-    client_snippet_id: "client-1",
-    trigger: "intro",
-    replacement: "Hello there",
-    created_at: "2026-07-01T10:00:00.000Z",
-    updated_at: "2026-07-01T10:00:00.000Z",
-  });
-  assert.equal(first.trigger, "intro");
-  assert.equal(first.sync_status, "synced");
-
-  const byClient = db.upsertSnippetFromCloud({
-    id: "cloud-1",
-    client_snippet_id: "client-1",
-    trigger: "intro",
-    replacement: "Hello again",
-    created_at: "2026-07-01T10:00:00.000Z",
-    updated_at: "2026-07-01T11:00:00.000Z",
-  });
-  assert.equal(byClient.id, first.id);
-  assert.equal(byClient.replacement, "Hello again");
-
-  const byTrigger = db.upsertSnippetFromCloud({
-    id: "cloud-2",
-    client_snippet_id: "client-2",
-    trigger: "INTRO",
-    replacement: "Case merge",
-    created_at: "2026-07-01T12:00:00.000Z",
-    updated_at: "2026-07-01T12:00:00.000Z",
-  });
-  assert.equal(byTrigger.id, first.id);
-  assert.equal(byTrigger.cloud_id, "cloud-2");
-  assert.equal(byTrigger.client_snippet_id, "client-2");
-  assert.equal(db.db.prepare("SELECT COUNT(*) AS count FROM snippets").get().count, 1);
-});
-
-test("cloud rename onto a trigger another active snippet holds converges without throwing", (t) => {
-  const db = createDb(t);
-  if (!db) return;
-
-  db.upsertSnippetFromCloud({
-    id: "cloud-a",
-    client_snippet_id: "ca",
-    trigger: "foo",
-    replacement: "Foo text",
-    created_at: "2026-07-01T10:00:00.000Z",
-    updated_at: "2026-07-01T10:00:00.000Z",
-  });
-  db.upsertSnippetFromCloud({
-    id: "cloud-b",
-    client_snippet_id: "cb",
-    trigger: "bar",
-    replacement: "Bar text",
-    created_at: "2026-07-01T10:00:00.000Z",
-    updated_at: "2026-07-01T10:00:00.000Z",
-  });
-
-  const merged = db.upsertSnippetFromCloud({
-    id: "cloud-a",
-    client_snippet_id: "ca",
-    trigger: "bar",
-    replacement: "Foo renamed",
-    created_at: "2026-07-01T10:00:00.000Z",
-    updated_at: "2026-07-01T12:00:00.000Z",
-  });
-
-  assert.equal(merged.trigger, "bar");
-  assert.equal(merged.cloud_id, "cloud-a");
-  assert.deepEqual(db.getSnippets(), [{ trigger: "bar", replacement: "Foo renamed" }]);
-  assert.equal(db.db.prepare("SELECT COUNT(*) AS count FROM snippets").get().count, 1);
-});
-
-test("markSnippetSynced leaves a row pending when its content changed since the push", (t) => {
-  const db = createDb(t);
-  if (!db) return;
-
-  db.setSnippets([{ trigger: "brb", replacement: "be right back" }]);
-  const [pushed] = db.getPendingSnippets();
-
-  // A concurrent edit lands while the push (snapshot 'be right back') is in flight.
-  db.setSnippets([{ trigger: "brb", replacement: "back in a bit" }]);
-
-  const stale = db.markSnippetSynced(
-    pushed.id,
-    "cloud-1",
-    "2026-07-01T10:00:00.000Z",
-    "brb",
-    "be right back"
-  );
-  assert.equal(stale.changes, 0);
-  const [stillPending] = db.getPendingSnippets();
-  assert.equal(stillPending.id, pushed.id);
-  assert.equal(stillPending.replacement, "back in a bit");
-  assert.equal(stillPending.cloud_id, null);
-
-  const ok = db.markSnippetSynced(
-    pushed.id,
-    "cloud-1",
-    "2026-07-01T11:00:00.000Z",
-    "brb",
-    "back in a bit"
-  );
-  assert.equal(ok.changes, 1);
-  assert.equal(db.getPendingSnippets().length, 0);
-});
-
-test("setSnippets drops triggers longer than the sync limit", (t) => {
+test("setSnippets drops triggers longer than the limit", (t) => {
   const db = createDb(t);
   if (!db) return;
 

@@ -303,75 +303,13 @@ test("request overrides win: explicit model and effective language", async () =>
   assert.equal(route.language, "ja");
 });
 
-const MANAGED_STT = {
-  kind: "managed",
-  provider: "azure",
-  deployment: "gpt-4o-transcribe",
-  context: {
-    accountId: "account-a",
-    workspaceId: "workspace-a",
-    authGeneration: 1,
-    setupMode: "auto",
-    inferenceScope: "transcription",
-    provider: "azure",
-    generation: 3,
-    providerVersion: 2,
-  },
-};
-
-test("a managed resolution outranks every personal setting", async () => {
-  const route = await resolve(
-    {
-      transcriptionMode: "self-hosted",
-      remoteTranscriptionUrl: "http://192.168.1.5:11434/v1",
-      useLocalWhisper: true,
-      cloudTranscriptionProvider: "custom",
-      cloudTranscriptionBaseUrl: "https://example.test/v1",
-      preferredLanguage: "de-DE",
-    },
-    { managed: MANAGED_STT }
-  );
-  assert.equal(route.transport, "managed");
-  assert.equal(route.provider, "azure");
-  assert.equal(route.deployment, "gpt-4o-transcribe");
-  assert.equal(route.context, MANAGED_STT.context);
-  assert.equal(route.language, "de");
-  // Routes never carry secrets — the context is identity metadata only.
-  assert.equal("auth" in route, false);
-});
-
-test("a managed resolution error becomes an error route", async () => {
-  const route = await resolve(
-    { cloudTranscriptionProvider: "openai" },
-    {
-      managed: {
-        kind: "error",
-        message: "Managed access unavailable",
-        code: "MANAGED_CONFIG_UNAVAILABLE",
-      },
-    }
-  );
-  assert.equal(route.transport, "error");
-  assert.equal(route.code, "MANAGED_CONFIG_UNAVAILABLE");
-});
-
-test("an enterprise transcription mode without a managed resolution fails closed", async () => {
+test("an enterprise transcription mode fails closed", async () => {
   const route = await resolve({
     transcriptionMode: "enterprise",
     cloudTranscriptionProvider: "openai",
   });
   assert.equal(route.transport, "error");
   assert.equal(route.code, "MANAGED_CONFIG_UNAVAILABLE");
-});
-
-test("an enterprise transcription mode WITH a managed resolution takes the managed transport, not the fail-closed guard", async () => {
-  const route = await resolve(
-    { transcriptionMode: "enterprise", cloudTranscriptionProvider: "openai" },
-    { managed: MANAGED_STT }
-  );
-  assert.equal(route.transport, "managed");
-  assert.equal(route.provider, "azure");
-  assert.equal(route.deployment, "gpt-4o-transcribe");
 });
 
 test("Orukeet fallback preserves the custom Bearer key", async () => {

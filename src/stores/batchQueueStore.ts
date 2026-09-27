@@ -5,7 +5,6 @@ import type { FileTranscriptionConfig, DiarizationSettings } from "../services/f
 import { DOWNLOAD_ERROR_KEYS, transcriptionErrorKey } from "../components/notes/shared";
 import { saveUploadNote, uploadTitleFallback } from "../services/uploadNotes";
 import { getSettings } from "./settingsStore";
-import { isManagedTranscriptionActive } from "../services/managedTranscription";
 
 export type QueueItemStatus = "queued" | "downloading" | "transcribing" | "done" | "error";
 

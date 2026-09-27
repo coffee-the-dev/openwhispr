@@ -54,7 +54,6 @@ test("persisted cloud and provider modes move to local or self-hosted once", asy
     }
     assert.equal(state.chatAgentProvider, "");
     assert.equal(state.cleanupProvider, "");
-    assert.equal(state.enterpriseSetupMode, "manual");
     assert.equal(storage.getItem("_localOnlyModesMigrated"), "1");
   });
 
@@ -170,9 +169,18 @@ test("persisted cloud and provider modes move to local or self-hosted once", asy
     assert.equal(state.noteFormattingModel, "");
   });
 
-  await t.test("managed enterprise setup is switched off", async () => {
-    const state = await load({ enterpriseSetupMode: "auto" });
-    assert.equal(state.enterpriseSetupMode, "manual");
+  await t.test("retired account, sync and enterprise settings are dropped", async () => {
+    const retired = {
+      enterpriseSetupMode: "auto",
+      isSignedIn: "true",
+      cloudBackupEnabled: "true",
+      activeWorkspaceId: "workspace-1",
+      "lastSyncedAt.notes": "2026-01-01T00:00:00.000Z",
+      "workspaces.joinPromptDismissed.user-1": "[]",
+      "leaderboardLeavePending:user-1": '{"attempts":1}',
+    };
+    await load(retired);
+    for (const key of Object.keys(retired)) assert.equal(storage.getItem(key), null, key);
   });
 
   await t.test("the migration runs once", async () => {

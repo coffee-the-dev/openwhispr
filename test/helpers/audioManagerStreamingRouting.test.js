@@ -93,7 +93,7 @@ test("Gemini's live model routes onto the gemini-streaming-* channels", async (t
   ]);
 });
 
-test("Gemini streaming needs a streaming model, plus a key (byok) or an account (managed)", async (t) => {
+test("Gemini streaming needs a streaming model and a key", async (t) => {
   const manager = await loadManager(t);
   manager.sttConfig = { dictation: { mode: "streaming" } };
   const gemini = (overrides) =>
@@ -109,10 +109,8 @@ test("Gemini streaming needs a streaming model, plus a key (byok) or an account 
   gemini({ geminiApiKey: "" });
   assert.equal(manager.shouldUseStreaming(), false);
 
-  gemini({ cloudTranscriptionMode: "openwhispr", isSignedIn: true });
-  assert.equal(manager.shouldUseStreaming(), true);
-
-  gemini({ cloudTranscriptionMode: "openwhispr", isSignedIn: false });
+  // OpenWhispr Cloud streaming needs an account this build does not have.
+  gemini({ cloudTranscriptionMode: "openwhispr" });
   assert.equal(manager.shouldUseStreaming(), false);
 
   // The batch Gemini model on the same provider stays on HTTP.
@@ -179,56 +177,9 @@ test("explicit Orukeet custom endpoint uses PCM streaming without cloud login", 
   assert.equal(manager.shouldUseStreaming(), false);
 });
 
-test("managed Orukeet rollout overrides stale personal provider and model without a key", async (t) => {
-  const manager = await loadManager(t);
-  manager.sttConfig = { dictation: { mode: "streaming" }, streamingProvider: "orukeet" };
-  setSettings({
-    cloudTranscriptionMode: "openwhispr",
-    cloudTranscriptionProvider: "gemini",
-    cloudTranscriptionModel: "gemini-3.5-transcribe",
-  });
-  assert.equal(manager.shouldUseStreaming(), true);
-  assert.equal(manager.getStreamingProviderName(), "orukeet");
-  const calls = [];
-  globalThis.window.electronAPI.dictationRealtimeWarmup = async (options) => {
-    calls.push(options);
-    return { success: true };
-  };
-  await manager.warmupStreamingConnection();
-  assert.equal(calls[0].mode, "openwhispr");
-  assert.equal(calls[0].provider, "orukeet");
-  assert.equal(calls[0].model, "orukeet-v0.1.0");
-  assert.equal(calls[0].baseUrl, undefined);
-  setSettings({ cloudTranscriptionMode: "openwhispr", isSignedIn: false });
-  assert.equal(manager.shouldUseStreaming(), false);
-  setSettings({ cloudTranscriptionMode: "openwhispr" });
-  manager.sttConfig.dictation.mode = "batch";
-  assert.equal(manager.shouldUseStreaming(), false);
-  setSettings({ cloudTranscriptionMode: "byok" });
-  assert.equal(manager.getStreamingProviderName(), "openai-realtime");
-});
-
 const orukeetConfig = { dictation: { mode: "streaming" }, streamingProvider: "orukeet" };
 const managedSettings = (overrides) =>
   setSettings({ cloudTranscriptionMode: "openwhispr", isSignedIn: true, ...overrides });
-
-test("managed Orukeet only streams languages the model covers", async (t) => {
-  const manager = await loadManager(t);
-  manager.sttConfig = orukeetConfig;
-
-  managedSettings({ preferredLanguage: "fr" });
-  assert.equal(manager.shouldUseStreaming(), true);
-  assert.equal(manager.getStreamingProviderName(), "orukeet");
-
-  managedSettings({ preferredLanguage: "ja" });
-  assert.equal(manager.shouldUseStreaming(), false);
-
-  managedSettings({ preferredLanguage: "auto" });
-  assert.equal(manager.shouldUseStreaming(), true);
-
-  managedSettings({ preferredLanguage: "fr", isSignedIn: false });
-  assert.equal(manager.shouldUseStreaming(), false);
-});
 
 test("a refused managed Orukeet session starts a batch recording instead of failing", async (t) => {
   const manager = await loadManager(t);
@@ -272,16 +223,14 @@ test("a refused managed Orukeet session starts a batch recording instead of fail
   assert.equal(errors.length, 0);
 });
 
-test("the weekly word quota on a managed Orukeet start opens the upgrade prompt", async (t) => {
-  const { createManager, window } = await loadAudioManager(t, {
+test("the weekly word quota on a managed Orukeet start fails without a batch fallback", async (t) => {
+  const { createManager } = await loadAudioManager(t, {
     cachePrefix: "openwhispr-streaming-routing-test-",
     settingsKey: "__streamingRoutingSettings",
   });
   const manager = createManager();
   manager.sttConfig = orukeetConfig;
   managedSettings({ preferredLanguage: "fr" });
-  const prompts = [];
-  window.electronAPI.notifyLimitReached = (data) => prompts.push(data);
 
   assert.throws(
     () =>
@@ -297,7 +246,6 @@ test("the weekly word quota on a managed Orukeet start opens the upgrade prompt"
       ),
     { code: "LIMIT_REACHED", message: "Weekly word limit reached" }
   );
-  assert.deepEqual(prompts, [{ wordsUsed: 2000, limit: 2000 }]);
   // A quota denial is not a fallback: batch would be refused the same way.
   assert.ok(!manager.streamingFallbackReason);
 });

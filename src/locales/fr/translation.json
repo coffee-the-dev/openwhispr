@@ -137,21 +137,6 @@
     "screenRecording": "Les réglages d'enregistrement de l'écran ne sont pas disponibles sur cette plateforme.",
     "loginItems": "Les réglages des éléments d'ouverture ne sont pas disponibles sur cette plateforme."
   },
-  "upgradePrompt": {
-    "paymentFailed": "Nous n'avons pas pu traiter votre paiement",
-    "weeklyLimit": "Vous avez atteint votre limite hebdomadaire",
-    "pastDueDescription": "Vous êtes temporairement sur le plan gratuit — pas de souci, vous avez encore {{limit}} mots par semaine.\nMettez à jour votre moyen de paiement pour revenir à Pro illimité.",
-    "limitDescription": "{{used}} de {{limit}} mots utilisés.\nVotre transcription a été sauvegardée et collée.",
-    "updatePayment": "Mettre à jour le moyen de paiement",
-    "updatePaymentDescription": "Retrouvez les transcriptions Pro illimitées.",
-    "upgradeToPro": "Passer à Pro",
-    "upgradeDescription": "Transcriptions illimitées à partir de $8/mois.",
-    "useApiKey": "Utiliser votre propre clé API",
-    "useApiKeyDescription": "Apportez votre propre clé pour un usage illimité.",
-    "switchToLocal": "Passer en local",
-    "switchToLocalDescription": "Transcription hors ligne. Sans limites.",
-    "rollingWeeklyLimit": "Limite hebdomadaire glissante"
-  },
   "windowControls": {
     "minimize": "Réduire",
     "maximize": "Agrandir",
@@ -163,7 +148,6 @@
   },
   "common": {
     "continue": "Continuer",
-    "add": "Ajouter",
     "retry": "Réessayer",
     "back": "Retour",
     "logout": "Se déconnecter",
@@ -175,7 +159,6 @@
     "cancel": "Annuler",
     "recommended": "Recommandé",
     "active": "Actif",
-    "freeAccountRequired": "Compte gratuit requis",
     "comingSoon": "Bientôt disponible",
     "cloud": "Cloud",
     "local": "Local",
@@ -191,18 +174,11 @@
     "close": "Fermer",
     "dismiss": "Ignorer",
     "save": "Enregistrer",
-    "saving": "Enregistrement…",
-    "create": "Créer",
-    "delete": "Supprimer",
     "actions": "Actions",
     "error": "Une erreur s'est produite",
     "unknownError": "Une erreur inconnue s'est produite",
-    "copy": "Copier",
     "copied": "Copié",
-    "done": "Terminé",
-    "skip": "Passer",
-    "managedConfigLoading": "Vérification de la configuration gérée de votre organisation en cours. Réessayez dans un instant.",
-    "managedConfigUnavailable": "L'accès d'entreprise géré est indisponible. Reconnectez-vous ou contactez votre administrateur."
+    "skip": "Passer"
   },
   "onboarding": {
     "rehaul": {
@@ -309,18 +285,6 @@
         "titleLineOne": "Choisissez votre",
         "titleLineTwo": "configuration OpenWhispr",
         "description": "Choisissez l’option qui correspond à votre façon de travailler.",
-        "cloud": {
-          "title": "OpenWhispr Cloud",
-          "description": "Bénéficiez de 2 000 mots gratuits par semaine. Vos réglages restent synchronisés entre vos appareils.",
-          "continue": "Continuer gratuitement",
-          "signIn": "Connectez-vous pour utiliser Cloud",
-          "features": {
-            "fast": "Le plus rapide, aucune configuration",
-            "privacy": "Privacy-focused processing",
-            "sync": "Réglages synchronisés entre appareils",
-            "features": "Fonctions d’IA pour les notes et les actions"
-          }
-        },
         "byok": {
           "title": "Fournisseur d’API",
           "description": "Utilisez votre propre clé API."
@@ -359,7 +323,6 @@
             }
           }
         },
-        "useCloud": "Utiliser Cloud à la place",
         "continueSetup": "Poursuivre la configuration",
         "showMore": "Afficher plus d’options",
         "moreOptions": {
@@ -553,7 +516,8 @@
         "step2": "Ouvrez la console Corti et créez des identifiants API",
         "step3": "Collez votre Client ID et votre Secret ci-dessous"
       }
-    }
+    },
+    "welcomeSubtitle": "Le pouvoir de votre voix. À vos conditions."
   },
   "streaming": {
     "errors": {
@@ -569,19 +533,9 @@
     }
   },
   "controlPanel": {
-    "limit": {
-      "weeklyTitle": "Limite hebdomadaire atteinte",
-      "weeklyDescription": "Votre limite se renouvelle de manière glissante. Passez à Pro ou utilisez votre propre clé API pour un usage illimité."
-    },
     "accessibilityMissing": {
       "title": "Autorisations d'accessibilité nécessaires",
       "description": "Nous avons détecté qu'OpenWhispr a besoin des autorisations d'accessibilité pour fonctionner correctement. Veuillez les activer ci-dessous."
-    },
-    "billing": {
-      "pastDueTitle": "Nous n'avons pas pu traiter votre paiement",
-      "pastDueDescription": "Pas de souci : vous êtes temporairement sur le plan gratuit. Mettez à jour votre paiement dans Paramètres pour revenir à Pro.",
-      "bannerDescription": "Vous êtes pour le moment sur le plan gratuit : vous avez encore {{limit}} mots par semaine. Mettez à jour votre paiement pour revenir à Pro.",
-      "updatePayment": "Mettre à jour le paiement"
     },
     "history": {
       "couldNotLoadTitle": "Impossible de charger votre historique",
@@ -628,8 +582,7 @@
       "rawTranscript": "Transcription brute",
       "clearAll": "Tout effacer",
       "clearAllTitle": "Effacer toutes les transcriptions",
-      "clearAllDescription": "Toutes les transcriptions, tous les fichiers audio et les compteurs Insights seront définitivement supprimés de cet appareil et de votre compte.",
-      "clearAllDescriptionDevice": "Toutes les transcriptions, tous les fichiers audio et les compteurs Insights seront définitivement supprimés de cet appareil. Les compteurs déjà synchronisés avec un compte ne seront pas affectés.",
+      "clearAllDescription": "Toutes les transcriptions, tous les fichiers audio et les compteurs Insights seront définitivement supprimés de cet appareil.",
       "clearAllSuccess": "Historique effacé",
       "clearAllErrorTitle": "Impossible d'effacer l'historique",
       "clearAllErrorDescription": "Une erreur est survenue. Veuillez réessayer.",
@@ -711,41 +664,8 @@
       "endpointHelp": "Pointez vers un serveur compatible OpenAI sur votre réseau local (par ex. Ollama, LM Studio, vLLM ou llama-server)."
     },
     "enterprise": {
-      "title": "Fournisseurs Enterprise",
-      "description": "Connectez-vous aux fournisseurs cloud avec les identifiants de votre organisation.",
-      "testConnection": "Tester la connexion",
-      "testing": "Test en cours…",
-      "testSuccess": "Connecté",
-      "testFailed": "Échec de la connexion",
-      "authMode": "Authentification",
-      "ssoProfile": "Profil SSO",
-      "accessKeys": "Clés d'accès",
-      "adc": "Application Default Credentials",
-      "apiKeyMode": "Clé API",
-      "region": "Région",
-      "profile": "Nom du profil",
-      "accessKeyId": "Access Key ID",
-      "secretAccessKey": "Secret Access Key",
-      "sessionToken": "Session Token (facultatif)",
-      "endpoint": "URL de l'endpoint",
-      "deploymentName": "Nom du déploiement",
-      "apiVersion": "Version de l'API",
-      "projectId": "ID du projet",
-      "location": "Emplacement",
-      "customModelId": "ID de modèle personnalisé",
-      "customModelPlaceholder": "Saisissez un ID de modèle ou un nom de déploiement",
-      "suggestedModels": "Modèles suggérés",
-      "browseModels": "Parcourir tous les modèles",
-      "loadingModels": "Récupération des modèles...",
-      "allModels": "Tous les modèles dans {{region}}",
-      "modelListError": "Impossible de charger les modèles.",
-      "bedrock": {
-        "ssoHelp": "Utilise votre configuration SSO d'AWS CLI. Assurez-vous d'avoir exécuté 'aws sso login'.",
-        "keysHelp": "Saisissez vos clés d'accès AWS IAM."
-      },
       "errors": {
         "bedrock": {
-          "temporaryAccessExpired": "L’accès AWS temporaire a expiré.",
           "ssoExpired": "La session SSO AWS a expiré.",
           "credentialsRejected": "Les identifiants AWS ont été refusés. Vérifiez l’ID de clé d’accès, le secret et le jeton de session.",
           "accessDenied": "AWS Bedrock a refusé cette requête. Demandez à votre administrateur AWS l’autorisation d’appeler le modèle sélectionné dans la région {{region}}.",
@@ -758,7 +678,6 @@
           "network": "AWS Bedrock est inaccessible. Vérifiez votre connexion Internet et réessayez.",
           "unknown": "Erreur AWS Bedrock : {{error}}",
           "actions": {
-            "refreshManagedAccess": "Déconnectez-vous puis reconnectez-vous pour actualiser l’accès de l’entreprise, puis réessayez.",
             "reauthenticate": "Exécutez la commande suivante dans votre terminal pour vous réauthentifier :"
           }
         }
@@ -771,14 +690,6 @@
         "underlyingError": "Erreur sous-jacente",
         "copy": "Copier les détails techniques",
         "copyCommand": "Copier la commande de récupération"
-      },
-      "azure": {
-        "endpointHelp": "L'endpoint de votre ressource Azure OpenAI (par ex. https://myresource.openai.azure.com).",
-        "deploymentHelp": "Nom du déploiement de votre modèle dans Azure OpenAI."
-      },
-      "vertex": {
-        "adcHelp": "Utilise Application Default Credentials. Exécutez : gcloud auth application-default login",
-        "apikeyHelp": "Clé API Vertex AI Express Mode obtenue depuis Google AI Studio."
       }
     },
     "tinfoil": {
@@ -868,8 +779,6 @@
         "screenContextSkipped": "La capture n'a pas pu être envoyée ; votre commande a été exécutée sans contexte d'écran.",
         "customEndpointInvalid": "Votre point de terminaison de transcription personnalisé n'est pas configuré ou son URL est invalide. Mettez-le à jour dans Réglages → Parole en texte.",
         "managedTranscriptionUnavailable": "La transcription gérée n'est pas disponible pour le moment. Réessayez dans un instant.",
-        "managedRouteInvalid": "La transcription gérée n'a pas pu démarrer en raison d'une incohérence de configuration. Réessayez ou contactez votre administrateur.",
-        "managedAuthRejected": "Les identifiants de transcription gérée de votre organisation ont été refusés. Contactez votre administrateur.",
         "streamingOnlyProvider": "Ce fournisseur ne prend en charge que la transcription en direct. Choisissez un autre fournisseur pour les imports de fichiers et les nouvelles tentatives.",
         "providerKeyMissing": "Aucune clé API n'est définie pour votre fournisseur de transcription. Ajoutez-la dans Réglages → Parole en texte.",
         "cleanupTruncated": "Le modèle d'IA a manqué de place avant de terminer le nettoyage de votre dictée.",
@@ -1034,85 +943,6 @@
       }
     }
   },
-  "auth": {
-    "cloudNotConfigured": "Cloud non configuré",
-    "common": {
-      "back": "Retour",
-      "continue": "Continuer",
-      "or": "ou"
-    },
-    "emailStep": {
-      "checkingEmail": "Vérification de votre adresse e-mail...",
-      "continueWithEmail": "Continuer avec l'e-mail",
-      "continueWithoutAccount": "Continuer sans compte",
-      "emailLabel": "Adresse e-mail",
-      "emailPlaceholder": "vous@exemple.com",
-      "useDifferentEmail": "Utiliser une autre adresse e-mail"
-    },
-    "errors": {
-      "accountExistsSignIn": "Un compte avec cet e-mail existe déjà. Veuillez vous connecter.",
-      "accountNotFoundCreate": "Aucun compte trouvé avec cet e-mail. Veuillez créer un compte.",
-      "authNotConfigured": "L'authentification n'est pas configurée",
-      "createAccountFailed": "Échec de la création du compte",
-      "failedProviderSignIn": "Échec de la connexion avec {{provider}}",
-      "failedUserCheck": "Échec de la vérification du compte utilisateur",
-      "generic": "Une erreur est survenue. Veuillez réessayer.",
-      "invalidCredentials": "E-mail ou mot de passe incorrect",
-      "invalidEmail": "Entrez une adresse e-mail valide"
-    },
-    "getStarted": "Commencer",
-    "legal": {
-      "and": "et",
-      "prefix": "En continuant, vous acceptez nos",
-      "privacy": "Politique de confidentialité",
-      "suffix": "",
-      "terms": "Conditions d'utilisation"
-    },
-    "passwordForm": {
-      "createAccount": "Créer un compte",
-      "createAccountButton": "Continuer avec l'e-mail",
-      "createAccountLink": "Créer un compte",
-      "createPasswordPlaceholder": "Créer un mot de passe",
-      "creatingAccount": "Création du compte...",
-      "enterPasswordPlaceholder": "Saisissez votre mot de passe",
-      "forgotPassword": "Mot de passe oublié ?",
-      "fullNamePlaceholder": "Ajoutez votre nom",
-      "nameLabel": "Nom",
-      "passwordLabel": "Mot de passe",
-      "haveAccount": "Vous avez déjà un compte ?",
-      "newHere": "Nouveau ici ?",
-      "passwordMinLength": "Le mot de passe doit contenir au moins 8 caractères",
-      "signIn": "Continuer avec l'e-mail",
-      "signInLink": "Se connecter",
-      "signingIn": "Connexion en cours...",
-      "welcomeBack": "Bon retour"
-    },
-    "signedIn": {
-      "welcomeBack": "Bon retour",
-      "notYou": "Ce n’est pas vous ? Se déconnecter"
-    },
-    "sso": {
-      "continueWithSSO": "Se connecter avec le SSO",
-      "workEmailLabel": "E-mail professionnel",
-      "emailPlaceholder": "Ajoutez votre e-mail",
-      "emailRequired": "Saisissez votre e-mail professionnel pour utiliser le SSO.",
-      "failed": "Échec de l’authentification unique. Veuillez réessayer.",
-      "companySignInTitle": "Utiliser la connexion de votre entreprise",
-      "requiredDescription": "{{domain}} exige le SSO pour OpenWhispr.",
-      "availableDescription": "Votre compte {{domain}} est prêt pour le SSO de l'entreprise.",
-      "useEmailInstead": "Utiliser plutôt l'e-mail et le mot de passe"
-    },
-    "social": {
-      "completeInBrowser": "Terminez la connexion dans votre navigateur",
-      "continueWithApple": "Continuer avec Apple",
-      "continueWithGoogle": "Continuer avec Google",
-      "continueWithMicrosoft": "Continuer avec Microsoft",
-      "protocolUnavailable": "Connexion par navigateur indisponible — réenregistrez le protocole openwhispr:// dans les paramètres Applications par défaut du système."
-    },
-    "welcomeSubtitle": "Le pouvoir de votre voix. À vos conditions.",
-    "welcomeTitle": "Bienvenue sur OpenWhispr",
-    "sessionExpired": "Session expirée. Veuillez relancer le processus d'inscription."
-  },
   "calendar": {
     "title": "Google Agenda",
     "status": "Statut",
@@ -1221,18 +1051,7 @@
   },
   "dictionarySuffix": "Suffixe du dictionnaire",
   "emailVerification": {
-    "checkEmailDescription": "Nous avons envoyé un lien de vérification à votre adresse :",
-    "checkEmailTitle": "E-mail de vérification envoyé",
-    "errors": {
-      "resendFailed": "Nous n'avons pas pu renvoyer l'e-mail. Veuillez réessayer.",
-      "serverUnreachable": "Impossible de joindre le serveur. Vérifiez votre connexion et réessayez."
-    },
-    "resendButton": "Renvoyer l'e-mail de vérification",
-    "resendIn": "Renvoyer dans {{seconds}}s",
-    "verifiedDescription": "Votre compte est prêt.",
-    "verifiedTitle": "Vérifié",
-    "waiting": "En attente de la vérification",
-    "backToSignIn": "Retour à la connexion"
+    "verifiedDescription": "Votre compte est prêt."
   },
   "errorBoundary": {
     "description": "Une erreur inattendue s'est produite. Veuillez recharger pour réessayer.",
@@ -1240,21 +1059,7 @@
     "title": "Une erreur est survenue"
   },
   "forgotPassword": {
-    "back": "Retour",
-    "backToSignIn": "Retour à la connexion",
-    "emailPlaceholder": "Saisissez votre e-mail",
-    "goBack": "Retour",
-    "notConfigured": "L'authentification n'est pas encore configurée.",
-    "sendResetLink": "Envoyer le lien de réinitialisation",
-    "sending": "Envoi...",
-    "subtitle": "Saisissez votre e-mail et nous vous enverrons un lien de réinitialisation",
-    "success": {
-      "description": "Nous avons envoyé un lien de réinitialisation de mot de passe à",
-      "help": "Vous n'avez pas reçu l'e-mail ? Vérifiez votre dossier spam ou réessayez.",
-      "title": "Vérifiez votre e-mail",
-      "tryAnother": "Essayer un autre e-mail"
-    },
-    "title": "Réinitialiser votre mot de passe"
+    "back": "Retour"
   },
   "actionPrompt": "Prompt d'action",
   "hotkeyGuidance": {
@@ -1448,24 +1253,11 @@
   },
   "settingsModal": {
     "groups": {
-      "account": "Compte",
       "app": "Application",
       "aiModels": "Modèles IA",
       "system": "Système"
     },
     "sections": {
-      "account": {
-        "description": "Profil & connexion",
-        "label": "Profil"
-      },
-      "plansBilling": {
-        "description": "Forfaits, utilisation & facturation",
-        "label": "Forfaits & facturation"
-      },
-      "workspace": {
-        "description": "Membres, espaces d'équipe et clés API",
-        "label": "Espace de travail"
-      },
       "general": {
         "description": "Apparence, sons & démarrage",
         "label": "Préférences"
@@ -1494,452 +1286,6 @@
     "title": "Paramètres"
   },
   "settingsPage": {
-    "workspace": {
-      "title": "Espace de travail",
-      "description": "Collaborez, partagez des notes et gérez l'accès à l'espace de travail au même endroit.",
-      "empty": {
-        "title": "Créez votre premier espace de travail",
-        "description": "Les espaces de travail vous permettent de collaborer et partager des notes.",
-        "create": "Créer un espace"
-      },
-      "loadError": {
-        "title": "Impossible de charger les espaces de travail",
-        "description": "Vérifiez votre connexion et réessayez.",
-        "retry": "Réessayer"
-      },
-      "tab": {
-        "general": "Général",
-        "members": "Membres",
-        "teams": "Groupes",
-        "developer": "Développeur"
-      },
-      "role": {
-        "owner": "Propriétaire",
-        "admin": "Administrateur",
-        "member": "Membre"
-      },
-      "general": {
-        "nameLabel": "Nom",
-        "saved": "Espace mis à jour",
-        "dangerTitle": "Supprimer l'espace",
-        "dangerDescription": "Toutes les notes, dossiers et intégrations partagés seront supprimés. Cette action est irréversible.",
-        "delete": "Supprimer l'espace",
-        "confirmTitle": "Supprimer {{name}} ?",
-        "confirmDescription": "Cela annule l'abonnement et supprime définitivement toutes les données.",
-        "deleting": "Suppression…",
-        "deleted": "Espace supprimé",
-        "leaveTitle": "Quitter l'espace",
-        "leaveDescription": "Vous perdrez l'accès à cet espace et à ses notes partagées.",
-        "leave": "Quitter l'espace",
-        "leaving": "Départ…",
-        "leaveConfirm": {
-          "title": "Quitter {{name}} ?",
-          "description": "Vous perdrez l'accès immédiatement. Un administrateur pourra vous réinviter."
-        },
-        "left": "Vous avez quitté {{name}}"
-      },
-      "members": {
-        "title": "Membres",
-        "description": "{{count}} sur {{seats}} sièges utilisés.",
-        "invite": "Inviter",
-        "empty": "Aucun membre pour l'instant.",
-        "loadError": "Impossible de charger les membres.",
-        "roleUpdated": "Rôle mis à jour",
-        "removed": "{{name}} retiré",
-        "promote": "Promouvoir administrateur",
-        "demote": "Rétrograder membre",
-        "transferOwnership": "Transférer la propriété",
-        "remove": "Retirer de l'espace",
-        "removeConfirm": {
-          "title": "Retirer ce membre ?",
-          "description": "{{name}} perdra immédiatement l'accès à {{workspace}}."
-        },
-        "transferConfirm": {
-          "title": "Transférer la propriété ?",
-          "description": "{{name}} devient propriétaire de {{workspace}}. Votre rôle passe à administrateur et seul le nouveau propriétaire pourra la retransférer."
-        }
-      },
-      "joinRequests": {
-        "title": "Demandes d'accès",
-        "approve": "Approuver",
-        "deny": "Refuser",
-        "approved": "{{name}} a rejoint l'espace de travail",
-        "denied": "Demande refusée",
-        "errorTitle": "Impossible de mettre à jour la demande"
-      },
-      "teams": {
-        "title": "Groupes",
-        "description": "Groupes de membres du workspace auxquels on peut donner accès aux espaces d'équipe en une fois.",
-        "new": "Nouveau groupe",
-        "empty": "Pas encore de groupes.",
-        "createFirst": "Créez votre premier groupe",
-        "addMembersLabel": "Ajouter des membres",
-        "createTitle": "Créer un groupe",
-        "nameLabel": "Nom du groupe",
-        "memberCount_one": "{{count}} membre",
-        "memberCount_other": "{{count}} membres",
-        "membersButton": "Membres",
-        "grantsAccessToSpaces_one": "Donne accès à {{count}} espace",
-        "grantsAccessToSpaces_other": "Donne accès à {{count}} espaces",
-        "couldNotCreate": "Impossible de créer le groupe",
-        "created": "{{team}} créée",
-        "deleted": "{{team}} supprimée",
-        "deleteConfirmTitle": "Supprimer {{team}} ?",
-        "deleteConfirmDescription": "Cela archive le groupe. Ses membres perdent l'accès qu'il accordait.",
-        "deleteConfirmSpaceAccess_one": "Ce groupe donne accès à {{count}} espace. Ses membres perdront cet accès.",
-        "deleteConfirmSpaceAccess_other": "Ce groupe donne accès à {{count}} espaces. Ses membres perdront cet accès.",
-        "members": {
-          "title": "Membres de {{team}}",
-          "removeConfirm": "Retirer {{name}} de {{team}} ?",
-          "leave": "Quitter le groupe",
-          "leftTeam": "Vous avez quitté {{team}}",
-          "leaveConfirm": "Quitter {{team}} ?",
-          "leaveConfirmDescription": "Vous perdrez l'accès aux espaces auxquels ce groupe est rattaché, sauf si vous y avez été ajouté directement ou si un autre groupe vous inclut."
-        }
-      },
-      "invites": {
-        "title": "Invitations en attente",
-        "expiresIn_one": "Expire dans {{count}} jour",
-        "expiresIn_other": "Expire dans {{count}} jours",
-        "expired": "Expirée",
-        "loadError": "Impossible de charger les invitations.",
-        "resend": "Renvoyer",
-        "resending": "Renvoi…",
-        "revoke": "Révoquer",
-        "resent": "Invitation renvoyée",
-        "resentNoEmail": "Invitation mise à jour, mais l'e-mail n'a pas pu être délivré.",
-        "revoked": "Invitation révoquée",
-        "revokeFailed": "Impossible de révoquer l'invitation",
-        "revokeConfirm": {
-          "title": "Révoquer cette invitation ?",
-          "description": "Le lien d'invitation pour {{email}} cessera de fonctionner."
-        }
-      },
-      "billing": {
-        "plan": "Plan",
-        "seats": "Sièges",
-        "ownerOnly": "Seul le propriétaire de l'espace de travail peut gérer l'abonnement.",
-        "nextInvoice": "Prochaine facture",
-        "manageStripe": "Gérer dans Stripe",
-        "startSubscription": "Démarrer l'abonnement",
-        "planLabel": {
-          "business": "Business",
-          "pro": "Pro",
-          "free": "Gratuit",
-          "enterprise": "Enterprise"
-        },
-        "status": {
-          "active": "Actif",
-          "trialing": "Période d'essai",
-          "past_due": "En retard",
-          "canceled": "Annulé",
-          "incomplete": "Incomplet",
-          "unpaid": "Impayé"
-        }
-      },
-      "developer": {
-        "title": "Clés API",
-        "description": "Accès programmatique limité à cet espace.",
-        "empty": "Aucune clé API. Créez-en une pour vous intégrer.",
-        "loadError": "Impossible de charger les clés API.",
-        "new": "Nouvelle clé",
-        "create": "Créer la clé",
-        "createTitle": "Créer une clé API",
-        "createDescription": "Choisissez les permissions. Vous pouvez la révoquer à tout moment.",
-        "nameLabel": "Nom de la clé",
-        "namePlaceholder": "Intégration production",
-        "revoke": "Révoquer la clé",
-        "revoked": "Clé {{name}} révoquée",
-        "lastUsed": "Dernière utilisation {{date}}",
-        "neverUsed": "Jamais utilisée",
-        "keyCreatedTitle": "Clé API créée",
-        "keyCreatedDescription": "Copiez cette clé maintenant — vous ne pourrez plus la voir.",
-        "revokeConfirm": {
-          "title": "Révoquer cette clé ?",
-          "description": "{{name}} cessera de fonctionner immédiatement. Toute intégration qui l'utilise commencera à échouer."
-        },
-        "scopes": {
-          "notes": {
-            "title": "Notes",
-            "read": "Lire les notes",
-            "write": "Modifier les notes"
-          },
-          "folders": {
-            "title": "Dossiers",
-            "read": "Lire les dossiers",
-            "write": "Modifier les dossiers"
-          },
-          "transcriptions": {
-            "title": "Transcriptions",
-            "read": "Lire les transcriptions"
-          },
-          "members": {
-            "title": "Membres",
-            "read": "Lire les membres",
-            "write": "Gérer les membres"
-          },
-          "billing": {
-            "title": "Facturation",
-            "read": "Lire la facturation"
-          },
-          "full": {
-            "title": "Accès complet",
-            "admin": "Administrateur de l'espace"
-          }
-        }
-      },
-      "enterpriseConsole": {
-        "title": "Console Enterprise",
-        "description": "Gérez le SSO, les politiques et les membres sur le web",
-        "open": "Ouvrir la console"
-      }
-    },
-    "unifiedBilling": {
-      "workspaceTitle": "Facturation de l'espace de travail",
-      "workspaceDescription": "Chaque espace de travail a son propre plan, ses sièges et son responsable de facturation.",
-      "billableSeat": "Votre siège est facturable",
-      "nonBillableSeat": "Accès administrateur uniquement · aucun siège payant",
-      "managedBy": "La facturation est gérée par {{owner}}.",
-      "addSeat": "Ajouter un siège",
-      "seatUpdated_one": "Capacité de l'espace de travail mise à jour : {{count}} siège",
-      "seatUpdated_other": "Capacité de l'espace de travail mise à jour : {{count}} sièges",
-      "seatUpdateFailed": "Impossible de mettre à jour les sièges de l'espace de travail",
-      "businessWorkspaceOnly": "Disponible pour les espaces de travail",
-      "personalPlanTitle": "Plan personnel",
-      "providedBy": "Plan personnel : Gratuit · Accès payant fourni par {{workspaces}}",
-      "confirmSeats": {
-        "title": "Ajouter un siège à l'espace de travail ?",
-        "description_one": "Passer {{workspace}} à {{count}} siège. Stripe calculera le changement au prorata.",
-        "description_other": "Passer {{workspace}} à {{count}} sièges. Stripe calculera le changement au prorata.",
-        "newCapacity": "Nouvelle capacité",
-        "chargeToday": "Montant facturé aujourd'hui",
-        "confirm": "Ajouter un siège"
-      }
-    },
-    "account": {
-      "badges": {
-        "free": "Gratuit",
-        "limitReached": "Limite atteinte",
-        "pastDue": "Paiement en retard",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "Essai"
-      },
-      "billing": {
-        "couldNotOpenDescription": "Nous avons eu un problème pour ouvrir la page de facturation. Veuillez réessayer.",
-        "couldNotOpenTitle": "Impossible d'ouvrir la facturation",
-        "manageBilling": "Gérer la facturation",
-        "opening": "Ouverture...",
-        "updatePaymentMethod": "Mettre à jour le moyen de paiement",
-        "contactOwnerTitle": "Contactez le propriétaire de l'espace de travail",
-        "contactOwnerDescription": "Seul le propriétaire de l'espace de travail peut modifier sa facturation."
-      },
-      "checkout": {
-        "couldNotOpenDescription": "Nous avons eu un problème pour ouvrir la page de paiement. Veuillez réessayer.",
-        "couldNotOpenTitle": "Impossible d'ouvrir le paiement",
-        "opening": "Ouverture...",
-        "upgradeToPro": "Passer à Pro"
-      },
-      "disabled": "Désactivé",
-      "featuresDisabled": "Fonctionnalités du compte désactivées",
-      "featuresDisabledDescription": "Définissez VITE_AUTH_URL dans votre fichier .env pour activer les fonctionnalités du compte.",
-      "notConfigured": "L'authentification n'est pas configurée",
-      "notSignedIn": "Non connecté",
-      "notSignedInDescription": "Créez un compte pour débloquer les fonctionnalités premium.",
-      "offline": "Hors ligne",
-      "pastDue": {
-        "description": "Vous êtes temporairement sur le plan gratuit. Mettez à jour votre moyen de paiement pour revenir à Pro.",
-        "title": "Nous n'avons pas pu traiter votre paiement"
-      },
-      "planDescriptions": {
-        "freeUsage": "{{used}} / {{limit}} mots cette semaine",
-        "nextBilling": "Prochaine facturation : {{date}}",
-        "pastDue": "{{used}} / {{limit}} mots gratuits cette semaine - mettez à jour le paiement pour restaurer Pro",
-        "trial": "{{days}} jours restants - transcriptions illimitées",
-        "unlimited": "Illimité"
-      },
-      "planLabels": {
-        "free": "Gratuit",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "Essai"
-      },
-      "pricing": {
-        "title": "Forfaits",
-        "billedYearly": "Facturation annuelle",
-        "free": {
-          "name": "Free",
-          "price": "$0",
-          "period": "pour toujours",
-          "features": [
-            "## OpenWhispr Cloud",
-            "2 000 mots/semaine de transcription",
-            "5 heures d'enregistrements de réunions/mois",
-            "## Toujours gratuit",
-            "Modèles d'IA locaux illimités",
-            "Transcription cloud illimitée avec vos propres clés API",
-            "Plus de 100 langues prises en charge",
-            "Dictionnaire personnalisé",
-            "Aucune conservation de données",
-            "Support communautaire"
-          ]
-        },
-        "pro": {
-          "name": "Pro",
-          "monthlyPrice": "$8",
-          "monthlyPeriod": "/mois",
-          "annualPrice": "$80",
-          "annualPeriod": "/an",
-          "annualEquivalent": "$6.67",
-          "includesPrefix": "Toutes les fonctionnalités Free +",
-          "features": [
-            "Transcription cloud illimitée",
-            "20 heures d'enregistrements de réunions/mois",
-            "Synchronisation entre appareils",
-            "Partagez des notes via des liens publics",
-            "Accès personnel à l'API",
-            "Intégration MCP dans toutes vos apps",
-            "Application mobile",
-            "Support par e-mail"
-          ],
-          "cta": "Commencer",
-          "switchToAnnual": "Passer à l'annuel"
-        },
-        "business": {
-          "name": "Business",
-          "monthlyPrice": "$16",
-          "monthlyPeriod": "/mois",
-          "annualPrice": "$160",
-          "annualPeriod": "/an",
-          "annualEquivalent": "$13.33",
-          "includesPrefix": "Toutes les fonctionnalités Pro +",
-          "badge": "Le plus populaire",
-          "features": [
-            "Enregistrements de réunions illimités",
-            "Rôles et gestion des membres de l'espace de travail",
-            "Mode assistant",
-            "Discutez avec vos données",
-            "Support prioritaire"
-          ],
-          "cta": "Commencer",
-          "switchToAnnual": "Passer à l'annuel"
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "Sur devis",
-          "subtitle": "Pour une sécurité avancée et un support dédié",
-          "includesPrefix": "Toutes les fonctionnalités Business +",
-          "features": [
-            "Crédits API gérés",
-            "Synchronisation cloud entre appareils",
-            "Fonctionnalités d'équipe et administration",
-            "SSO et conformité",
-            "Support dédié"
-          ],
-          "cta": "Contacter les ventes",
-          "upgradeCta": "Passer à Enterprise",
-          "askOwner": "Demandez à {{name}} de mettre à niveau votre espace de travail."
-        },
-        "currentPlan": "Forfait actuel",
-        "coveredByWorkspace": "Inclus dans votre plan d'espace de travail",
-        "upgrade": "Passer au supérieur",
-        "downgrade": "Rétrograder",
-        "planSwitched": "Forfait mis à jour avec succès",
-        "confirmSwitch": {
-          "title": "Confirmer le changement",
-          "description": "Passer à {{plan}} ({{interval}})",
-          "monthly": "mensuel",
-          "yearly": "annuel",
-          "chargeToday": "Montant aujourd'hui",
-          "accountCredit": "Crédit sur le compte",
-          "newPrice": "Nouveau prix",
-          "nextBilling": "Prochaine facturation",
-          "mo": "mo",
-          "yr": "yr",
-          "cancel": "Annuler",
-          "confirm": "Confirmer"
-        }
-      },
-      "rollingWeeklyLimit": "Limite hebdomadaire glissante",
-      "signOut": {
-        "failedDescription": "Un problème est survenu lors de la déconnexion. Veuillez réessayer.",
-        "failedTitle": "Impossible de se déconnecter",
-        "signOut": "Se déconnecter",
-        "signingOut": "Déconnexion..."
-      },
-      "title": "Compte",
-      "toasts": {
-        "approachingLimit": {
-          "description": "Vous avez utilisé {{used}} de {{limit}} mots gratuits cette semaine. Passez à Pro pour une utilisation illimitée.",
-          "title": "Limite hebdomadaire bientôt atteinte"
-        }
-      },
-      "trialCta": {
-        "button": "Créer un compte gratuit",
-        "description": "Transcriptions illimitées, traitement prioritaire et plus encore.",
-        "title": "Essayez Pro gratuitement pendant 7 jours"
-      },
-      "signedOutPlans": {
-        "button": "Créer un compte gratuit"
-      },
-      "user": "Utilisateur",
-      "wordsRemaining": "{{remaining}} restants",
-      "deleteAccount": {
-        "label": "Supprimer le compte",
-        "labelDescription": "Supprimer définitivement votre compte et vos données cloud personnelles. Les autres utilisateurs locaux et le contenu des espaces de travail sont conservés.",
-        "button": "Supprimer mon compte",
-        "deleting": "Suppression...",
-        "title": "Supprimer votre compte ?",
-        "description": "Cela supprime définitivement votre compte OpenWhispr et vos données personnelles. Le contenu des espaces de travail et les données des autres utilisateurs locaux restent sur cet appareil.",
-        "confirmText": "Supprimer le compte",
-        "eraseDeviceLabel": "Effacer aussi toutes les données de cet appareil",
-        "eraseDeviceDescription": "Supprime les notes et caches d’espaces de tous les utilisateurs locaux, les modèles téléchargés, paramètres, calendriers, identifiants et enregistrements.",
-        "eraseDeviceWarning": "Cet effacement de l’appareil est irréversible et affecte tous les utilisateurs locaux.",
-        "successTitle": "Compte supprimé",
-        "successDescription": "Votre compte et vos données personnelles ont été supprimés. Les autres utilisateurs locaux, espaces de travail, modèles et paramètres ont été conservés.",
-        "partialCleanupDescription": "Votre compte a été supprimé, mais une partie du nettoyage local n’a pas pu aboutir. Les autres utilisateurs et le contenu des espaces de travail ont été conservés.",
-        "failedTitle": "Échec de la suppression",
-        "failedDescription": "La suppression du compte n’a pas pu aboutir. Aucun effacement global de l’appareil n’a été lancé. Veuillez réessayer."
-      },
-      "profile": {
-        "name": {
-          "label": "Nom affiché",
-          "placeholder": "Votre nom",
-          "save": "Enregistrer",
-          "saving": "Enregistrement...",
-          "saved": "Nom affiché mis à jour",
-          "error": "Impossible de mettre à jour votre nom"
-        },
-        "password": {
-          "label": "Mot de passe",
-          "description": "Modifiez le mot de passe que vous utilisez pour vous connecter.",
-          "change": "Changer le mot de passe",
-          "dialogTitle": "Changer le mot de passe",
-          "dialogDescription": "Saisissez votre mot de passe actuel et choisissez-en un nouveau.",
-          "currentLabel": "Mot de passe actuel",
-          "newLabel": "Nouveau mot de passe",
-          "confirmLabel": "Confirmer le nouveau mot de passe",
-          "minLength": "Le mot de passe doit contenir au moins 8 caractères",
-          "mismatch": "Les mots de passe ne correspondent pas",
-          "revokeOthers": "Déconnecter les autres appareils",
-          "submit": "Mettre à jour le mot de passe",
-          "saving": "Mise à jour...",
-          "cancel": "Annuler",
-          "saved": "Mot de passe mis à jour"
-        },
-        "errors": {
-          "invalidPassword": "Votre mot de passe actuel est incorrect.",
-          "passwordTooShort": "Le mot de passe doit contenir au moins 8 caractères.",
-          "passwordTooLong": "Le mot de passe est trop long.",
-          "noPassword": "Aucun mot de passe n'est défini pour ce compte.",
-          "generic": "Une erreur est survenue. Veuillez réessayer."
-        }
-      },
-      "planUnavailable": {
-        "title": "Forfait indisponible",
-        "description": "Nous n'avons pas pu charger votre forfait pour le moment. Votre accès reste inchangé."
-      }
-    },
     "agentConfig": {
       "agentName": "Nom de l'assistant",
       "description": "Nommez votre assistant IA pour pouvoir l'interpeller directement pendant la dictée",
@@ -1968,11 +1314,9 @@
       "enableTextCleanup": "Activer la correction de texte",
       "enableTextCleanupDescription": "L'IA supprime les mots de remplissage, corrige la grammaire et la ponctuation",
       "modes": {
-        "openwhispr": "OpenWhispr Cloud",
         "providers": "Fournisseurs cloud",
         "local": "Local",
         "selfHosted": "Auto-hébergé",
-        "openwhisprDesc": "Résultats fiables. Aucune configuration requise.",
         "providersDesc": "Utilisez votre propre clé API.",
         "localDesc": "Modèles sur l'appareil. 100 % privé.",
         "selfHostedDesc": "Votre serveur sur votre réseau."
@@ -2005,15 +1349,6 @@
           "title": "Enterprise",
           "description": "Utilise le compte cloud de votre organisation."
         }
-      },
-      "managedEnterprise": {
-        "errorTitle": "L'IA d'entreprise gérée nécessite votre attention",
-        "title": "Géré par votre organisation",
-        "description": "La connexion fournit automatiquement un accès de courte durée. Aucune clé cloud ni configuration CLI n'est nécessaire.",
-        "usePersonalSetup": "Utiliser la configuration personnelle",
-        "availableTitle": "Configuration de l'organisation disponible",
-        "availableDescription": "Utilisez {{provider}} sans gérer d'identifiants.",
-        "useManaged": "Utiliser la version gérée"
       }
     },
     "developer": {
@@ -2263,11 +1598,6 @@
       "troubleshootingTitle": "Dépannage"
     },
     "privacy": {
-      "cloudBackup": "Sauvegarde cloud",
-      "cloudBackupDescription": "Sauvegardez vos transcriptions et notes dans le cloud pour un accès fluide sur tous vos appareils.",
-      "cloudBackupTeamCaveat": "Les notes des espaces d'équipe et celles que vous avez partagées sont toujours synchronisées, quel que soit ce réglage.",
-      "cloudNotesMigration": "Sauvegarde des notes… {{done}} / {{total}}",
-      "cloudNotesMigrationDone": "Toutes les notes sauvegardées",
       "description": "Contrôlez quelles données quittent votre appareil. Tout est désactivé par défaut.",
       "title": "Confidentialité",
       "audioRetention": "Conservation de l'audio",
@@ -2286,10 +1616,6 @@
       "transcriptRetention": "Conservation des transcriptions",
       "transcriptRetentionDescription": "Supprimer automatiquement les transcriptions enregistrées, leur audio et leurs compteurs Insights après cette période.",
       "transcriptRetentionForever": "Toujours",
-      "hoursAgo": "il y a {{count}}h",
-      "justNow": "à l'instant",
-      "lastSynced": "Dernière synchronisation {{time}}",
-      "minutesAgo": "il y a {{count}}min",
       "saveDiscarded": "Enregistrer les dictées abandonnées",
       "saveDiscardedDescription": "Quand vous annulez une dictée avec Échap, conserve son audio dans l'historique pour pouvoir la récupérer. Nécessite la conservation des données et de l'audio."
     },
@@ -2327,11 +1653,9 @@
       "customSetupDescription": "Utilisez votre propre fournisseur et clé API.",
       "description": "Choisissez comment OpenWhispr transcrit votre voix",
       "modes": {
-        "openwhispr": "OpenWhispr Cloud",
         "providers": "Fournisseurs cloud",
         "local": "Local",
         "selfHosted": "Auto-hébergé",
-        "openwhisprDesc": "Résultats fiables. Aucune configuration requise.",
         "providersDesc": "Utilisez votre propre clé API.",
         "localDesc": "Modèles sur l'appareil. 100 % privé.",
         "selfHostedDesc": "Votre serveur sur votre réseau."
@@ -2432,34 +1756,6 @@
       "endpointUrl": "URL du point d'accès",
       "serverUrl": "URL du serveur",
       "apiKeyOptional": "Clé API (facultative)"
-    },
-    "enterpriseCheckout": {
-      "title": "Passer à Enterprise",
-      "description": "Choisissez l'espace de travail, les sièges et le cycle de facturation. Le paiement s'effectue dans Stripe Checkout.",
-      "allSubscribed": "Les espaces de travail que vous possédez sont déjà sur Enterprise ou ne peuvent pas être modifiés ici. Pour tout changement de plan, contactez le service commercial.",
-      "workspaceLabel": "Espace de travail",
-      "seatsLabel": "Sièges",
-      "seatsHint_one": "{{count}} siège actuellement utilisé",
-      "seatsHint_other": "{{count}} sièges actuellement utilisés",
-      "intervalLabel": "Cycle de facturation",
-      "interval": {
-        "monthly": "Mensuel",
-        "annual": "Annuel"
-      },
-      "proratedCharge": "Montant au prorata",
-      "prorationNote": "La différence au prorata est ajoutée à votre prochaine facture.",
-      "errors": {
-        "previewFailed": "Impossible de charger l'aperçu de la mise à niveau.",
-        "alreadyEnterprise": "Cet espace de travail est déjà sur Enterprise.",
-        "subscriptionInactive": "L'abonnement de cet espace de travail n'est pas actif. Mettez à jour vos informations de facturation et réessayez.",
-        "priceNotConfigured": "Les tarifs Enterprise ne sont pas disponibles pour le moment. Veuillez contacter le service commercial."
-      },
-      "priceNote": "Le prix final est affiché lors du paiement.",
-      "continueCta": "Continuer vers le paiement",
-      "upgradeDescription": "Passez {{workspace}} de {{plan}} à Enterprise. Les sièges et le cycle de facturation sont conservés ; le changement prend effet immédiatement.",
-      "upgradeCta": "Mettre à niveau",
-      "upgradedTitle": "Mise à niveau effectuée",
-      "upgradedDescription": "{{workspace}} est maintenant sur Enterprise."
     }
   },
   "models": {
@@ -2627,7 +1923,7 @@
     "activityMore": "Plus",
     "dayTooltip_one": "{{date}} : {{count}} mot",
     "dayTooltip_other": "{{date}} : {{count}} mots",
-    "dataRetentionDisabled": "La conservation des données est désactivée : les nouvelles dictées ne sont comptabilisées dans les Statistiques ni sur cet appareil ni dans votre compte. Les compteurs déjà synchronisés restent dans votre compte.",
+    "dataRetentionDisabled": "La conservation des données est désactivée : les nouvelles dictées ne sont pas comptabilisées dans les Statistiques.",
     "onDevice": "Sur cet appareil",
     "onDevicePrivacy": "Ces statistiques sont calculées sur cet appareil afin de protéger votre vie privée.",
     "emptyTitle": "Aucune dictée pour l'instant",
@@ -2640,100 +1936,12 @@
     "notes": "Notes",
     "upload": "Importer",
     "dictionary": "Dictionnaire",
-    "inviteTeam": "Invitez votre équipe",
     "settings": "Paramètres",
     "support": "Assistance",
-    "limitReached": "Limite hebdomadaire atteinte",
-    "limitReachedDescription": "Passez à Pro pour des transcriptions illimitées.",
-    "viewPlans": "Voir les forfaits",
-    "upgradeTitle": "Passer à Pro",
-    "upgradeDescription": "Transcription illimitée, plus précise et plus rapide.",
-    "upgradeInstantSetup": "Configuration instantanée",
-    "upgradeZeroRetention": "Zéro conservation des données",
-    "upgradeEnterpriseSecurity": "Sécurité entreprise SOC 2 Type II, HIPAA, ISO27001",
-    "learnMore": "En savoir plus",
     "integrations": "Intégrations",
-    "defaultUser": "Utilisateur",
-    "notSignedIn": "Non connecté",
     "chat": "Chat",
     "collapse": "Réduire la barre latérale",
     "expand": "Développer la barre latérale"
-  },
-  "workspaces": {
-    "switcher": {
-      "workspaces": "Espaces de travail",
-      "create": "Créer un espace de travail…"
-    },
-    "create": {
-      "title": "Créer un espace de travail",
-      "description": "Un espace de travail réunit les membres et la facturation de votre organisation. Créez-y des espaces d'équipe pour les notes partagées.",
-      "nameLabel": "Nom de l'espace de travail",
-      "namePlaceholder": "Acme Corp",
-      "submit": "Créer l'espace",
-      "submitting": "Création…",
-      "errorTitle": "Impossible de créer l'espace"
-    },
-    "created": {
-      "title": "Espace de travail créé",
-      "description": "Vous êtes maintenant propriétaire de {{name}}."
-    },
-    "invite": {
-      "title": "Inviter dans {{workspace}}",
-      "description": "Ajoutez des coéquipiers par e-mail. Ils recevront un lien pour rejoindre.",
-      "emailLabel": "E-mail",
-      "emailPlaceholder": "collegue@exemple.com",
-      "roleLabel": "Rôle",
-      "seatUsage": "{{used}} sur {{seats}} sièges utilisés",
-      "seatCost": "En cas d’acceptation, un siège sera ajouté à votre offre · facturation au prorata estimée à {{amount}}.",
-      "submit": "Envoyer l'invitation",
-      "submitting": "Envoi…",
-      "sentTitle": "Invitation envoyée",
-      "sentDescription": "Nous avons envoyé une invitation à {{email}}.",
-      "sentNoEmailTitle": "Invitation créée, mais non envoyée par e-mail",
-      "sentNoEmailDescription": "{{email}} a été invité, mais l'e-mail n'a pas pu être délivré. Renvoyez-le plus tard ou partagez le lien d'invitation autrement.",
-      "errorTitle": "Impossible d'envoyer l'invitation",
-      "role": {
-        "admin": "Administrateur",
-        "member": "Membre"
-      },
-      "roleDescription": {
-        "admin": "Gère les membres et la facturation",
-        "member": "Utilise l'espace de travail"
-      }
-    },
-    "join": {
-      "title": "Rejoignez votre équipe",
-      "domainTitle": "Votre équipe est déjà sur OpenWhispr",
-      "description": "Ces espaces de travail comptent quelqu'un de votre domaine e-mail.",
-      "invitedDescription": "Vous avez été invité à un espace de travail.",
-      "invitedBy": "Invité par {{inviter}} en tant que {{role}}",
-      "memberCount_one": "{{count}} membre",
-      "memberCount_other": "{{count}} membres",
-      "join": "Rejoindre",
-      "requestErrorTitle": "Impossible d'envoyer la demande",
-      "requestedDescription": "Un administrateur de {{workspace}} l'examinera.",
-      "requestedTitle": "Demande envoyée",
-      "requested": "Demandé",
-      "request": "Demander l'accès",
-      "notNow": "Pas maintenant",
-      "successTitle": "Vous avez rejoint",
-      "successDescription": "Vous êtes désormais membre de {{workspace}}.",
-      "errorTitle": "Impossible de rejoindre"
-    },
-    "accept": {
-      "title": "Rejoindre l'espace",
-      "description": "{{inviter}} vous a invité à rejoindre {{workspace}} en tant que {{role}}.",
-      "loading": "Chargement…",
-      "accept": "Accepter l'invitation",
-      "accepting": "Acceptation…",
-      "signInToAccept": "Connectez-vous pour accepter",
-      "switchAccount": "Changer de compte",
-      "successTitle": "Vous êtes membre",
-      "successDescription": "Vous êtes membre de {{name}}. Gérez-le dans Paramètres → Espace de travail.",
-      "errorTitle": "Impossible d'accepter l'invitation",
-      "sentTo": "Invitation envoyée à {{email}}",
-      "wrongAccount": "Cette invitation a été envoyée à {{email}}. Vous êtes connecté en tant que {{current}}."
-    }
   },
   "chat": {
     "newChat": "Nouveau chat",
@@ -2775,143 +1983,12 @@
     },
     "spaces": {
       "privateSpaces": "Notes privées",
-      "teamSpaces": "Teamspaces",
       "personal": "Personnel",
-      "privateTooltip": "Vous seul pouvez voir votre espace personnel",
-      "newSpace": "Nouvel espace d'équipe",
-      "newSpaceInWorkspace": "Nouvel espace d'équipe dans {{workspace}}",
-      "createTitle": "Créer un espace d'équipe",
-      "createDescription": "Un espace partagé au sein d'un workspace pour les personnes et les groupes que vous ajoutez.",
-      "nameAndIconLabel": "Nom et icône",
-      "create": "Créer",
-      "couldNotCreate": "Impossible de créer l'espace",
-      "created": "{{space}} créé",
-      "changeEmoji": "Changer l'émoji",
-      "settings": "Paramètres",
-      "settingsTitle": "Paramètres de l'espace",
-      "couldNotRename": "Impossible de renommer l'espace",
-      "couldNotChangeEmoji": "Impossible de changer l'emoji",
-      "deleteSpace": "Supprimer l'espace",
-      "deleteHintTeam": "Supprime cet espace pour tout le monde. Ses groupes sont conservés.",
-      "deleteHintLocal": "Supprime définitivement cet espace, ses dossiers et ses notes sur cet appareil.",
-      "leaveTitle": "Quitter l'espace",
-      "leaveDescription": "Vos notes restent accessibles aux autres membres.",
-      "leave": "Quitter l'espace",
-      "leaveConfirmTitle": "Quitter {{space}} ?",
-      "leaveConfirmDescription": "Vous serez retiré de {{teams}} et perdrez l'accès aux autres espaces ouverts par ces groupes.",
-      "leaveDirectDescription": "Vous perdrez l'accès à cet espace.",
-      "leaveKeepsGroupAccess": "Vous garderez l'accès via {{groups}}.",
-      "left": "Vous avez quitté {{space}}",
-      "stillViaGroups": "Vous avez toujours accès à {{space}} via {{groups}}.",
-      "couldNotLeave": "Impossible de quitter l'espace",
-      "deleteConfirmTitle": "Supprimer l'espace ?",
-      "deleteConfirmDescription": "Cela supprime définitivement {{space}} ainsi que tous ses dossiers et notes sur cet appareil.",
-      "deleteConfirmTeamDescription": "Cela supprime {{space}} pour tout le monde. Ses groupes subsistent, mais les membres perdent l'accès à tous ses dossiers et notes.",
-      "deleteTypeName": "Saisissez {{space}} pour confirmer",
-      "couldNotDelete": "Impossible de supprimer l'espace",
-      "deleted": "{{space}} supprimé",
-      "moveTo": "Déplacer vers",
-      "moveToSpace": "Déplacer vers un espace…",
-      "searchSpaces": "Rechercher des espaces...",
-      "noSpacesFound": "Aucun espace trouvé",
-      "spaceRoot": "Racine de l'espace",
-      "moveConfirm": "Déplacer",
-      "confirmMoveInTitle": "Déplacer vers {{space}} ?",
-      "confirmMoveIn": "Tous les membres de {{space}} pourront voir et modifier cette note. Les notes ne pourront plus être retirées d'un espace d'équipe par la suite.",
-      "confirmMoveInFolder": "Tous les membres de {{space}} pourront voir et modifier ce dossier et ses notes. Les dossiers et les notes ne pourront plus être retirés d'un espace d'équipe par la suite.",
-      "cantMoveOut": "Les notes ne peuvent pas être retirées d'un espace d'équipe.",
-      "cantMoveTeammate": "Seul le propriétaire de la note ou un administrateur du workspace peut la déplacer vers un autre espace.",
       "moved": "« {{title}} » déplacée vers {{target}}",
-      "couldNotMove": "Impossible de déplacer le dossier",
       "couldNotMoveNote": "Impossible de déplacer la note",
-      "folderNameTaken": "Impossible de déplacer « {{name}} » : un dossier portant ce nom existe déjà à cet emplacement",
       "undo": "Annuler",
-      "emptySpace": "Aucune note pour le moment. Les notes ici sont visibles par tous les membres de {{space}}.",
-      "emptyTeamHint": "Les espaces partagés avec vous apparaîtront ici.",
       "noteCount_one": "{{count}} note",
-      "noteCount_other": "{{count}} notes",
-      "accessRevoked": "Vous n'avez plus accès à {{space}}",
-      "accessRevokedActiveNote": "Vous n'avez plus accès à {{space}} — « {{title}} » n'est plus disponible sur cet appareil",
-      "movedToPersonal": "Vous n'avez plus accès à {{space}} — « {{title}} » a été déplacée vers votre espace personnel",
-      "updateDeniedNote": "Vous n'avez pas la permission de modifier « {{title}} » — vos modifications non synchronisées ont été enregistrées comme copie dans votre espace personnel",
-      "deleteDeniedNote": "« {{title}} » n'a pas été supprimée — seul le propriétaire de la note ou un administrateur peut la supprimer",
-      "updateDeniedFolder": "Vous n'avez pas la permission de modifier « {{name}} » — votre travail non synchronisé a été enregistré dans votre espace personnel",
-      "deleteDeniedFolder": "« {{name}} » n'a pas été supprimé — seul un administrateur peut supprimer un dossier d'espace",
-      "conflictBanner": "Une version plus récente de cette note existe.",
-      "conflictRefresh": "Actualiser",
-      "conflictKeep": "Continuer à modifier",
-      "editedBy": "Modifié par {{name}} · {{time}}",
-      "members": {
-        "addPeople": "Ajouter des personnes",
-        "addedToTeam": "{{name}} ajouté à {{team}}",
-        "removedFromTeam": "{{name}} retiré de {{team}}",
-        "stillViaGroups": "{{name}} a toujours accès via {{groups}}",
-        "roleUpdated": "Rôle mis à jour",
-        "you": "Vous",
-        "addFailed": "Impossible d'ajouter {{failed}} personnes sur {{total}}",
-        "searchPlaceholder": "Rechercher des personnes…",
-        "noResults": "Aucune personne trouvée",
-        "roleAdmin": "Administrateur",
-        "roleMember": "Membre",
-        "roleAdminDescription": "Gère les personnes et les paramètres.",
-        "roleMemberDescription": "Peut consulter et modifier les notes.",
-        "remove": "Retirer",
-        "removeConfirm": "Retirer {{name}} de {{space}} ?",
-        "removeConfirmDescription": "Cette personne perdra l'accès à toutes les notes de cet espace.",
-        "removeKeepsGroupAccess": "L'accès via {{groups}} est conservé.",
-        "inviteFooter": "Inviter {{email}} dans l'espace de travail…",
-        "empty": "Personne n'a encore été ajouté",
-        "viaGroup": "via {{group}}",
-        "managedByGroup": "Ajouté via {{group}}. Retirez-le depuis ce groupe.",
-        "roleFromGroup": "Admin via {{group}}. Modifiez-le là-bas.",
-        "invited": "Invitation envoyée à {{email}}"
-      },
-      "invitedTo_one": "Vous rejoindrez {{count}} espace d'équipe",
-      "invitedTo_other": "Vous rejoindrez {{count}} espaces d'équipe",
-      "invitedToSpaces": "Vous rejoindrez {{spaces}}",
-      "teamsMembers": {
-        "title": "Membres de {{space}}",
-        "noTeams": "Aucun groupe n'est encore rattaché à cet espace.",
-        "addTeamLabel": "Ajouter un groupe à cet espace",
-        "chooseTeam": "Choisir un groupe…",
-        "teamAdded": "{{team}} ajoutée à {{space}}",
-        "teamRemoved": "{{team}} retirée de {{space}}",
-        "removeTeamFromSpace": "Retirer de l'espace",
-        "removeTeamConfirm": "Retirer {{team}} de {{space}} ?",
-        "removeTeamConfirmDescription": "Ses membres perdront l'accès à cet espace, sauf s'ils ont été ajoutés directement ou si un autre groupe les inclut.",
-        "accessLabel": "Accès à l'espace",
-        "accessAdmin": "Administrateur",
-        "accessMember": "Membre",
-        "accessChanged": "Accès de {{team}} mis à jour",
-        "accessHint": "Les administrateurs de {{team}} ne gèrent cet espace que lorsque son accès est défini sur Administrateur."
-      },
-      "teams": {
-        "newTeam": "Nouveau groupe",
-        "loadError": "Impossible de charger les groupes."
-      },
-      "groups": {
-        "title": "Groupes ayant accès",
-        "optional": "Groupes (facultatif)"
-      }
-    },
-    "structureIntro": {
-      "title": "Où se trouvent vos notes",
-      "description": "OpenWhispr sépare les idées privées du travail partagé afin que les bonnes personnes voient les bonnes notes.",
-      "personal": {
-        "title": "Espace personnel",
-        "description": "Vous seul pouvez voir les dossiers et les notes qui s'y trouvent."
-      },
-      "workspace": {
-        "title": "Espace de travail",
-        "description": "L'espace des membres, des rôles et des espaces d'équipe de votre espace de travail."
-      },
-      "teamSpace": {
-        "title": "Espace d'équipe",
-        "description": "Un espace partagé au sein d'un workspace. Ajoutez des personnes ou des groupes pour leur donner accès."
-      },
-      "contents": "Chaque espace peut contenir des dossiers et des notes.",
-      "done": "Compris",
-      "reopen": "Comprendre l'organisation des espaces"
+      "noteCount_other": "{{count}} notes"
     },
     "folders": {
       "defaults": {
@@ -2935,7 +2012,6 @@
       "newNote": "Nouvelle note",
       "untitled": "Sans titre",
       "untitledNote": "Note sans titre",
-      "shared": "Partagée",
       "timeNow": "maintenant",
       "minutesAgo": "il y a {{count}}m",
       "hoursAgo": "il y a {{count}}h",
@@ -2944,7 +2020,6 @@
     "createMenu": {
       "note": "Note",
       "assistantChat": "Chat avec l'assistant",
-      "teamSpace": "Espace d'équipe",
       "chooseType": "Choisir quoi créer"
     },
     "editor": {
@@ -3022,7 +2097,6 @@
       "dropToUpload": "Déposez pour téléverser",
       "transcribe": "Transcrire",
       "cancel": "Annuler",
-      "transcribingCloud": "Transcription via le cloud...",
       "transcribingLocal": "Transcription locale...",
       "transcribingProvider": "Transcription via {{provider}}...",
       "cancelTranscription": "Annuler la transcription",
@@ -3038,7 +2112,6 @@
       "newFolder": "Nouveau dossier",
       "folderName": "Nom du dossier",
       "create": "Créer",
-      "openwhisprCloud": "OpenWhispr Cloud",
       "custom": "Personnalisé",
       "selectFolder": "Sélectionner un dossier",
       "transcriptionFailed": "Échec de la transcription",
@@ -3047,18 +2120,8 @@
       "noProviderTitle": "Aucun fournisseur de transcription configuré",
       "noProviderDescription": "Ajoutez une clé API ou téléchargez un modèle local pour commencer à transcrire.",
       "noProviderAction": "Ouvrir les paramètres de transcription",
-      "fileTooLarge": "Ce fichier dépasse la limite de 500 MB.",
-      "paidPlanRequired": "La transcription cloud pour les fichiers de plus de 25 Mo nécessite un abonnement payant. Les fichiers volumineux sont traités avec OpenWhispr Cloud pour des résultats fiables et de haute qualité.",
-      "largeFileNote": "Les fichiers volumineux sont découpés et transcrits en parallèle.",
-      "chunkProgress": "Transcription de la partie {{completed}} sur {{total}}...",
       "byokTooLarge": "Les clés API tierces ne prennent en charge que les fichiers jusqu'à {{size}} Mo.",
       "byokTooLargeDetail": "Pour les fichiers de plus de {{size}} Mo, OpenWhispr Cloud gère le découpage, le traitement parallèle et le réassemblage — pour des résultats fiables sans dépendre des limites des fournisseurs tiers.",
-      "byokTooLargeNeedsAccount": "Créez un compte et passez à un abonnement payant pour transcrire des fichiers plus volumineux avec OpenWhispr Cloud.",
-      "byokTooLargeNeedsUpgrade": "Passez à un abonnement payant pour transcrire des fichiers plus volumineux avec OpenWhispr Cloud.",
-      "switchToCloudForLargeFiles": "Passez à OpenWhispr Cloud pour transcrire ce fichier.",
-      "createAccount": "Créer un compte",
-      "upgrade": "Mettre à niveau",
-      "switchToCloud": "OpenWhispr Cloud",
       "orDivider": "ou",
       "urlPlaceholder": "Collez une URL YouTube ou audio",
       "urlDownloading": "Téléchargement de l'audio...",
@@ -3088,7 +2151,6 @@
       "batchSaveFailed": "Échec de l'enregistrement de la note",
       "batchUnknownError": "Erreur inconnue",
       "removeFromQueue": "Retirer de la file",
-      "diarizationRunsLocally": "La détection des locuteurs s'exécute localement sur votre appareil.",
       "urlSubmit": "Ajouter le lien",
       "urlsSkipped": "Certains liens n'ont pas pu être ajoutés ({{n}})",
       "queueFailed": "{{n}} en échec",
@@ -3267,22 +2329,17 @@
     },
     "overview": {
       "subtitle": {
-        "team": "Notes visibles par tout le monde dans cet espace.",
         "private": "Vous seul pouvez voir ces notes."
       },
       "meta": {
         "folders_one": "{{count}} dossier",
-        "folders_other": "{{count}} dossiers",
-        "members_one": "{{count}} membre",
-        "members_other": "{{count}} membres"
+        "folders_other": "{{count}} dossiers"
       },
       "banner": {
         "title": {
-          "team": "Votre espace d'équipe",
           "private": "Votre espace privé"
         },
         "body": {
-          "team": "Transformez vos conversations en savoir partagé. Publiez entretiens utilisateurs, appels commerciaux et réunions d'équipe là où tout le monde peut les retrouver.",
           "private": "Regroupez notes de réunion, idées et brouillons au même endroit, et posez des questions sur tout ce que contient cet espace."
         },
         "dismiss": "Fermer"
@@ -3295,12 +2352,8 @@
           "inFlight": "Montre les projets en cours"
         }
       },
-      "invite": "Inviter",
       "list": {
         "empty": "Aucune note ici pour l'instant"
-      },
-      "author": {
-        "you": "Vous"
       }
     }
   },
@@ -3463,8 +2516,6 @@
       "relaunchHint": "L'enregistrement d'écran a été autorisé pendant qu'OpenWhispr était en cours d'exécution. Quittez et rouvrez OpenWhispr pour commencer à capturer des captures d'écran."
     },
     "modes": {
-      "openwhispr": "OpenWhispr Cloud",
-      "openwhisprDesc": "Utilisez l'assistant géré par OpenWhispr, sans clé API.",
       "providers": "Utilisez votre propre clé API",
       "providersDesc": "Connectez-vous à OpenAI, Anthropic, Gemini ou Groq avec votre propre clé API.",
       "local": "Local",
@@ -3483,11 +2534,9 @@
       "systemPromptDescription": "Instructions personnalisées pour l'assistant",
       "systemPromptPlaceholder": "Entrez un prompt système personnalisé...",
       "modes": {
-        "openwhispr": "OpenWhispr Cloud",
         "providers": "Fournisseurs Cloud",
         "local": "Local",
         "selfHosted": "Auto-hébergé",
-        "openwhisprDesc": "Résultats fiables. Aucune configuration requise.",
         "providersDesc": "Apportez votre propre clé API.",
         "localDesc": "Modèles sur l'appareil. Entièrement privé.",
         "selfHostedDesc": "Votre propre serveur sur votre réseau."
@@ -3530,9 +2579,7 @@
       "create_noteStatus": "Création de la note...",
       "update_noteStatus": "Mise à jour de la note...",
       "copiedToClipboard": "Copié dans le presse-papiers",
-      "openNote": "Ouvrir la note",
-      "unknownTool": "Outil inconnu : {{name}}",
-      "invalidArgs": "Arguments d'outil invalides pour {{name}}"
+      "openNote": "Ouvrir la note"
     }
   },
   "assistant": {
@@ -3586,16 +2633,9 @@
       "learnMore": "Lire la documentation",
       "copyDocsLink": "Copier le lien de la documentation",
       "docsLinkCopied": "Lien de la documentation copié",
-      "viewPlans": "Voir les forfaits",
       "local": {
         "label": "Local",
-        "freeBadge": "Gratuit",
         "description": "Lisez vos notes locales directement. Aucun compte ni clé API — fonctionne tant qu'OpenWhispr est ouvert."
-      },
-      "cloud": {
-        "label": "Cloud",
-        "description": "Synchronisez vos appareils avec votre clé API.",
-        "proRequired": "Passez à un plan payant pour utiliser la CLI en mode cloud."
       }
     },
     "plan": {
@@ -3605,7 +2645,6 @@
       "freeLimit": "5 réunions / mois",
       "essential": "Essential",
       "essentialLimit": "20 réunions / mois",
-      "pro": "Pro",
       "proLimit": "Illimité",
       "upgrade": "Passer au supérieur"
     },
@@ -3643,51 +2682,8 @@
     "deleteConfirmDescription": "Cette note sera supprimée définitivement et ne pourra pas être récupérée.",
     "deleteConfirm": "Supprimer",
     "share": {
-      "button": "Partager",
       "dialog": {
-        "title": "Partager la note",
-        "description": "Invitez des personnes par e-mail ou partagez un lien vers cette note.",
-        "searchPlaceholder": "Rechercher des personnes, dossiers ou e-mails",
-        "noResults": "Aucun résultat trouvé",
-        "emailLabel": "Personnes, dossiers ou e-mail",
-        "shareButton": "Partager",
-        "createLink": "Créer un lien",
-        "copyLink": "Copier le lien",
-        "copied": "Copié",
-        "export": "Exporter",
-        "owner": "Propriétaire",
-        "editor": "Peut modifier",
-        "viewer": "Peut consulter",
-        "teamAudience": "Tous les membres de cet espace d'équipe",
-        "pending": "En attente",
-        "accepted": "A accès",
-        "resend": "Renvoyer l'invitation",
-        "revoke": "Retirer",
-        "invitationActions": "Actions de l'invitation",
-        "resendSent": "Invitation envoyée",
-        "resendThrottled": "Invitation envoyée récemment. Réessayez dans une minute.",
-        "syncPrompt": "Le partage conserve une copie de cette note dans votre cloud OpenWhispr. Vous seul pouvez la voir tant que vous n'avez pas choisi avec qui la partager.",
-        "syncAndShare": "Synchroniser la note",
-        "visibility": {
-          "label": "Visibilité",
-          "private": "Privée",
-          "privateOption": "Privée — vous uniquement",
-          "link": "Toute personne ayant le lien",
-          "domain": "Tout le monde chez {{domain}} avec le lien",
-          "invited": "Uniquement les personnes invitées"
-        },
-        "error": {
-          "invalidEmail": "Entrez une adresse e-mail valide",
-          "alreadyInvited": "{{email}} est déjà invité(e)",
-          "inviteFailed": "Impossible d'envoyer l'invitation. Réessayez.",
-          "visibilityFailed": "Impossible de modifier le partage. Réessayez.",
-          "copyFailed": "Impossible de copier le lien. Réessayez.",
-          "revokeFailed": "Impossible de retirer l'invitation. Réessayez.",
-          "resendFailed": "Impossible de renvoyer l'invitation. Réessayez.",
-          "syncFailed": "Impossible de synchroniser cette note. Réessayez.",
-          "loadFailed": "Impossible de charger les paramètres de partage",
-          "retry": "Réessayer"
-        }
+        "export": "Exporter"
       }
     }
   },
@@ -3707,23 +2703,6 @@
       "navigate": "Naviguer",
       "open": "Ouvrir",
       "dismiss": "Fermer"
-    }
-  },
-  "emojiPicker": {
-    "search": "Rechercher un emoji…",
-    "recent": "Récents",
-    "noResults": "Aucun emoji trouvé",
-    "remove": "Retirer",
-    "groups": {
-      "smileys": "Smileys et émotions",
-      "people": "Personnes et corps",
-      "animals": "Animaux et nature",
-      "food": "Nourriture et boissons",
-      "travel": "Voyages et lieux",
-      "activities": "Activités",
-      "objects": "Objets",
-      "symbols": "Symboles",
-      "flags": "Drapeaux"
     }
   },
   "permissionsGate": {

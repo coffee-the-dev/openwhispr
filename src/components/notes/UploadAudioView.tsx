@@ -33,10 +33,7 @@ import {
   transcriptionErrorKey,
   MEETINGS_FOLDER_NAME,
 } from "./shared";
-import { useAuth } from "../../hooks/useAuth";
-import { useUsage } from "../../hooks/useUsage";
 import { useSettings } from "../../hooks/useSettings";
-import { requestSignIn } from "../../utils/requestSignIn";
 import {
   getAllReasoningModels,
   getBatchTranscriptionModel,
@@ -69,14 +66,10 @@ import { generateNoteTitle } from "../../utils/generateTitle";
 import { getBaseLanguageCode } from "../../utils/languageSupport";
 import { byokFileSizeLimit, resolveTranscriptionRoute } from "../../helpers/transcriptionRoute";
 import { saveUploadNote, uploadTitleFallback } from "../../services/uploadNotes";
-import { useManagedScopeResolution } from "../../stores/enterpriseIdentityStore";
 import { UploadCompleteWarnings, UploadModelSettingsButton } from "./UploadAudioFeedback";
 import { isSupportedUploadFile, uploadFileUrlPattern } from "../../utils/uploadAudioFormats";
 
 type UploadState = "idle" | "selected" | "downloading" | "transcribing" | "complete" | "error";
-
-const CLOUD_FREE_MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB — free plan cloud limit
-const CLOUD_PRO_MAX_FILE_SIZE = 500 * 1024 * 1024; // 500 MB — pro plan cloud limit
 
 const MAX_BATCH_URLS = 50;
 
@@ -154,11 +147,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   const [isDragOver, setIsDragOver] = useState(false);
   const [progress, setProgress] = useState(0);
   const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const [chunkProgress, setChunkProgress] = useState<{
-    chunksTotal: number;
-    chunksCompleted: number;
-  } | null>(null);
-  const progressCleanupRef = useRef<(() => void) | null>(null);
   const runIdRef = useRef(0);
   const activeRequestIdRef = useRef<string | null>(null);
   const mountedRef = useRef(true);
@@ -257,12 +245,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
 
   const [providerReady, setProviderReady] = useState<boolean | null>(null);
 
-  const { isSignedIn } = useAuth();
-  const usage = useUsage();
-  // The server enforces the free-tier size limit regardless, so an unresolved
-  // entitlement should not block a payer's upload.
-  const isProUser = usage?.hasPaidAccessOptimistic ?? false;
-
   const apiKeys = useSettings();
   const {
     openaiApiKey,
@@ -285,17 +267,10 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     cloudTranscriptionProvider,
     cloudTranscriptionModel,
     cloudTranscriptionBaseUrl,
-    cloudTranscriptionMode,
     transcriptionMode,
     remoteTranscriptionUrl,
     remoteTranscriptionModel,
   } = useSettingsStore(useShallow((settings) => selectResolvedUploadTranscription(settings)));
-
-  const setUploadTranscriptionMode = useSettingsStore((s) => s.setUploadTranscriptionMode);
-  const setUploadCloudTranscriptionMode = useSettingsStore(
-    (s) => s.setUploadCloudTranscriptionMode
-  );
-  const setUploadUseLocalWhisper = useSettingsStore((s) => s.setUploadUseLocalWhisper);
 
   const cortiClientId = useSettingsStore((s) => s.cortiClientId);
   const cortiClientSecret = useSettingsStore((s) => s.cortiClientSecret);
@@ -308,49 +283,16 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     return selectIsCloudCleanupMode(effectiveSettings) ? "" : effectiveSettings.cleanupModel;
   });
   const useCleanupModel = useSettingsStore((s) => s.useCleanupModel);
-  const enterpriseTranscriptionSetupMode = useSettingsStore(
-    (s) => s.enterpriseTranscriptionSetupMode
-  );
-  const managedActive =
-    useManagedScopeResolution("transcription", enterpriseTranscriptionSetupMode).kind === "managed";
-
-  const isOpenWhisprCloud =
-    isSignedIn && cloudTranscriptionMode === "openwhispr" && !useLocalWhisper;
-
   // Mode detection
   const isSelfHosted = transcriptionMode === "self-hosted" && !useLocalWhisper;
-  const isByok = !useLocalWhisper && !isOpenWhisprCloud;
-
-  // Mode-aware file size validation
-  // Local: no limits at all
-  // BYOK: 25 MB hard max regardless of plan (14 MB for Gemini's inline cap)
-  // Cloud free: 25 MB max (upgrade to Pro for more)
-  // Cloud pro: 500 MB max
+  // Mode-aware file size validation. Local, self-hosted and custom endpoints
+  // have no limit; BYOK providers cap uploads at 25 MB (14 MB for Gemini's
+  // inline cap).
+  const hasProviderSizeLimit =
+    !useLocalWhisper && !isSelfHosted && cloudTranscriptionProvider !== "custom";
   const byokMaxFileSize = byokFileSizeLimit(cloudTranscriptionProvider);
   const byokMaxFileSizeMb = Math.floor(byokMaxFileSize / (1024 * 1024));
-  let fileTooLarge = false;
-  let requiresUpgrade = false;
-  let requiresAccount = false;
-  let byokTooLarge = false;
-  let isLargeFile = false;
-
-  if (file) {
-    if (useLocalWhisper) {
-      // Local transcription: no file size restrictions
-    } else if (isSelfHosted || cloudTranscriptionProvider === "custom") {
-      // Self-hosted / custom endpoints (e.g. local whisper.cpp): no file size restrictions
-    } else if (isByok) {
-      byokTooLarge = file.sizeBytes > byokMaxFileSize;
-      if (byokTooLarge && !isSignedIn) {
-        requiresAccount = true;
-      }
-    } else {
-      // Cloud (OpenWhispr) — user is always signed in here
-      fileTooLarge = file.sizeBytes > CLOUD_PRO_MAX_FILE_SIZE;
-      requiresUpgrade = !isProUser && file.sizeBytes > CLOUD_FREE_MAX_FILE_SIZE;
-      isLargeFile = file.sizeBytes > CLOUD_FREE_MAX_FILE_SIZE;
-    }
-  }
+  const byokTooLarge = !!file && hasProviderSizeLimit && file.sizeBytes > byokMaxFileSize;
 
   useEffect(() => {
     return () => {
@@ -401,14 +343,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   useEffect(() => {
     let cancelled = false;
     const checkProviderReady = async () => {
-      if (managedActive) {
-        setProviderReady(true);
-        return;
-      }
-      if (isOpenWhisprCloud) {
-        setProviderReady(true);
-        return;
-      }
       if (!useLocalWhisper) {
         if (isSelfHosted) {
           if (!cancelled) setProviderReady(!!remoteTranscriptionUrl?.trim());
@@ -457,8 +391,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
       cancelled = true;
     };
   }, [
-    managedActive,
-    isOpenWhisprCloud,
     isSelfHosted,
     remoteTranscriptionUrl,
     useLocalWhisper,
@@ -479,7 +411,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   ]);
 
   const getActiveModelLabel = (): string => {
-    if (isOpenWhisprCloud) return t("notes.upload.openwhisprCloud");
     if (useLocalWhisper) {
       if (localTranscriptionProvider === "nvidia")
         return getParakeetModelInfo(parakeetModel)?.name ?? parakeetModel;
@@ -504,7 +435,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     whisperModel,
     parakeetModel,
     cohereModel,
-    isOpenWhisprCloud,
     getApiKey: () => getTranscriptionApiKey(cloudTranscriptionProvider, apiKeys),
     cloudTranscriptionProvider: cloudTranscriptionProvider as string,
     cloudTranscriptionBaseUrl: cloudTranscriptionBaseUrl || "",
@@ -520,11 +450,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
 
   // Batch counterpart of the single-file size gating above; returns keys under notes.upload.*.
   const getBatchSizeErrorKey = (sizeBytes: number): string | null => {
-    if (useLocalWhisper || isSelfHosted || cloudTranscriptionProvider === "custom") return null;
-    if (isByok) return sizeBytes > byokMaxFileSize ? "byokTooLarge" : null;
-    if (sizeBytes > CLOUD_PRO_MAX_FILE_SIZE) return "fileTooLarge";
-    if (!isProUser && sizeBytes > CLOUD_FREE_MAX_FILE_SIZE) return "paidPlanRequired";
-    return null;
+    return hasProviderSizeLimit && sizeBytes > byokMaxFileSize ? "byokTooLarge" : null;
   };
 
   const generateTitle = async (text: string): Promise<string> => {
@@ -606,8 +532,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
 
   const reset = () => {
     if (progressRef.current) clearInterval(progressRef.current);
-    if (progressCleanupRef.current) progressCleanupRef.current();
-    progressCleanupRef.current = null;
     if (downloadedTempPath) {
       window.electronAPI.deleteTempFile(downloadedTempPath);
       setDownloadedTempPath(null);
@@ -620,7 +544,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     setNoteId(null);
     setError(null);
     setProgress(0);
-    setChunkProgress(null);
     setUrlInput("");
     setDownloadProgress(null);
     setSkippedNotice(null);
@@ -648,33 +571,17 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     setState("transcribing");
     setError(null);
     setProgress(0);
-    setChunkProgress(null);
     setDiarizationWarning(false);
 
-    const useChunkProgress = isOpenWhisprCloud && isLargeFile;
-
-    if (useChunkProgress) {
-      progressCleanupRef.current =
-        window.electronAPI.onUploadTranscriptionProgress?.((data) => {
-          if (data.chunksTotal > 0) {
-            setChunkProgress({
-              chunksTotal: data.chunksTotal,
-              chunksCompleted: data.chunksCompleted,
-            });
-            setProgress((data.chunksCompleted / data.chunksTotal) * 90);
-          }
-        }) ?? null;
-    } else {
-      progressRef.current = setInterval(() => {
-        setProgress((prev) => {
-          if (prev >= 90) {
-            if (progressRef.current) clearInterval(progressRef.current);
-            return prev;
-          }
-          return prev + Math.random() * 6;
-        });
-      }, 500);
-    }
+    progressRef.current = setInterval(() => {
+      setProgress((prev) => {
+        if (prev >= 90) {
+          if (progressRef.current) clearInterval(progressRef.current);
+          return prev;
+        }
+        return prev + Math.random() * 6;
+      });
+    }, 500);
 
     try {
       const diarization = await buildDiarizationSettings();
@@ -691,8 +598,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
       if (runId !== runIdRef.current) return;
 
       if (progressRef.current) clearInterval(progressRef.current);
-      if (progressCleanupRef.current) progressCleanupRef.current();
-      progressCleanupRef.current = null;
 
       if (res.success && res.text) {
         setProgress(100);
@@ -744,8 +649,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     } catch (err) {
       if (runId !== runIdRef.current) return;
       if (progressRef.current) clearInterval(progressRef.current);
-      if (progressCleanupRef.current) progressCleanupRef.current();
-      progressCleanupRef.current = null;
       setProgress(0);
       const errorKey = transcriptionErrorKey(err);
       if (errorKey) {
@@ -913,14 +816,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     }
   };
 
-  const switchToCloud = () => {
-    setUploadTranscriptionMode("openwhispr");
-    setUploadCloudTranscriptionMode("openwhispr");
-    setUploadUseLocalWhisper(false);
-  };
-
   const getTranscribingLabel = (): string => {
-    if (isOpenWhisprCloud) return t("notes.upload.transcribingCloud");
     if (useLocalWhisper) return t("notes.upload.transcribingLocal");
     if (isSelfHosted) {
       return t("notes.upload.transcribingProvider", {
@@ -1117,17 +1013,8 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
             reset={reset}
             handleTranscribe={handleTranscribe}
             transcribeDisabled={batch.isProcessing}
-            requiresUpgrade={!!requiresUpgrade}
-            fileTooLarge={fileTooLarge}
-            isLargeFile={isLargeFile}
-            isOpenWhisprCloud={isOpenWhisprCloud}
             byokTooLarge={byokTooLarge}
             byokMaxFileSizeMb={byokMaxFileSizeMb}
-            requiresAccount={requiresAccount}
-            isProUser={!!isProUser}
-            onUpgrade={() => usage?.openCheckout()}
-            onCreateAccount={requestSignIn}
-            onSwitchToCloud={switchToCloud}
             onOpenSettings={onOpenSettings}
           />
         )}
@@ -1198,7 +1085,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
             progress={progress}
             getTranscribingLabel={getTranscribingLabel}
             file={file}
-            chunkProgress={chunkProgress}
             onCancel={cancelTranscription}
           />
         )}
@@ -1272,7 +1158,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
 
             {diarizationEnabled &&
               !useLocalWhisper &&
-              !isOpenWhisprCloud &&
               !isSelfHosted &&
               cloudTranscriptionProvider === "openai" && (
                 <p className="text-[10px] text-foreground/45 mt-1.5">
@@ -1281,7 +1166,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
               )}
             {diarizationEnabled &&
               !useLocalWhisper &&
-              !isOpenWhisprCloud &&
               !isSelfHosted &&
               cloudTranscriptionProvider === "mistral" && (
                 <p className="text-[10px] text-foreground/45 mt-1.5">
@@ -1290,7 +1174,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
               )}
             {diarizationEnabled &&
               !useLocalWhisper &&
-              !isOpenWhisprCloud &&
               !isSelfHosted &&
               cloudTranscriptionProvider === "groq" && (
                 <p className="text-[10px] text-amber-500/60 mt-1.5">
@@ -1301,12 +1184,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
             {diarizationDownloading && (
               <p className="text-[10px] text-primary/50 mt-1.5">
                 {t("notes.upload.downloadingModels")}
-              </p>
-            )}
-
-            {diarizationEnabled && isOpenWhisprCloud && (
-              <p className="text-[10px] text-foreground/45 mt-1.5">
-                {t("notes.upload.diarizationRunsLocally")}
               </p>
             )}
 
@@ -1531,17 +1408,8 @@ interface SelectedViewProps {
   reset: () => void;
   handleTranscribe: () => void;
   transcribeDisabled: boolean;
-  requiresUpgrade: boolean;
-  fileTooLarge: boolean;
-  isLargeFile: boolean;
-  isOpenWhisprCloud: boolean;
   byokTooLarge: boolean;
   byokMaxFileSizeMb: number;
-  requiresAccount: boolean;
-  isProUser: boolean;
-  onUpgrade: () => void;
-  onCreateAccount: () => void;
-  onSwitchToCloud: () => void;
   onOpenSettings?: (section: string) => void;
 }
 
@@ -1552,21 +1420,10 @@ function SelectedView({
   reset,
   handleTranscribe,
   transcribeDisabled,
-  requiresUpgrade,
-  fileTooLarge,
-  isLargeFile,
-  isOpenWhisprCloud,
   byokTooLarge,
   byokMaxFileSizeMb,
-  requiresAccount,
-  isProUser,
-  onUpgrade,
-  onCreateAccount,
-  onSwitchToCloud,
   onOpenSettings,
 }: SelectedViewProps) {
-  const canTranscribe = !fileTooLarge && !requiresUpgrade && !byokTooLarge;
-
   return (
     <div style={{ animation: "float-up 0.3s ease-out" }}>
       <div className="rounded-lg border border-foreground/8 dark:border-white/10 bg-surface-1/40 dark:bg-white/[0.03] backdrop-blur-sm p-4 mb-3">
@@ -1592,15 +1449,6 @@ function SelectedView({
         </div>
       </div>
 
-      {/* Cloud absolute limit (500 MB) */}
-      {fileTooLarge && (
-        <div className="rounded-lg border border-destructive/12 dark:border-destructive/15 bg-destructive/[0.03] px-3 py-2.5 mb-3">
-          <p className="text-xs text-destructive/60 leading-relaxed">
-            {t("notes.upload.fileTooLarge")}
-          </p>
-        </div>
-      )}
-
       {/* BYOK file too large — shared explanation */}
       {byokTooLarge && (
         <div className="rounded-lg border border-primary/12 dark:border-primary/15 bg-primary/[0.03] px-3 py-2.5 mb-3">
@@ -1610,73 +1458,11 @@ function SelectedView({
           <p className="text-xs text-foreground/45 leading-relaxed mt-1.5">
             {t("notes.upload.byokTooLargeDetail", { size: byokMaxFileSizeMb })}
           </p>
-          <p className="text-xs text-foreground/50 leading-relaxed mt-1.5 font-medium">
-            {requiresAccount
-              ? t("notes.upload.byokTooLargeNeedsAccount")
-              : isProUser
-                ? t("notes.upload.switchToCloudForLargeFiles")
-                : t("notes.upload.byokTooLargeNeedsUpgrade")}
-          </p>
         </div>
-      )}
-
-      {/* Cloud free user, file > 25 MB → needs paid plan */}
-      {requiresUpgrade && !fileTooLarge && (
-        <div className="rounded-lg border border-primary/12 dark:border-primary/15 bg-primary/[0.03] px-3 py-2.5 mb-3">
-          <p className="text-xs text-foreground/50 leading-relaxed">
-            {t("notes.upload.paidPlanRequired")}
-          </p>
-        </div>
-      )}
-
-      {/* Cloud large file info (Pro user, will be chunked) */}
-      {isLargeFile && !requiresUpgrade && !fileTooLarge && isOpenWhisprCloud && (
-        <p className="text-xs text-foreground/45 text-center mb-3">
-          {t("notes.upload.largeFileNote")}
-        </p>
       )}
 
       <div className="flex items-center gap-2 justify-center flex-wrap">
-        {/* BYOK too large — not signed in: Create Account */}
-        {byokTooLarge && requiresAccount && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onCreateAccount}
-            className="h-8 text-xs px-5"
-          >
-            {t("notes.upload.createAccount")}
-          </Button>
-        )}
-
-        {/* BYOK too large — signed in, Pro: Switch to Cloud */}
-        {byokTooLarge && !requiresAccount && isProUser && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={onSwitchToCloud}
-            className="h-8 text-xs px-5"
-          >
-            {t("notes.upload.switchToCloud")}
-          </Button>
-        )}
-
-        {/* BYOK too large — signed in, Free: Upgrade */}
-        {byokTooLarge && !requiresAccount && !isProUser && (
-          <Button variant="default" size="sm" onClick={onUpgrade} className="h-8 text-xs px-5">
-            {t("notes.upload.upgrade")}
-          </Button>
-        )}
-
-        {/* Cloud requires upgrade */}
-        {!byokTooLarge && requiresUpgrade && (
-          <Button variant="default" size="sm" onClick={onUpgrade} className="h-8 text-xs px-5">
-            {t("notes.upload.upgrade")}
-          </Button>
-        )}
-
-        {/* Normal: can transcribe */}
-        {canTranscribe && (
+        {!byokTooLarge && (
           <Button
             variant="default"
             size="sm"
@@ -1707,7 +1493,6 @@ interface TranscribingViewProps {
   progress: number;
   getTranscribingLabel: () => string;
   file: { name: string; path: string; size: string; sizeBytes: number } | null;
-  chunkProgress: { chunksTotal: number; chunksCompleted: number } | null;
   onCancel: () => void;
 }
 
@@ -1716,11 +1501,8 @@ function TranscribingView({
   progress,
   getTranscribingLabel,
   file,
-  chunkProgress,
   onCancel,
 }: TranscribingViewProps) {
-  const hasChunkInfo = chunkProgress !== null && chunkProgress.chunksTotal > 0;
-
   return (
     <div className="flex flex-col items-center" style={{ animation: "float-up 0.3s ease-out" }}>
       <div className="flex items-end justify-center gap-[3px] h-10 mb-5">
@@ -1745,15 +1527,7 @@ function TranscribingView({
       </div>
 
       <p className="text-xs text-foreground/50 font-medium">{getTranscribingLabel()}</p>
-      {hasChunkInfo ? (
-        <p className="text-xs text-foreground/45 mt-1">
-          {t("notes.upload.chunkProgress", {
-            completed: chunkProgress.chunksCompleted,
-            total: chunkProgress.chunksTotal,
-          })}
-        </p>
-      ) : null}
-      {!hasChunkInfo && file ? (
+      {file ? (
         <p dir="ltr" className="text-xs text-foreground/45 mt-1 truncate max-w-50">
           {file.name}
         </p>

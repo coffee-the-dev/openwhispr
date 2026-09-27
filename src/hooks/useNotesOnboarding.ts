@@ -1,20 +1,14 @@
 import { useState, useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { selectIsCloudCleanupMode, useSettingsStore } from "../stores/settingsStore";
-import { useUsage } from "./useUsage";
 
 interface UseNotesOnboardingReturn {
   isComplete: boolean;
-  isProUser: boolean;
-  isProLoading: boolean;
   isLLMConfigured: boolean;
   complete: () => void;
 }
 
 export function useNotesOnboarding(): UseNotesOnboardingReturn {
-  const usage = useUsage();
-  const isProUser = usage?.hasPaidAccess === true;
-  const isProLoading = usage !== null && usage.status !== "success";
   const { useCleanupModel, effectiveModel, isCloudCleanup } = useSettingsStore(
     useShallow((settings) => {
       const effective = settings;
@@ -37,5 +31,5 @@ export function useNotesOnboarding(): UseNotesOnboardingReturn {
     setIsComplete(true);
   }, []);
 
-  return { isComplete, isProUser, isProLoading, isLLMConfigured, complete };
+  return { isComplete, isLLMConfigured, complete };
 }

@@ -7,7 +7,6 @@ const FINISHED_RECORDING = {
   isRecording: false,
   hasTranscriptSegments: true,
   hasSummary: false,
-  canEdit: true,
   isProcessingAction: false,
 };
 
@@ -31,10 +30,9 @@ test("a live recording, an existing summary, or nothing transcribed offers nothi
   );
 });
 
-test("a read-only note and an action already running offer nothing", async () => {
+test("an action already running offers nothing", async () => {
   const { shouldOfferMeetingSummary } = await load();
 
-  assert.equal(shouldOfferMeetingSummary({ ...FINISHED_RECORDING, canEdit: false }), false);
   assert.equal(
     shouldOfferMeetingSummary({ ...FINISHED_RECORDING, isProcessingAction: true }),
     false

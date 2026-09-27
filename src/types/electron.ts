@@ -1,10 +1,5 @@
 import type { ModelDefinition } from "../models/ModelRegistry";
 import type { TinfoilCatalogModel } from "../models/tinfoilModels";
-import type { UsageResponse } from "../lib/usageStore";
-import type {
-  ManagedEnterpriseConfig,
-  ManagedEnterpriseRequestContext,
-} from "./enterpriseIdentity";
 import type { CalendarAvailabilityRequest, CalendarAvailabilityResult } from "./calendar";
 
 export type LocalTranscriptionProvider = "whisper" | "nvidia" | "cohere";
@@ -135,22 +130,6 @@ export type ProxyTranscriptionResult =
   | { text: string; model?: string; error?: undefined }
   | { error: string; code?: string; messageKey?: string; text?: undefined };
 
-export interface AuthTokenState {
-  token: string | null;
-  generation: number;
-}
-
-export interface AuthTokenMutationResult extends AuthTokenState {
-  success: boolean;
-  code?: string;
-}
-
-/** The validated account scope the main process holds, as seen by any window. */
-export interface ActiveAccountScope {
-  accountId: string;
-  authGeneration: number;
-}
-
 export interface TranscriptionItem {
   id: number;
   text: string;
@@ -166,9 +145,6 @@ export interface TranscriptionItem {
   error_code: TranscriptionErrorCode;
   route_kind?: string | null;
   client_transcription_id: string;
-  cloud_id: string | null;
-  sync_status: "synced" | "pending" | "error";
-  deleted_at: string | null;
 }
 
 export type AnalyticsMode = "local" | "openwhispr_cloud" | "byok" | "self_hosted" | "unknown";
@@ -219,126 +195,9 @@ export interface NoteItem {
   participants: string | null;
   diarization_enabled: number | null;
   expected_speaker_count: number | null;
-  cloud_id: string | null;
-  is_shared: number;
-  share_token: string | null;
-  // The note's owner (CloudNote.user_id) — who created it, not who last
-  // edited it. Only populated from the cloud; NULL on local-only rows and on
-  // team notes mirrored before ownership shipped (the UI fails closed on
-  // those until the owner backfill fills them).
-  owner_user_id?: string | null;
-  created_by_user_id?: string | null;
-  // Last cloud editor; only populated on cloud pull (local edits don't set it).
-  updated_by_user_id?: string | null;
-  // Server updated_at this device last acked (push response or pull); echoed
-  // as base_updated_at on the next PATCH. Null = pre-guard row, pushes LWW.
-  cloud_updated_at?: string | null;
   created_at: string;
   updated_at: string;
   client_note_id: string;
-  sync_status: "synced" | "pending" | "error";
-  deleted_at: string | null;
-  // Computed by getNoteByClientId while a parent folder DELETE awaits its
-  // server result. Held notes stay hidden and must not be pulled/queued alone.
-  folder_delete_pending?: number;
-  // 1 while a cloud-backed row that left a team space still owes its scope
-  // retraction push (D6); cleared when the row settles.
-  left_team?: number;
-}
-
-// Immutable view of every local field that affects a note push. The main
-// process compares this atomically when the cloud response returns, so an
-// in-flight create/PATCH cannot settle a newer edit or a purged identity.
-export type NotePushSnapshot = Pick<
-  NoteItem,
-  | "client_note_id"
-  | "title"
-  | "content"
-  | "enhanced_content"
-  | "enhancement_prompt"
-  | "enhanced_at_content_hash"
-  | "note_type"
-  | "source_file"
-  | "audio_duration_seconds"
-  | "folder_id"
-  | "space_id"
-  | "transcript"
-  | "calendar_event_id"
-  | "participants"
-  | "diarization_enabled"
-  | "expected_speaker_count"
-  | "created_at"
-  | "updated_at"
-  | "sync_status"
-  | "deleted_at"
-  | "cloud_updated_at"
-  | "left_team"
->;
-
-export type NoteCreateSnapshot = NotePushSnapshot;
-export type NoteUpdateSnapshot = NotePushSnapshot;
-
-export interface NoteCreateAckResult {
-  success: boolean;
-  outcome: "synced" | "pending" | "already-linked" | "orphaned" | "unresolved";
-}
-
-export interface NoteUpdateAckResult {
-  success: boolean;
-  outcome: "synced" | "pending" | "identity-changed";
-  changes: number;
-}
-
-export type ShareVisibility = "private" | "link" | "domain" | "invited";
-
-export type NotePermission = "owner" | "editor" | "viewer";
-
-export type NoteAccessPrincipalType = "user" | "email" | "team" | "folder" | "workspace";
-
-export interface NoteAccessPrincipal {
-  type: NoteAccessPrincipalType;
-  id: string | null;
-  email: string | null;
-  name: string | null;
-  image: string | null;
-  member_count: number | null;
-}
-
-export interface NoteAccessGrant {
-  id: string;
-  principal: NoteAccessPrincipal;
-  permission: Exclude<NotePermission, "owner">;
-  source: "direct" | "team" | "folder" | "workspace";
-  inherited: boolean;
-  pending: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface NoteAccessState {
-  owner: NoteAccessPrincipal;
-  grants: NoteAccessGrant[];
-  my_permission: NotePermission;
-  can_manage_access: boolean;
-  can_manage_inherited_access: boolean;
-}
-
-export interface ShareSettings {
-  visibility: ShareVisibility;
-  token_prefix: string | null;
-  domain_allowlist: string[];
-  updated_by_user_id: string | null;
-  updated_at: string | null;
-}
-
-export interface NoteShareInvitation {
-  id: string;
-  email: string;
-  invited_by_user_id: string;
-  accepted_at: string | null;
-  revoked_at: string | null;
-  last_emailed_at: string | null;
-  created_at: string;
 }
 
 export interface FolderItem {
@@ -350,230 +209,17 @@ export interface FolderItem {
   created_at: string;
   updated_at: string;
   client_folder_id: string;
-  cloud_id: string | null;
-  sync_status: "synced" | "pending" | "error";
-  deleted_at: string | null;
-  // 1 while a cloud-backed row that left a team space still owes its scope
-  // retraction push (D6); cleared when the row settles.
-  left_team?: number;
-}
-
-export type FolderPushSnapshot = Pick<
-  FolderItem,
-  | "client_folder_id"
-  | "name"
-  | "is_default"
-  | "sort_order"
-  | "space_id"
-  | "created_at"
-  | "updated_at"
-  | "sync_status"
-  | "deleted_at"
-  | "left_team"
->;
-
-export interface FolderAckResult {
-  success: boolean;
-  outcome: "synced" | "pending" | "already-linked" | "identity-changed" | "unresolved";
-  changes: number;
-}
-
-/** A team assigned to a space, as mirrored from GET /api/me/spaces. */
-export interface SpaceTeamRef {
-  id: string;
-  name: string;
-  // Explicit team membership role, if any (workspace admins may have none).
-  my_role?: "admin" | "member" | null;
-  // Per-assignment cap on what the team conveys (space_teams.access): its
-  // team admins are space admins only when this is 'admin'. Absent on
-  // mirrors written before the API shipped it; those rows are 'admin'.
-  access?: "admin" | "member";
 }
 
 export interface SpaceItem {
   id: number;
   client_space_id: string;
-  cloud_space_id: string | null;
-  // Retained only for unambiguous adoption of pre-spaces team rows.
-  cloud_team_id?: string | null;
-  workspace_id: string | null;
-  kind: "private" | "team";
+  kind: "private";
   name: string;
   emoji: string | null;
   sort_order: number;
-  // Server-computed effective role: direct grant or best role across assigned
-  // teams (ws owner/admin ⇒ admin).
-  my_role: "admin" | "member" | null;
-  // Direct space_members grant, null when access comes only via teams or the
-  // workspace role. Absent on mirrors written before the API shipped it.
-  my_direct_role?: TeamRole | null;
-  // Server-computed deduped union of direct members and assigned team rosters.
-  member_count: number | null;
-  teams: SpaceTeamRef[];
-  sync_status: "synced" | "pending" | "error";
-  deleted_at: string | null;
   created_at: string;
   updated_at: string;
-}
-
-export interface DictionaryEntryItem {
-  id: number;
-  word: string;
-  source: "manual" | "learned";
-  created_at: string;
-  updated_at: string;
-  client_dict_id: string;
-  cloud_id: string | null;
-  sync_status: "synced" | "pending" | "error";
-  deleted_at: string | null;
-}
-
-export interface SnippetEntryItem {
-  id: number;
-  trigger: string;
-  replacement: string;
-  created_at: string;
-  updated_at: string;
-  client_snippet_id: string;
-  cloud_id: string | null;
-  sync_status: "synced" | "pending" | "error";
-  deleted_at: string | null;
-}
-
-export type WorkspaceRole = "owner" | "admin" | "member";
-
-export interface Workspace {
-  id: string;
-  name: string;
-  slug: string;
-  created_by_user_id: string;
-  stripe_customer_id: string | null;
-  stripe_subscription_id: string | null;
-  plan: string;
-  status: string;
-  trial_ends_at: string | null;
-  current_period_end: string | null;
-  cancel_at_period_end: boolean;
-  seats: number;
-  // Optional: absent from API responses that predate unified billing.
-  seats_used?: number;
-  created_at: string;
-  updated_at: string;
-  role: WorkspaceRole;
-  is_billable?: boolean;
-  billing_manager?: string | null;
-}
-
-export interface WorkspaceMember {
-  user_id: string;
-  role: WorkspaceRole;
-  is_billable?: boolean;
-  joined_at: string;
-  email: string;
-  name: string | null;
-  image: string | null;
-}
-
-export type TeamRole = "admin" | "member";
-
-export interface Team {
-  id: string;
-  workspace_id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  emoji?: string | null;
-  created_at: string;
-  updated_at: string;
-  member_count?: number;
-}
-
-export interface TeamMember {
-  user_id: string;
-  role: TeamRole;
-  joined_at: string;
-  email: string;
-  name: string | null;
-  image: string | null;
-}
-
-export interface WorkspaceInvitation {
-  id: string;
-  email: string;
-  workspace_role: WorkspaceRole;
-  team_ids: string[];
-  invited_by_user_id: string;
-  expires_at: string;
-  created_at: string;
-  accepted_at: string | null;
-  revoked_at: string | null;
-}
-
-export interface JoinableMember {
-  name: string | null;
-  email: string;
-  image: string | null;
-}
-
-/**
- * A workspace the signed-in user can act on, from GET /api/me/joinable.
- * `source` is why they can see it, `mode` is what the button does: a direct
- * invitation joins, while a company-domain match only earns the right to ask
- * an admin. Enterprise SSO and SCIM provision through the SSO callback.
- */
-export interface JoinableWorkspace {
-  source: "invitation" | "domain";
-  mode: "join" | "request";
-  request_state: "none" | "pending";
-  invitation_id: string | null;
-  workspace_id: string;
-  workspace_name: string;
-  workspace_slug: string;
-  role: WorkspaceRole;
-  member_count: number;
-  members: JoinableMember[];
-  inviter_name: string | null;
-  inviter_email: string | null;
-}
-
-export interface WorkspaceJoinRequest {
-  id: string;
-  user_id: string;
-  name: string | null;
-  email: string;
-  image: string | null;
-  created_at: string;
-}
-
-export interface InvitationPreview {
-  id: string;
-  email: string;
-  workspace_role: WorkspaceRole;
-  team_ids: string[];
-  /** Live spaces the invite grants directly; absent from APIs that predate space grants. */
-  space_names?: string[];
-  expires_at: string;
-  workspace_id: string;
-  workspace_name: string;
-  workspace_slug: string;
-  inviter_name: string | null;
-  inviter_email: string | null;
-}
-
-export interface WorkspaceApiKey {
-  id: string;
-  name: string;
-  key_prefix: string;
-  scopes: string[];
-  last_used_at: string | null;
-  expires_at: string | null;
-  created_at: string;
-  created_by_user_id: string | null;
-  description: string | null;
-}
-
-export interface NewWorkspaceApiKey extends WorkspaceApiKey {
-  key: string;
 }
 
 export interface ActionItem {
@@ -924,28 +570,10 @@ export interface ConversationPreview {
   created_at: string;
   updated_at: string;
   archived_at?: string | null;
-  cloud_id?: string | null;
   client_conversation_id?: string;
-  sync_status?: "synced" | "pending" | "error";
-  deleted_at?: string | null;
-  // Computed for sync lookups while the parent folder delete is unresolved.
-  folder_delete_pending?: number;
   message_count: number;
   last_message?: string | null;
   last_message_role?: "user" | "assistant" | "system" | null;
-}
-
-export interface ConversationCreateSnapshot {
-  client_conversation_id?: string | null;
-  title: string;
-  updated_at: string;
-  message_count: number;
-}
-
-export interface ConversationCreateAckResult {
-  success: boolean;
-  outcome: "synced" | "changed" | "already-linked" | "delete-pending" | "orphaned" | "unresolved";
-  cloud_id?: string | null;
 }
 
 export type OnboardingDemoKind = "dictation" | "assistant";
@@ -1183,12 +811,6 @@ declare global {
           remoteTranscriptionType?: SelfHostedType;
           remoteTranscriptionUrl?: string;
           remoteTranscriptionModel?: string;
-          managed?: {
-            kind: "managed";
-            provider: "azure";
-            deployment: string;
-            context: ManagedEnterpriseRequestContext;
-          };
         }
       ) => Promise<{
         success: boolean;
@@ -1257,11 +879,6 @@ declare global {
           diarization_enabled?: number | null;
           expected_speaker_count?: number | null;
           client_note_id?: string;
-          cloud_id?: string | null;
-          cloud_updated_at?: string | null;
-          owner_user_id?: string | null;
-          updated_by_user_id?: string | null;
-          left_team?: number;
         }
       ) => Promise<{ success: boolean; note?: NoteItem; error?: string }>;
       deleteNote: (id: number) => Promise<{ success: boolean }>;
@@ -1286,11 +903,6 @@ declare global {
         spaceId?: number | null,
         folderId?: number | null
       ) => Promise<NoteItem[]>;
-      updateNoteCloudId: (id: number, cloudId: string) => Promise<NoteItem>;
-      updateNoteShareState: (
-        id: number,
-        state: { is_shared: number; share_token?: string | null }
-      ) => Promise<NoteItem>;
 
       // Folder operations
       getFolders: (spaceId?: number | null) => Promise<FolderItem[]>;
@@ -1303,63 +915,16 @@ declare global {
         id: number,
         name: string
       ) => Promise<{ success: boolean; folder?: FolderItem; error?: string }>;
-      moveFolderToSpace: (
-        id: number,
-        spaceId: number
-      ) => Promise<{ success: boolean; folder?: FolderItem; notes?: NoteItem[]; error?: string }>;
       getFolderNoteCounts: () => Promise<
         Array<{ space_id: number; folder_id: number | null; count: number }>
       >;
 
       // Space operations
       getSpaces?: () => Promise<SpaceItem[]>;
-      setActiveAccountScope?: (
-        accountId: string | null,
-        expectedAuthGeneration?: number
-      ) => Promise<{ success: boolean; code?: string; error?: string }>;
-      getActiveAccountScope?: () => Promise<ActiveAccountScope | null>;
-      onActiveAccountScopeChanged?: (
-        callback: (scope: ActiveAccountScope | null) => void
-      ) => () => void;
-      deleteAccountData?: (
-        accountId: string,
-        expectedAuthGeneration: number
-      ) => Promise<{
-        success: boolean;
-        code?: string;
-        error?: string;
-        deletedNoteIds?: number[];
-        deletedFolderIds?: number[];
-      }>;
       updateSpace?: (
         id: number,
         updates: { name?: string; emoji?: string | null }
       ) => Promise<{ success: boolean; space?: SpaceItem; error?: string }>;
-      purgeSpace?: (
-        id: number,
-        options?: {
-          mode?: "preserve-dirty" | "destructive";
-          expectedAuthGeneration?: number;
-        }
-      ) => Promise<{
-        success: boolean;
-        code?: string;
-        error?: string;
-        noteIds?: number[];
-        folderNames?: string[];
-        spaceId?: number;
-        relocatedNotes?: NoteItem[];
-        relocatedCount?: number;
-        relocatedTitles?: string[];
-        preservedForOtherAccounts?: boolean;
-      }>;
-      upsertSpaceFromCloud?: (space: Record<string, unknown>) => Promise<SpaceItem>;
-      setSpaceSyncStatus?: (
-        id: number,
-        status: SpaceItem["sync_status"]
-      ) => Promise<{ success: boolean; space?: SpaceItem | null }>;
-      onSpacePurged?: (callback: (payload: { spaceId: number }) => void) => () => void;
-      onSpaceSynced?: (callback: (space: SpaceItem) => void) => () => void;
 
       // Note files (markdown mirror)
       noteFilesSetEnabled?: (
@@ -1466,13 +1031,7 @@ declare global {
       onNoteAdded?: (callback: (note: NoteItem) => void) => () => void;
       onNoteUpdated?: (callback: (note: NoteItem) => void) => () => void;
       onNoteDeleted?: (callback: (payload: { id: number }) => void) => () => void;
-      onNoteSynced?: (callback: (note: NoteItem) => void) => () => void;
-      onFolderSynced?: (callback: (folder: FolderItem) => void) => () => void;
       onFolderDeleted?: (callback: (payload: { id: number }) => void) => () => void;
-
-      // Cross-window sync events
-      emitSyncEvent?: (name: string, payload?: unknown) => Promise<{ success: boolean }>;
-      onSyncEvent?: (callback: (event: { name: string; payload?: unknown }) => void) => () => void;
 
       // Database event listeners
       onTranscriptionAdded?: (callback: (item: TranscriptionItem) => void) => () => void;
@@ -1800,8 +1359,6 @@ declare global {
 
       getAppVersion: () => Promise<AppVersionResult>;
       getPostMigrationState: () => Promise<{ justMigrated: boolean }>;
-      getOAuthProtocolRegistered: () => Promise<boolean>;
-      getOAuthProtocol: () => Promise<string>;
       markBundleMigrated: () => Promise<void>;
       markBundleMigrationDismissed: () => Promise<void>;
 
@@ -1983,43 +1540,6 @@ declare global {
           underlyingError?: string;
         };
       }>;
-      getManagedEnterpriseConfig?: (
-        accountId: string,
-        workspaceId: string,
-        expectedAuthGeneration: number,
-        forceRefresh?: boolean
-      ) => Promise<{
-        success: boolean;
-        status?: "network" | "current" | "cached" | "error";
-        accountId?: string | null;
-        workspaceId?: string | null;
-        authGeneration?: number | null;
-        config?: ManagedEnterpriseConfig;
-        code?: string;
-        error?: string;
-        enforcementRequired?: boolean;
-        enforcedScopes?: string[];
-      }>;
-      onManagedEnterpriseConfigChanged?: (
-        callback: (snapshot: {
-          accountId: string;
-          workspaceId: string;
-          authGeneration: number;
-          config: ManagedEnterpriseConfig | null;
-          code: string | null;
-          enforcementRequired?: boolean;
-          enforcedScopes?: string[];
-        }) => void
-      ) => () => void;
-      clearManagedEnterpriseIdentity?: () => Promise<void>;
-      managedTranscribe?: (data: {
-        audioBuffer: ArrayBuffer;
-        fileName: string;
-        mimeType: string;
-        language?: string;
-        prompt?: string;
-        managed: { provider: "azure"; context: ManagedEnterpriseRequestContext };
-      }) => Promise<{ text?: string; error?: string; code?: string; messageKey?: string }>;
 
       // Dictation key persistence (file-based for reliable startup)
       getDictationKey?: () => Promise<string | null>;
@@ -2109,22 +1629,6 @@ declare global {
       getAutoStartEnabled?: () => Promise<{ enabled: boolean; requiresApproval: boolean }>;
       setAutoStartEnabled?: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
 
-      // Auth
-      authClearSession?: () => Promise<{
-        success: boolean;
-        tokenState?: AuthTokenState;
-        error?: string;
-      }>;
-      authGetToken?: () => Promise<string | null>;
-      authGetTokenState?: () => Promise<AuthTokenState>;
-      authSetToken?: (
-        token: string,
-        expectedGeneration: number
-      ) => Promise<AuthTokenMutationResult>;
-      onAuthTokenStateChanged?: (
-        callback: (state: { generation: number; hasToken: boolean }) => void
-      ) => () => void;
-
       // OpenWhispr Cloud API
       cloudTranscribe?: (
         audioBuffer: ArrayBuffer,
@@ -2176,93 +1680,12 @@ declare global {
         code?: string;
       }>;
       cancelCloudReason?: () => void;
-      cloudStreamingUsage?: (
-        text: string,
-        audioDurationSeconds: number,
-        opts?: {
-          sendLogs?: boolean;
-          sttProvider?: string;
-          sttModel?: string;
-          sttProcessingMs?: number;
-          sttLanguage?: string;
-          audioSizeBytes?: number;
-          audioFormat?: string;
-          clientTotalMs?: number;
-          clientTranscriptionId?: string;
-        } & SttDetectedLanguageFields
-      ) => Promise<{
-        success: boolean;
-        wordsUsed?: number;
-        wordsRemaining?: number;
-        limitReached?: boolean;
-        error?: string;
-        code?: string;
-      }>;
       cloudHealthCheck?: () => Promise<{
         ok: boolean;
         status?: number;
         code?: string;
         messageKey?: string;
       }>;
-      cloudUsage?: () => Promise<
-        UsageResponse & {
-          success: boolean;
-          error?: string;
-          code?: string;
-        }
-      >;
-      cloudCheckout?: (opts?: {
-        plan?: "monthly" | "annual";
-        tier?: "pro" | "business";
-      }) => Promise<{
-        success: boolean;
-        url?: string;
-        error?: string;
-        code?: string;
-      }>;
-      cloudBillingPortal?: () => Promise<{
-        success: boolean;
-        url?: string;
-        error?: string;
-        code?: string;
-      }>;
-      cloudSwitchPlan?: (opts: {
-        plan: "monthly" | "annual";
-        tier: "pro" | "business";
-      }) => Promise<{
-        success: boolean;
-        alreadyOnPlan?: boolean;
-        error?: string;
-      }>;
-      cloudPreviewSwitch?: (opts: {
-        plan: "monthly" | "annual";
-        tier: "pro" | "business";
-      }) => Promise<{
-        success: boolean;
-        immediateAmount?: number;
-        currency?: string;
-        currentPriceAmount?: number;
-        currentInterval?: string;
-        newPriceAmount?: number;
-        newInterval?: string;
-        nextBillingDate?: string;
-        alreadyOnPlan?: boolean;
-        error?: string;
-      }>;
-
-      // Authenticated cloud API proxy (`public: true` skips the auth requirement)
-      cloudApiRequest?: (opts: {
-        method?: string;
-        path: string;
-        body?: unknown;
-        public?: boolean;
-        expectedAuthGeneration?: number;
-      }) => Promise<
-        {
-          success: boolean;
-          data?: unknown;
-        } & CloudFailureMetadata
-      >;
 
       // Cloud audio file transcription
       transcribeAudioFileCloud?: (
@@ -2299,12 +1722,6 @@ declare global {
         transcriptionMode?: string;
         remoteTranscriptionUrl?: string;
         remoteTranscriptionModel?: string;
-        managed?: {
-          kind: "managed";
-          provider: "azure";
-          deployment: string;
-          context: ManagedEnterpriseRequestContext;
-        };
       }) => Promise<{
         success: boolean;
         text?: string;
@@ -2312,16 +1729,6 @@ declare global {
         diarized?: boolean;
         segments?: Array<{ text: string; start: number; end: number; speaker?: string }>;
       }>;
-
-      // Usage limit events
-      notifyLimitReached?: (data: { wordsUsed: number; limit: number }) => void;
-      onLimitReached?: (
-        callback: (data: { wordsUsed: number; limit: number }) => void
-      ) => () => void;
-
-      // Workspace invitation deep link
-      onWorkspaceInvitationToken?: (callback: (token: string) => void) => () => void;
-      getPendingInvitationToken?: () => Promise<string | null>;
 
       // AssemblyAI Streaming
       assemblyAiStreamingWarmup?: (options?: { sampleRate?: number; language?: string }) => Promise<
@@ -2403,7 +1810,6 @@ declare global {
           id: number;
           title: string;
           archived_at?: string;
-          cloud_id?: string;
           client_conversation_id?: string;
           created_at: string;
           updated_at: string;
@@ -2413,7 +1819,6 @@ declare global {
         id: number;
         title: string;
         archived_at?: string;
-        cloud_id?: string | null;
         client_conversation_id?: string | null;
         created_at: string;
         updated_at: string;
@@ -2459,10 +1864,6 @@ declare global {
       searchAgentConversations?: (query: string, limit?: number) => Promise<ConversationPreview[]>;
       archiveAgentConversation?: (id: number) => Promise<{ success: boolean }>;
       unarchiveAgentConversation?: (id: number) => Promise<{ success: boolean }>;
-      updateAgentConversationCloudId?: (
-        id: number,
-        cloudId: string
-      ) => Promise<{ success: boolean }>;
       semanticSearchConversations?: (
         query: string,
         limit?: number
@@ -2929,139 +2330,8 @@ declare global {
       hideDictationPreview?: () => Promise<{ success: boolean }>;
       sendDictationPreviewAudio?: (data: ArrayBuffer) => void;
 
-      // Sync operations
-      getPendingNotes?: (spaceKind?: "private" | "team") => Promise<NoteItem[]>;
-      getPendingNoteDeletes?: () => Promise<NoteItem[]>;
-      getNoteByClientId?: (clientNoteId: string) => Promise<NoteItem | null>;
-      upsertNoteFromCloud?: (
-        cloudNote: Record<string, unknown>,
-        localFolderId: number | null,
-        localSpaceId?: number | null
-      ) => Promise<NoteItem>;
-      acknowledgeNoteCreate?: (
-        id: number,
-        snapshot: NoteCreateSnapshot,
-        cloudId: string,
-        cloudUpdatedAt?: string | null,
-        ownerUserId?: string | null,
-        settleIfUnchanged?: boolean
-      ) => Promise<NoteCreateAckResult>;
-      markNoteSyncedIfUnchanged?: (
-        id: number,
-        snapshot: NoteUpdateSnapshot,
-        expectedCloudId: string,
-        cloudUpdatedAt?: string | null,
-        ownerUserId?: string | null
-      ) => Promise<NoteUpdateAckResult>;
-      setNoteCloudBase?: (id: number, cloudUpdatedAt: string | null) => Promise<void>;
-      setNoteOwnerFromCloud?: (id: number, ownerUserId: string) => Promise<void>;
-      countTeamNotesMissingOwner?: () => Promise<number>;
-      markNoteSyncError?: (id: number) => Promise<void>;
-      restoreNoteAfterDeniedDelete?: (id: number) => Promise<{ success: boolean; id: number }>;
-      hardDeleteNote?: (id: number) => Promise<void>;
-
-      getPendingFolders?: (spaceKind?: "private" | "team") => Promise<FolderItem[]>;
-      getFolderByClientId?: (clientFolderId: string) => Promise<FolderItem | null>;
-      upsertFolderFromCloud?: (
-        cloudFolder: Record<string, unknown>,
-        localSpaceId?: number | null
-      ) => Promise<FolderItem>;
-      acknowledgeFolderCreate?: (
-        id: number,
-        snapshot: FolderPushSnapshot,
-        expectedCloudId: string | null,
-        responseClientFolderId: string,
-        cloudId: string,
-        cloudUpdatedAt?: string | null
-      ) => Promise<FolderAckResult>;
-      markFolderSyncedIfUnchanged?: (
-        id: number,
-        snapshot: FolderPushSnapshot,
-        expectedCloudId: string
-      ) => Promise<FolderAckResult>;
-      getFolderIdMap?: () => Promise<FolderItem[]>;
-      getPendingFolderDeletes?: () => Promise<FolderItem[]>;
-      restoreFolderAfterDeniedDelete?: (id: number) => Promise<{
-        success: boolean;
-        id: number;
-        folder?: FolderItem;
-        notes?: NoteItem[];
-        conversationIds?: number[];
-        reason?: "name-taken";
-        error?: string;
-      }>;
-      hardDeleteFolder?: (id: number) => Promise<{ success: boolean; id: number }>;
-      relocateRevokedFolder?: (
-        id: number,
-        privateSpaceId: number,
-        preserveFolder?: boolean
-      ) => Promise<{
-        success: boolean;
-        folder?: FolderItem | null;
-        folderName?: string;
-        relocatedNotes?: NoteItem[];
-        deletedNoteIds?: number[];
-        error?: string;
-      }>;
-
-      getPendingConversations?: () => Promise<ConversationPreview[]>;
-      getPendingConversationDeletes?: () => Promise<ConversationPreview[]>;
-      getConversationByClientId?: (clientId: string) => Promise<ConversationPreview | null>;
-      upsertConversationFromCloud?: (
-        cloudConv: Record<string, unknown>,
-        messages: Array<Record<string, unknown>>
-      ) => Promise<void>;
-      acknowledgeConversationCreate?: (
-        id: number,
-        snapshot: ConversationCreateSnapshot,
-        cloudId: string
-      ) => Promise<ConversationCreateAckResult | undefined>;
-      markConversationSynced?: (
-        id: number,
-        cloudId: string
-      ) => Promise<{ success: boolean } | undefined>;
-      hardDeleteConversation?: (id: number) => Promise<void>;
-
-      getPendingTranscriptions?: () => Promise<TranscriptionItem[]>;
-      getTranscriptionByClientId?: (clientId: string) => Promise<TranscriptionItem | null>;
-      upsertTranscriptionFromCloud?: (
-        cloudTranscription: Record<string, unknown>
-      ) => Promise<TranscriptionItem>;
-      markTranscriptionSynced?: (id: number, cloudId: string) => Promise<void>;
-      getPendingTranscriptionDeletes?: () => Promise<TranscriptionItem[]>;
-      hardDeleteTranscription?: (id: number) => Promise<{ success: boolean; id: number }>;
-
-      getPendingDictionary?: () => Promise<DictionaryEntryItem[]>;
-      getPendingDictionaryDeletes?: () => Promise<DictionaryEntryItem[]>;
-      getDictionaryByClientId?: (clientDictId: string) => Promise<DictionaryEntryItem | null>;
-      upsertDictionaryFromCloud?: (
-        cloudEntry: Record<string, unknown>
-      ) => Promise<DictionaryEntryItem | null>;
-      markDictionarySynced?: (
-        id: number,
-        cloudId: string
-      ) => Promise<{ success: boolean; changes: number }>;
-      hardDeleteDictionary?: (id: number) => Promise<{ success: boolean; id: number }>;
-      clearDictionaryCloudId?: (id: number) => Promise<{ success: boolean }>;
       broadcastDictionaryUpdated?: () => Promise<{ success: boolean }>;
 
-      getPendingSnippets?: () => Promise<SnippetEntryItem[]>;
-      getPendingSnippetDeletes?: () => Promise<SnippetEntryItem[]>;
-      getSnippetForCloudMerge?: (
-        cloudEntry: Record<string, unknown>
-      ) => Promise<SnippetEntryItem | null>;
-      upsertSnippetFromCloud?: (
-        cloudEntry: Record<string, unknown>
-      ) => Promise<SnippetEntryItem | null>;
-      markSnippetSynced?: (
-        id: number,
-        cloudId: string,
-        serverUpdatedAt?: string,
-        expectedTrigger?: string,
-        expectedReplacement?: string
-      ) => Promise<{ success: boolean; changes: number }>;
-      hardDeleteSnippet?: (id: number) => Promise<{ success: boolean; id: number }>;
-      clearSnippetCloudId?: (id: number) => Promise<{ success: boolean }>;
       broadcastSnippetsUpdated?: () => Promise<{ success: boolean }>;
     };
 

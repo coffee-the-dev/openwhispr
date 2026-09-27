@@ -1,8 +1,7 @@
 import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import { Cloud, Key, Cpu, Network } from "../icons";
+import { Key, Cpu, Network } from "../icons";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { requestSignIn } from "../../utils/requestSignIn";
 import { InferenceModeSelector } from "../ui/SettingsSection";
 import type { InferenceModeOption } from "../ui/SettingsSection";
 import TranscriptionModelPicker from "../TranscriptionModelPicker";
@@ -13,7 +12,6 @@ export function UploadTranscriptionPanel() {
   const { t } = useTranslation();
 
   const {
-    isSignedIn,
     uploadTranscriptionMode,
     setUploadTranscriptionMode,
     setUploadUseLocalWhisper,
@@ -39,14 +37,6 @@ export function UploadTranscriptionPanel() {
   } = useSettingsStore();
   const transcriptionModes: InferenceModeOption[] = [
     {
-      id: "openwhispr",
-      label: t("settingsPage.transcription.modes.openwhispr"),
-      description: t("settingsPage.transcription.modes.openwhisprDesc"),
-      icon: <Cloud className="w-4 h-4" />,
-      disabled: !isSignedIn,
-      badge: !isSignedIn ? t("common.freeAccountRequired") : undefined,
-    },
-    {
       id: "providers",
       label: t("settingsPage.transcription.modes.providers"),
       description: t("settingsPage.transcription.modes.providersDesc"),
@@ -67,10 +57,6 @@ export function UploadTranscriptionPanel() {
   ];
   const effectiveTranscriptionMode = uploadTranscriptionMode;
   const handleTranscriptionModeSelect = (mode: InferenceMode) => {
-    if (mode === "openwhispr" && !isSignedIn) {
-      requestSignIn();
-      return;
-    }
     if (mode === effectiveTranscriptionMode) return;
     setUploadTranscriptionMode(mode);
     setUploadUseLocalWhisper(mode === "local");

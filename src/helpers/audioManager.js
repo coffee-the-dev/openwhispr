@@ -2,7 +2,6 @@ import ReasoningService from "../services/ReasoningService";
 import logger from "../utils/logger";
 import { assertValidCleanupOutput } from "../utils/cleanupOutput";
 import { isAzureOpenAIEndpoint } from "../utils/urlUtils";
-import { withSessionRefresh } from "../lib/auth";
 import { getBaseLanguageCode, getLanguageLabel } from "../utils/languageSupport";
 import { convertToWav, needsWavConversion } from "../utils/audioContainer";
 import {
@@ -58,7 +57,6 @@ import {
   resolveTranscriptionRoute,
   STREAMING_ONLY_PROVIDERS,
 } from "./transcriptionRoute.ts";
-import { getManagedTranscriptionResolution } from "../services/managedTranscription.ts";
 import { getTranscriptionApiKey } from "../services/fileTranscription";
 import { shouldSkipTranscriptionApiKey } from "./transcriptionAuth";
 import {
@@ -91,7 +89,6 @@ import {
 import { providerSupportsImages } from "../services/ai/inferenceProviders";
 import { resolveDictationTranslationInference } from "./dictationTranslationInference";
 import { resolvePrompt, appendScreenContextSuffix } from "../config/prompts";
-import { syncService } from "../services/SyncService.js";
 import { evaluateFinishedRecording, withSalvageWarning } from "./recordingValidation";
 import { isEmptyRecording } from "./recordingGuard";
 import {
@@ -267,9 +264,7 @@ function resolveReasoningRoute(
     };
   }
   if (kind === "agent") {
-    const vision = resolveDictationAgentVisionInference(settings, {
-      isSignedIn: settings.isSignedIn,
-    });
+    const vision = resolveDictationAgentVisionInference(settings);
     const { attach, useVisionOverride } = resolveAgentImageTarget({
       hasScreenContext: !!screenContext,
       visionOverrideActive: vision.active,
@@ -425,21 +420,6 @@ function audioExtensionForMime(mimeType) {
   if (mimeType.includes("wav")) return "wav";
   return "webm";
 }
-
-// Workspace-managed Azure STT: the Entra token lives in the main process, so
-// dictation dispatches over IPC exactly like the proxied providers below.
-const MANAGED_TRANSCRIPTION_SPEC = {
-  displayName: "Managed Azure",
-  ipc: () => window.electronAPI?.managedTranscribe,
-  buildPayload: ({ audioBuffer, language, dictionaryPrompt, managedResolution, mimeType }) => ({
-    audioBuffer,
-    fileName: `audio.${audioExtensionForMime(mimeType)}`,
-    mimeType,
-    language,
-    prompt: dictionaryPrompt || undefined,
-    managed: { provider: managedResolution.provider, context: managedResolution.context },
-  }),
-};
 
 const PROXY_TRANSCRIPTION_PROVIDERS = {
   tinfoil: {
@@ -1165,7 +1145,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const { useLocalWhisper, localTranscriptionProvider, parakeetModel } = getSettings();
     const offlineLocal =
       useLocalWhisper &&
-      !getManagedTranscriptionResolution() &&
       !(localTranscriptionProvider === "nvidia" && isOnlineParakeetModel(parakeetModel));
     if (!offlineLocal) return null;
     try {
@@ -1965,28 +1944,16 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const parakeetModel = settings.parakeetModel || "parakeet-tdt-0.6b-v3";
 
       const cloudTranscriptionMode = settings.cloudTranscriptionMode;
-      const isSignedIn = settings.isSignedIn;
-
       const isOpenWhisprCloudMode = !useLocalWhisper && cloudTranscriptionMode === "openwhispr";
-      const useCloud = isOpenWhisprCloudMode && isSignedIn;
       logger.debug(
         "Transcription routing",
-        { useLocalWhisper, useCloud, isSignedIn, cloudTranscriptionMode },
+        { useLocalWhisper, cloudTranscriptionMode },
         "transcription"
       );
 
       let result;
       let activeModel;
-      // Managed enterprise STT outranks the local and OpenWhispr Cloud lanes,
-      // matching the LLM scopes; users opt out via "Use personal setup" when
-      // the administrator allows it. Error resolutions fail closed inside
-      // processWithOpenAIAPI with their own code.
-      const managedTranscription = getManagedTranscriptionResolution();
-      if (managedTranscription) {
-        activeModel =
-          managedTranscription.kind === "managed" ? managedTranscription.deployment : null;
-        result = await this.processWithOpenAIAPI(audioBlob, metadata, wasCancelled);
-      } else if (useLocalWhisper) {
+      if (useLocalWhisper) {
         if (isSherpaLocalProvider(localProvider)) {
           activeModel = localProvider === "cohere" ? settings.cohereModel : parakeetModel;
           result = await this.processWithLocalParakeet(
@@ -2005,9 +1972,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           );
         }
       } else if (isOpenWhisprCloudMode) {
-        if (!isSignedIn) throw cloudSignInRequiredError();
-        activeModel = "openwhispr-cloud";
-        result = await this.processWithOpenWhisprCloud(audioBlob, metadata, wasCancelled);
+        throw cloudSignInRequiredError();
       } else {
         activeModel = this.getTranscriptionModel();
         result = await this.processWithOpenAIAPI(audioBlob, metadata, wasCancelled);
@@ -2865,7 +2830,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const runCleanup = async (currentText) => {
       if (cleanup.mode === "cloudReason") {
         const customPrompt = this.getCustomPrompt();
-        const reasonResult = await withSessionRefresh(async () => {
+        const reasonResult = await (async () => {
           const res = await window.electronAPI.cloudReason(currentText, {
             agentName,
             promptMode: "cleanup",
@@ -2882,7 +2847,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             throw err;
           }
           return res;
-        });
+        })();
         if (!customPrompt && hasTextContent(reasonResult.text)) {
           assertValidCleanupOutput(currentText, reasonResult.text);
         }
@@ -3303,9 +3268,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     const dictionaryPrompt = this.getWhisperPrompt(settings);
     if (dictionaryPrompt) opts.prompt = dictionaryPrompt;
 
-    // Use withSessionRefresh to handle AUTH_EXPIRED automatically
     const transcriptionStart = performance.now();
-    const result = await withSessionRefresh(async () => {
+    const result = await (async () => {
       const res = await window.electronAPI.cloudTranscribe(arrayBuffer, opts);
       if (!res.success) {
         const err = new Error(res.error || "Cloud transcription failed");
@@ -3318,7 +3282,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         throw err;
       }
       return res;
-    });
+    })();
     timings.transcriptionProcessingDurationMs = Math.round(performance.now() - transcriptionStart);
 
     const rawText = result.text;
@@ -3359,7 +3323,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           if (hasTextContent(reasoned)) processedText = reasoned;
         } else if (route.kind === "cleanup" && cleanupCloudMode === "openwhispr") {
           const customPrompt = this.getCustomPrompt();
-          const reasonResult = await withSessionRefresh(async () => {
+          const reasonResult = await (async () => {
             const res = await window.electronAPI.cloudReason(processedText, {
               agentName,
               promptMode: "cleanup",
@@ -3385,7 +3349,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
               throw err;
             }
             return res;
-          });
+          })();
 
           // Cloud cleanup can return success with empty text; keep the raw transcription instead of wiping it.
           if (reasonResult.success && hasTextContent(reasonResult.text)) {
@@ -3505,29 +3469,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         "transcription"
       );
 
-      // Managed enterprise STT outranks every personal setting.
-      const managedResolution = getManagedTranscriptionResolution();
-      if (managedResolution?.kind === "error") {
-        throw Object.assign(new Error(managedResolution.message), {
-          code: managedResolution.code,
-          messageKey: managedResolution.messageKey,
-        });
-      }
-
       // Route before reading a key: the resolver's fail-closed guards name the
       // real problem (a realtime-only provider, or its missing key), whereas the
       // key read blames the OpenAI key for a provider that never uses it.
-      const route = managedResolution ? null : this.resolveBatchRoute(apiSettings, model);
-      const apiKey = managedResolution ? null : await this.getAPIKey();
+      const route = this.resolveBatchRoute(apiSettings, model);
+      const apiKey = await this.getAPIKey();
       const optimizedAudio = audioBlob;
 
       // Dispatch before endpoint resolution (which defaults to OpenAI and would leak
       // the key). Self-hosted wins, so a leftover proxied provider isn't diverted here.
-      const proxySpec = managedResolution
-        ? MANAGED_TRANSCRIPTION_SPEC
-        : PROXY_TRANSCRIPTION_PROVIDERS[provider];
-      if (proxySpec && (managedResolution || !isSelfHostedTranscription(apiSettings))) {
-        const providerName = managedResolution ? "azure-managed" : provider;
+      const proxySpec = PROXY_TRANSCRIPTION_PROVIDERS[provider];
+      if (proxySpec && !isSelfHostedTranscription(apiSettings)) {
         const call = proxySpec.ipc();
         if (!call) {
           throw new Error(`${proxySpec.displayName} transcription is unavailable in this window`);
@@ -3538,8 +3490,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           model,
           language,
           apiSettings,
-          managedResolution,
-          mimeType: optimizedAudio.type || "audio/webm",
           dictionaryPrompt: this.getWhisperPrompt(apiSettings),
           keyterms: this.getKeyterms()
             .map((t) => t.trim().slice(0, 50))
@@ -3562,12 +3512,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         }
         timings.transcriptionProcessingDurationMs = Math.round(performance.now() - apiCallStart);
         const reasoningStart = performance.now();
-        const text = await this.processTranscription(proxyText, providerName, wasCancelled);
+        const text = await this.processTranscription(proxyText, provider, wasCancelled);
         timings.reasoningProcessingDurationMs = Math.round(performance.now() - reasoningStart);
 
-        const source = (await this.isReasoningAvailable())
-          ? `${providerName}-reasoned`
-          : providerName;
+        const source = (await this.isReasoningAvailable()) ? `${provider}-reasoned` : provider;
         return { success: true, text, rawText: proxyText, source, timings };
       }
 
@@ -4039,8 +3987,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         routeKind: this.translationRequested ? "translation" : null,
         analyticsOccurredAt: occurredAt.toISOString(),
       });
-      if (result?.id) syncService.debouncedPush("transcription", result.id);
-
       // Save audio if we have a captured blob and the transcription was saved successfully
       if (result?.id && this.lastAudioBlob) {
         if (audioRetentionDays > 0) {
@@ -4085,8 +4031,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           ? { analyticsOccurredAt: metadata.analyticsOccurredAt }
           : {}),
       });
-      if (result?.id) syncService.debouncedPush("transcription", result.id);
-
       if (result?.id && this.lastAudioBlob) {
         if (audioRetentionDays > 0) {
           try {
@@ -4143,8 +4087,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           model: null,
         });
       }
-
-      syncService.debouncedPush("transcription", savedId);
     } catch (error) {
       logger.error(
         "Failed to save discarded transcription record",
@@ -4178,32 +4120,14 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     };
   }
 
-  shouldUseStreaming(isSignedInOverride) {
+  shouldUseStreaming() {
     const s = getSettings();
     if (s.useLocalWhisper) return false;
-
-    // Managed enterprise STT is batch-only and outranks personal streaming
-    // setups; an error resolution must fail closed on the batch path too.
-    if (getManagedTranscriptionResolution()) return false;
 
     if (isOrukeetStreaming(s)) return Boolean(s.customTranscriptionApiKey);
 
     // Self-hosted transcription is batch HTTP to the user's server, never cloud realtime WS.
     if (isSelfHostedTranscription(s)) return false;
-
-    if (
-      s.cloudTranscriptionMode === "openwhispr" &&
-      this.sttConfig?.streamingProvider === "orukeet"
-    ) {
-      // A language the model does not cover takes the batch path, which
-      // carries the language, instead of a socket that would ignore it.
-      const route = resolveManagedOrukeetRoute({
-        settings: s,
-        sttConfig: this.sttConfig,
-        language: this.getEffectiveSttLanguage(s),
-      });
-      return route === "orukeet" && Boolean(isSignedInOverride ?? s.isSignedIn);
-    }
 
     // Corti (BYOK) streams over its own WSS — independent of OpenWhispr Cloud.
     if (s.cloudTranscriptionProvider === "corti" && s.cloudTranscriptionMode === "byok") {
@@ -4223,8 +4147,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const provider = getTranscriptionProvider("gemini");
       const model = provider?.models.find((m) => m.id === s.cloudTranscriptionModel);
       if (!model?.streaming) return false;
-      if (s.cloudTranscriptionMode === "byok") return !!s.geminiApiKey;
-      return !!(isSignedInOverride ?? s.isSignedIn);
+      return s.cloudTranscriptionMode === "byok" && !!s.geminiApiKey;
     }
 
     // Realtime-only providers (BYOK) stream over their own WSS and have no batch
@@ -4237,30 +4160,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       return Boolean(getTranscriptionApiKey(s.cloudTranscriptionProvider, s));
     }
 
-    // The managed-cloud bootstrap only controls OpenWhispr Cloud. A user's
-    // BYOK realtime model must not be downgraded because managed dictation is
-    // configured for batch processing.
-    if (s.cloudTranscriptionMode === "openwhispr" && this.sttConfig?.dictation?.mode === "batch") {
-      return false;
-    }
-
     if (REALTIME_MODELS.has(s.cloudTranscriptionModel)) {
       // Realtime WS is OpenAI-only — other providers fall through to HTTP.
       if ((s.cloudTranscriptionProvider || "openai") !== "openai") return false;
-      if (s.cloudTranscriptionMode === "byok") return !!s.openaiApiKey;
-      if (s.cloudTranscriptionMode === "openwhispr") return !!(isSignedInOverride ?? s.isSignedIn);
-      return false;
+      return s.cloudTranscriptionMode === "byok" && !!s.openaiApiKey;
     }
 
-    if (s.cloudTranscriptionMode !== "openwhispr" || !(isSignedInOverride ?? s.isSignedIn)) {
-      return false;
-    }
-    if (!this.sttConfig) return false;
-    return this.sttConfig.dictation?.mode === "streaming";
+    return false;
   }
 
-  async warmupStreamingConnection({ isSignedIn: isSignedInOverride } = {}) {
-    if (!this.shouldUseStreaming(isSignedInOverride)) {
+  async warmupStreamingConnection() {
+    if (!this.shouldUseStreaming()) {
       logger.debug("Streaming warmup skipped - not in streaming mode", {}, "streaming");
       return false;
     }
@@ -4270,7 +4180,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const provider = STREAMING_PROVIDERS[providerName];
       const [, wsResult] = await Promise.all([
         this.cacheMicrophoneDeviceId(),
-        withSessionRefresh(async () => {
+        (async () => {
           const settings = getSettings();
           const res = await provider.warmup(
             buildStreamingSessionOptions({
@@ -4288,7 +4198,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             throw err;
           }
           return res;
-        }),
+        })(),
       ]);
 
       if (wsResult.success) {
@@ -4468,13 +4378,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         "streaming"
       );
       return { needsFallback: true };
-    }
-    if (res.code === "LIMIT_REACHED" && Number.isFinite(res.details?.wordsUsed)) {
-      // Same upgrade prompt a batch upload opens when it crosses the quota.
-      window.electronAPI?.notifyLimitReached?.({
-        wordsUsed: res.details.wordsUsed,
-        limit: Number.isFinite(res.details.limit) ? res.details.limit : 2000,
-      });
     }
     const err = new Error(res.error || "Failed to start streaming session");
     err.code = res.code;
@@ -4696,7 +4599,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
 
       // 4. Connect WebSocket — audio is already flowing from the pipeline above,
       //    so Deepgram receives data immediately (no idle timeout).
-      const result = await withSessionRefresh(async () => {
+      const result = await (async () => {
         const streamingSettings = getSettings();
         const { useLocalWhisper } = streamingSettings;
         const res = await provider.start(
@@ -4710,7 +4613,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         );
 
         return this.classifyStreamingStartResult(res, { useLocalWhisper });
-      });
+      })();
       const tWs = performance.now();
       this._settleStreamingStart();
       if (startWasCancelled()) return false;
@@ -5312,7 +5215,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           );
         } else if (route.kind === "cleanup" && cleanupCloudMode === "openwhispr") {
           const customPrompt = this.getCustomPrompt();
-          const reasonResult = await withSessionRefresh(async () => {
+          const reasonResult = await (async () => {
             const res = await window.electronAPI.cloudReason(finalText, {
               agentName,
               promptMode: "cleanup",
@@ -5337,7 +5240,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
               throw err;
             }
             return res;
-          });
+          })();
 
           usedCloudReasoning = true;
           if (reasonResult.success && hasTextContent(reasonResult.text)) {
@@ -5555,7 +5458,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       if (!usedBatchFallback) {
         (async () => {
           try {
-            await withSessionRefresh(async () => {
+            await (async () => {
               const res = await window.electronAPI.cloudStreamingUsage(
                 finalText,
                 durationSeconds ?? 0,
@@ -5577,7 +5480,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
                 err.code = res.code;
                 throw err;
               }
-            });
+            })();
           } catch (err) {
             logger.error("Failed to report streaming usage", { error: err.message }, "streaming");
           }

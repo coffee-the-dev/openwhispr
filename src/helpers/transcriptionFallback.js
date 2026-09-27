@@ -1,13 +1,8 @@
-// Where a streaming session's batch fallback goes. "skip" keeps a signed-out
-// cloud user's audio from being diverted to a leftover BYOK provider.
-export function resolveStreamingFallbackTarget({
-  useLocalWhisper,
-  cloudTranscriptionMode,
-  isSignedIn,
-}) {
+// Where a streaming session's batch fallback goes. "skip" keeps OpenWhispr
+// Cloud audio from being diverted to a leftover BYOK provider.
+export function resolveStreamingFallbackTarget({ useLocalWhisper, cloudTranscriptionMode }) {
   const isCloudMode = !useLocalWhisper && cloudTranscriptionMode === "openwhispr";
-  if (isCloudMode) return isSignedIn ? "cloud" : "skip";
-  return "byok";
+  return isCloudMode ? "skip" : "byok";
 }
 
 // Denials the user has to act on, which batch could not absorb either. An

@@ -1,6 +1,5 @@
 import type { InferenceProvider } from "./types";
 import { INFERENCE_SCOPES } from "../../../config/inferenceScopes";
-import { withSessionRefresh } from "../../../lib/auth";
 import { getSettings } from "../../../stores/settingsStore";
 import logger from "../../../utils/logger";
 
@@ -29,7 +28,7 @@ export const openwhisprProvider: InferenceProvider = {
         : undefined
       : "cleanup";
 
-    const result = await withSessionRefresh(async () => {
+    const result = await (async () => {
       const res = await window.electronAPI?.cloudReason?.(text, {
         agentName,
         customDictionary: ctx.getCustomDictionary(),
@@ -54,7 +53,7 @@ export const openwhisprProvider: InferenceProvider = {
       }
 
       return res;
-    });
+    })();
 
     logger.logReasoning("OPENWHISPR_SUCCESS", {
       model: result.model,

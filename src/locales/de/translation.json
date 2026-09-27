@@ -137,21 +137,6 @@
     "screenRecording": "Einstellungen zur Bildschirmaufnahme sind auf dieser Plattform nicht verfügbar.",
     "loginItems": "Einstellungen für Anmeldeobjekte sind auf dieser Plattform nicht verfügbar."
   },
-  "upgradePrompt": {
-    "paymentFailed": "Ihre Zahlung konnte nicht verarbeitet werden",
-    "weeklyLimit": "Sie haben Ihr Wochenlimit erreicht",
-    "pastDueDescription": "Sie sind vorerst im kostenlosen Tarif – keine Sorge, Sie haben weiterhin {{limit}} Wörter pro Woche.\nAktualisieren Sie Ihre Zahlungsmethode, um wieder unbegrenztes Pro zu erhalten.",
-    "limitDescription": "{{used}} von {{limit}} Wörtern verwendet.\nIhre Transkription wurde gespeichert und eingefügt.",
-    "updatePayment": "Zahlungsmethode aktualisieren",
-    "updatePaymentDescription": "Zurück zu unbegrenzten Pro-Transkriptionen.",
-    "upgradeToPro": "Auf Pro upgraden",
-    "upgradeDescription": "Unbegrenzte Transkriptionen ab $8/Monat.",
-    "useApiKey": "Eigenen API-Schlüssel verwenden",
-    "useApiKeyDescription": "Verwenden Sie Ihren eigenen Schlüssel für unbegrenzte Nutzung.",
-    "switchToLocal": "Zu lokal wechseln",
-    "switchToLocalDescription": "Offline-Transkription. Keine Limits.",
-    "rollingWeeklyLimit": "Rollierendes Wochenlimit"
-  },
   "windowControls": {
     "minimize": "Minimieren",
     "maximize": "Maximieren",
@@ -163,7 +148,6 @@
   },
   "common": {
     "continue": "Weiter",
-    "add": "Hinzufügen",
     "retry": "Erneut versuchen",
     "back": "Zurück",
     "logout": "Abmelden",
@@ -175,7 +159,6 @@
     "cancel": "Abbrechen",
     "recommended": "Empfohlen",
     "active": "Aktiv",
-    "freeAccountRequired": "Kostenloses Konto erforderlich",
     "comingSoon": "Demnächst verfügbar",
     "cloud": "Cloud",
     "local": "Lokal",
@@ -191,18 +174,11 @@
     "close": "Schließen",
     "dismiss": "Verwerfen",
     "save": "Speichern",
-    "saving": "Speichern…",
-    "create": "Erstellen",
-    "delete": "Löschen",
     "actions": "Aktionen",
     "error": "Etwas ist schiefgelaufen",
     "unknownError": "Ein unbekannter Fehler ist aufgetreten",
-    "copy": "Kopieren",
     "copied": "Kopiert",
-    "done": "Fertig",
-    "skip": "Überspringen",
-    "managedConfigLoading": "Die verwaltete Einrichtung Ihrer Organisation wird überprüft. Versuchen Sie es gleich noch einmal.",
-    "managedConfigUnavailable": "Der verwaltete Unternehmenszugriff ist nicht verfügbar. Melden Sie sich erneut an oder wenden Sie sich an Ihren Administrator."
+    "skip": "Überspringen"
   },
   "onboarding": {
     "rehaul": {
@@ -309,18 +285,6 @@
         "titleLineOne": "Wählen Sie Ihre",
         "titleLineTwo": "OpenWhispr-Einrichtung",
         "description": "Wählen Sie die Option, die zu Ihrer Arbeitsweise passt.",
-        "cloud": {
-          "title": "OpenWhispr Cloud",
-          "description": "2.000 Wörter pro Woche gratis. Ihre Einstellungen bleiben geräteübergreifend synchron.",
-          "continue": "Kostenlos fortfahren",
-          "signIn": "Anmelden, um Cloud zu nutzen",
-          "features": {
-            "fast": "Am schnellsten, keine Einrichtung nötig",
-            "privacy": "Privacy-focused processing",
-            "sync": "Einstellungen geräteübergreifend synchron",
-            "features": "KI-Funktionen für Notizen und Aktionen"
-          }
-        },
         "byok": {
           "title": "API-Anbieter",
           "description": "Verwenden Sie Ihren eigenen API-Schlüssel."
@@ -359,7 +323,6 @@
             }
           }
         },
-        "useCloud": "Stattdessen Cloud verwenden",
         "continueSetup": "Einrichtung fortsetzen",
         "showMore": "Weitere Optionen anzeigen",
         "moreOptions": {
@@ -553,7 +516,8 @@
         "step2": "Öffne die Corti-Konsole und erstelle API-Zugangsdaten",
         "step3": "Füge Client-ID und Secret unten ein"
       }
-    }
+    },
+    "welcomeSubtitle": "Die Kraft Ihrer Stimme. Zu Ihren Bedingungen."
   },
   "streaming": {
     "errors": {
@@ -569,19 +533,9 @@
     }
   },
   "controlPanel": {
-    "limit": {
-      "weeklyTitle": "Wochenlimit erreicht",
-      "weeklyDescription": "Ihr Limit setzt sich rollierend zurück. Upgraden Sie auf Pro oder nutzen Sie Ihren eigenen API-Schlüssel für unbegrenzte Nutzung."
-    },
     "accessibilityMissing": {
       "title": "Bedienungshilfen-Berechtigungen benötigt",
       "description": "Wir haben festgestellt, dass OpenWhispr Bedienungshilfen-Berechtigungen benötigt, um korrekt zu funktionieren. Bitte aktivieren Sie diese unten."
-    },
-    "billing": {
-      "pastDueTitle": "Ihre Zahlung konnte nicht verarbeitet werden",
-      "pastDueDescription": "Keine Sorge – Sie sind vorerst im kostenlosen Tarif. Aktualisieren Sie Ihre Zahlungsdaten in den Einstellungen, um wieder Pro zu erhalten.",
-      "bannerDescription": "Sie sind momentan im kostenlosen Tarif – Sie haben weiterhin {{limit}} Wörter pro Woche. Aktualisieren Sie Ihre Zahlungsdaten, um wieder Pro zu erhalten.",
-      "updatePayment": "Zahlung aktualisieren"
     },
     "history": {
       "couldNotLoadTitle": "Verlauf konnte nicht geladen werden",
@@ -628,8 +582,7 @@
       "rawTranscript": "Rohtranskript",
       "clearAll": "Alle löschen",
       "clearAllTitle": "Alle Transkriptionen löschen",
-      "clearAllDescription": "Alle Transkriptionen, Audiodateien und Insights-Zähler werden dauerhaft von diesem Gerät und aus Ihrem Konto entfernt.",
-      "clearAllDescriptionDevice": "Alle Transkriptionen, Audiodateien und Insights-Zähler werden dauerhaft von diesem Gerät entfernt. Bereits mit einem Konto synchronisierte Zähler bleiben davon unberührt.",
+      "clearAllDescription": "Alle Transkriptionen, Audiodateien und Insights-Zähler werden dauerhaft von diesem Gerät entfernt.",
       "clearAllSuccess": "Verlauf gelöscht",
       "clearAllErrorTitle": "Verlauf konnte nicht gelöscht werden",
       "clearAllErrorDescription": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
@@ -711,41 +664,8 @@
       "endpointHelp": "Zeige auf einen OpenAI-kompatiblen Server in deinem lokalen Netzwerk (z. B. Ollama, LM Studio, vLLM oder llama-server)."
     },
     "enterprise": {
-      "title": "Enterprise-Anbieter",
-      "description": "Verbinden Sie sich mit Cloud-Anbietern über die Zugangsdaten Ihrer Organisation.",
-      "testConnection": "Verbindung testen",
-      "testing": "Wird getestet…",
-      "testSuccess": "Verbunden",
-      "testFailed": "Verbindung fehlgeschlagen",
-      "authMode": "Authentifizierung",
-      "ssoProfile": "SSO-Profil",
-      "accessKeys": "Zugriffsschlüssel",
-      "adc": "Application Default Credentials",
-      "apiKeyMode": "API-Schlüssel",
-      "region": "Region",
-      "profile": "Profilname",
-      "accessKeyId": "Access Key ID",
-      "secretAccessKey": "Secret Access Key",
-      "sessionToken": "Session Token (optional)",
-      "endpoint": "Endpoint-URL",
-      "deploymentName": "Deployment-Name",
-      "apiVersion": "API-Version",
-      "projectId": "Projekt-ID",
-      "location": "Standort",
-      "customModelId": "Eigene Modell-ID",
-      "customModelPlaceholder": "Modell-ID oder Deployment-Name eingeben",
-      "suggestedModels": "Empfohlene Modelle",
-      "browseModels": "Alle Modelle durchsuchen",
-      "loadingModels": "Modelle werden geladen...",
-      "allModels": "Alle Modelle in {{region}}",
-      "modelListError": "Modelle konnten nicht geladen werden.",
-      "bedrock": {
-        "ssoHelp": "Verwendet Ihre AWS-CLI-SSO-Konfiguration. Stellen Sie sicher, dass Sie 'aws sso login' ausgeführt haben.",
-        "keysHelp": "Geben Sie Ihre AWS-IAM-Zugriffsschlüssel ein."
-      },
       "errors": {
         "bedrock": {
-          "temporaryAccessExpired": "Der temporäre AWS-Zugriff ist abgelaufen.",
           "ssoExpired": "Die AWS-SSO-Sitzung ist abgelaufen.",
           "credentialsRejected": "Die AWS-Anmeldedaten wurden abgelehnt. Prüfe Zugriffsschlüssel-ID, Geheimnis und Sitzungstoken.",
           "accessDenied": "AWS Bedrock hat diese Anfrage abgelehnt. Bitte deinen AWS-Administrator um die Berechtigung, das ausgewählte Modell in der Region {{region}} aufzurufen.",
@@ -758,7 +678,6 @@
           "network": "AWS Bedrock konnte nicht erreicht werden. Prüfe deine Internetverbindung und versuche es erneut.",
           "unknown": "AWS-Bedrock-Fehler: {{error}}",
           "actions": {
-            "refreshManagedAccess": "Melde dich ab und wieder an, um den Unternehmenszugriff zu erneuern, und versuche es dann erneut.",
             "reauthenticate": "Führe den folgenden Befehl im Terminal aus, um dich erneut zu authentifizieren:"
           }
         }
@@ -771,14 +690,6 @@
         "underlyingError": "Zugrunde liegender Fehler",
         "copy": "Technische Details kopieren",
         "copyCommand": "Wiederherstellungsbefehl kopieren"
-      },
-      "azure": {
-        "endpointHelp": "Endpoint-URL Ihrer Azure-OpenAI-Ressource (z. B. https://myresource.openai.azure.com).",
-        "deploymentHelp": "Name Ihres Modell-Deployments in Azure OpenAI."
-      },
-      "vertex": {
-        "adcHelp": "Verwendet Application Default Credentials. Führen Sie aus: gcloud auth application-default login",
-        "apikeyHelp": "API-Schlüssel für Vertex AI Express Mode aus Google AI Studio."
       }
     },
     "tinfoil": {
@@ -868,8 +779,6 @@
         "screenContextSkipped": "Der Screenshot konnte nicht gesendet werden, daher lief Ihr Befehl ohne Bildschirmkontext.",
         "customEndpointInvalid": "Ihr benutzerdefinierter Transkriptionsendpunkt ist nicht konfiguriert oder seine URL ist ungültig. Aktualisieren Sie ihn unter Einstellungen → Sprache zu Text.",
         "managedTranscriptionUnavailable": "Die verwaltete Transkription ist derzeit nicht verfügbar. Versuchen Sie es gleich noch einmal.",
-        "managedRouteInvalid": "Die verwaltete Transkription konnte aufgrund einer Konfigurationsabweichung nicht gestartet werden. Versuchen Sie es erneut oder wenden Sie sich an Ihren Administrator.",
-        "managedAuthRejected": "Die verwalteten Transkriptions-Anmeldedaten Ihrer Organisation wurden abgelehnt. Wenden Sie sich an Ihren Administrator.",
         "streamingOnlyProvider": "Dieser Anbieter unterstützt nur Live-Transkription. Wähle für Datei-Uploads und Wiederholungen einen anderen Anbieter.",
         "providerKeyMissing": "Für Ihren Transkriptionsanbieter ist kein API-Schlüssel hinterlegt. Fügen Sie ihn unter Einstellungen → Sprache zu Text hinzu.",
         "cleanupTruncated": "Dem KI-Modell ging der Platz aus, bevor es dein Diktat fertig bereinigt hatte.",
@@ -1034,85 +943,6 @@
       }
     }
   },
-  "auth": {
-    "cloudNotConfigured": "Cloud nicht konfiguriert",
-    "common": {
-      "back": "Zurück",
-      "continue": "Weiter",
-      "or": "oder"
-    },
-    "emailStep": {
-      "checkingEmail": "E-Mail-Adresse wird überprüft...",
-      "continueWithEmail": "Weiter mit E-Mail",
-      "continueWithoutAccount": "Ohne Konto fortfahren",
-      "emailLabel": "E-Mail",
-      "emailPlaceholder": "sie@beispiel.de",
-      "useDifferentEmail": "Andere E-Mail-Adresse verwenden"
-    },
-    "errors": {
-      "accountExistsSignIn": "Ein Konto mit dieser E-Mail-Adresse existiert bereits. Bitte melden Sie sich an.",
-      "accountNotFoundCreate": "Kein Konto mit dieser E-Mail-Adresse gefunden. Bitte erstellen Sie ein Konto.",
-      "authNotConfigured": "Authentifizierung ist nicht konfiguriert",
-      "createAccountFailed": "Konto konnte nicht erstellt werden",
-      "failedProviderSignIn": "Anmeldung mit {{provider}} fehlgeschlagen",
-      "failedUserCheck": "Kontostatus konnte nicht überprüft werden",
-      "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut.",
-      "invalidCredentials": "Ungültige E-Mail-Adresse oder ungültiges Passwort",
-      "invalidEmail": "Geben Sie eine gültige E-Mail-Adresse ein"
-    },
-    "getStarted": "Jetzt starten",
-    "legal": {
-      "and": "und",
-      "prefix": "Durch Fortfahren stimmen Sie unseren",
-      "privacy": "Datenschutzrichtlinie",
-      "suffix": "zu",
-      "terms": "Nutzungsbedingungen"
-    },
-    "passwordForm": {
-      "createAccount": "Konto erstellen",
-      "createAccountButton": "Mit E-Mail fortfahren",
-      "createAccountLink": "Konto erstellen",
-      "createPasswordPlaceholder": "Passwort erstellen",
-      "creatingAccount": "Konto wird erstellt...",
-      "enterPasswordPlaceholder": "Passwort eingeben",
-      "forgotPassword": "Passwort vergessen?",
-      "fullNamePlaceholder": "Namen hinzufügen",
-      "nameLabel": "Name",
-      "passwordLabel": "Passwort",
-      "haveAccount": "Bereits ein Konto?",
-      "newHere": "Neu hier?",
-      "passwordMinLength": "Passwort muss mindestens 8 Zeichen lang sein",
-      "signIn": "Mit E-Mail fortfahren",
-      "signInLink": "Anmelden",
-      "signingIn": "Anmeldung läuft...",
-      "welcomeBack": "Willkommen zurück"
-    },
-    "signedIn": {
-      "welcomeBack": "Willkommen zurück",
-      "notYou": "Nicht Sie? Abmelden"
-    },
-    "sso": {
-      "continueWithSSO": "Mit SSO anmelden",
-      "workEmailLabel": "Geschäftliche E-Mail",
-      "emailPlaceholder": "E-Mail-Adresse hinzufügen",
-      "emailRequired": "Geben Sie Ihre geschäftliche E-Mail-Adresse ein, um SSO zu verwenden.",
-      "failed": "Single Sign-on fehlgeschlagen. Bitte versuchen Sie es erneut.",
-      "companySignInTitle": "Unternehmensanmeldung verwenden",
-      "requiredDescription": "{{domain}} erfordert SSO für OpenWhispr.",
-      "availableDescription": "Ihr {{domain}}-Konto ist für das Unternehmens-SSO bereit.",
-      "useEmailInstead": "Stattdessen E-Mail und Passwort verwenden"
-    },
-    "social": {
-      "completeInBrowser": "Anmeldung im Browser abschließen",
-      "continueWithApple": "Weiter mit Apple",
-      "continueWithGoogle": "Weiter mit Google",
-      "continueWithMicrosoft": "Weiter mit Microsoft",
-      "protocolUnavailable": "Browser-Anmeldung nicht verfügbar — registrieren Sie das openwhispr://-Protokoll in den Standardanwendungs-Einstellungen Ihres Systems erneut."
-    },
-    "welcomeSubtitle": "Die Kraft Ihrer Stimme. Zu Ihren Bedingungen.",
-    "welcomeTitle": "Willkommen bei OpenWhispr",
-    "sessionExpired": "Sitzung abgelaufen"
-  },
   "calendar": {
     "title": "Google Kalender",
     "status": "Status",
@@ -1221,18 +1051,7 @@
   },
   "dictionarySuffix": "Wörterbuch-Suffix",
   "emailVerification": {
-    "checkEmailDescription": "Wir haben einen Bestätigungslink an Ihre E-Mail-Adresse gesendet:",
-    "checkEmailTitle": "Bestätigungs-E-Mail gesendet",
-    "errors": {
-      "resendFailed": "Die E-Mail konnte nicht erneut gesendet werden. Bitte versuchen Sie es erneut.",
-      "serverUnreachable": "Server nicht erreichbar. Prüfen Sie Ihre Verbindung und versuchen Sie es erneut."
-    },
-    "resendButton": "Bestätigungs-E-Mail erneut senden",
-    "resendIn": "Erneut senden in {{seconds}}s",
-    "verifiedDescription": "Ihr Konto ist eingerichtet.",
-    "verifiedTitle": "Bestätigt",
-    "waiting": "Warten auf Bestätigung",
-    "backToSignIn": "Zurück zur Anmeldung"
+    "verifiedDescription": "Ihr Konto ist eingerichtet."
   },
   "errorBoundary": {
     "description": "Ein unerwarteter Fehler ist aufgetreten. Bitte laden Sie die Seite neu.",
@@ -1240,21 +1059,7 @@
     "title": "Etwas ist schiefgelaufen"
   },
   "forgotPassword": {
-    "back": "Zurück",
-    "backToSignIn": "Zurück zur Anmeldung",
-    "emailPlaceholder": "E-Mail-Adresse eingeben",
-    "goBack": "Zurück",
-    "notConfigured": "Authentifizierung ist noch nicht eingerichtet.",
-    "sendResetLink": "Link zum Zurücksetzen senden",
-    "sending": "Wird gesendet...",
-    "subtitle": "Geben Sie Ihre E-Mail-Adresse ein und wir senden Ihnen einen Link zum Zurücksetzen",
-    "success": {
-      "description": "Wir haben einen Link zum Zurücksetzen des Passworts gesendet an",
-      "help": "Keine E-Mail erhalten? Prüfen Sie Ihren Spam-Ordner oder versuchen Sie es erneut.",
-      "title": "Prüfen Sie Ihre E-Mail",
-      "tryAnother": "Andere E-Mail-Adresse versuchen"
-    },
-    "title": "Passwort zurücksetzen"
+    "back": "Zurück"
   },
   "actionPrompt": "Aktions-Prompt",
   "hotkeyGuidance": {
@@ -1448,24 +1253,11 @@
   },
   "settingsModal": {
     "groups": {
-      "account": "Konto",
       "app": "App",
       "aiModels": "KI-Modelle",
       "system": "System"
     },
     "sections": {
-      "account": {
-        "description": "Profil & Anmeldung",
-        "label": "Profil"
-      },
-      "plansBilling": {
-        "description": "Tarife, Nutzung & Abrechnung",
-        "label": "Tarife & Abrechnung"
-      },
-      "workspace": {
-        "description": "Mitglieder, Team-Bereiche und API-Schlüssel",
-        "label": "Workspace"
-      },
       "general": {
         "description": "Darstellung, Töne & Start",
         "label": "Einstellungen"
@@ -1494,452 +1286,6 @@
     "title": "Einstellungen"
   },
   "settingsPage": {
-    "workspace": {
-      "title": "Workspace",
-      "description": "Arbeiten Sie zusammen, teilen Sie Notizen und verwalten Sie den Workspace-Zugriff an einem Ort.",
-      "empty": {
-        "title": "Ersten Workspace erstellen",
-        "description": "Workspaces ermöglichen die Zusammenarbeit und das Teilen von Notizen.",
-        "create": "Workspace erstellen"
-      },
-      "loadError": {
-        "title": "Workspaces konnten nicht geladen werden",
-        "description": "Prüfen Sie Ihre Verbindung und versuchen Sie es erneut.",
-        "retry": "Erneut versuchen"
-      },
-      "tab": {
-        "general": "Allgemein",
-        "members": "Mitglieder",
-        "teams": "Gruppen",
-        "developer": "Entwickler"
-      },
-      "role": {
-        "owner": "Inhaber",
-        "admin": "Administrator",
-        "member": "Mitglied"
-      },
-      "general": {
-        "nameLabel": "Workspace-Name",
-        "saved": "Workspace aktualisiert",
-        "dangerTitle": "Workspace löschen",
-        "dangerDescription": "Alle geteilten Notizen, Ordner und Integrationen werden gelöscht. Dies kann nicht rückgängig gemacht werden.",
-        "delete": "Workspace löschen",
-        "confirmTitle": "{{name}} löschen?",
-        "confirmDescription": "Dies kündigt das Abonnement und entfernt alle Workspace-Daten dauerhaft.",
-        "deleting": "Lösche…",
-        "deleted": "Workspace gelöscht",
-        "leaveTitle": "Workspace verlassen",
-        "leaveDescription": "Sie verlieren den Zugriff auf diesen Workspace und seine geteilten Notizen.",
-        "leave": "Workspace verlassen",
-        "leaving": "Verlasse…",
-        "leaveConfirm": {
-          "title": "{{name}} verlassen?",
-          "description": "Sie verlieren sofort den Zugriff. Ein Administrator kann Sie erneut einladen."
-        },
-        "left": "Sie haben {{name}} verlassen"
-      },
-      "members": {
-        "title": "Mitglieder",
-        "description": "{{count}} von {{seats}} Plätzen belegt.",
-        "invite": "Einladen",
-        "empty": "Noch keine Mitglieder.",
-        "loadError": "Mitglieder konnten nicht geladen werden.",
-        "roleUpdated": "Rolle aktualisiert",
-        "removed": "{{name}} entfernt",
-        "promote": "Zum Administrator machen",
-        "demote": "Zum Mitglied machen",
-        "transferOwnership": "Eigentum übertragen",
-        "remove": "Aus Workspace entfernen",
-        "removeConfirm": {
-          "title": "Dieses Mitglied entfernen?",
-          "description": "{{name}} verliert sofort den Zugriff auf {{workspace}}."
-        },
-        "transferConfirm": {
-          "title": "Eigentum übertragen?",
-          "description": "{{name}} wird Inhaber von {{workspace}}. Ihre Rolle ändert sich zu Administrator und nur der neue Inhaber kann das Eigentum zurückübertragen."
-        }
-      },
-      "joinRequests": {
-        "title": "Beitrittsanfragen",
-        "approve": "Annehmen",
-        "deny": "Ablehnen",
-        "approved": "{{name}} ist dem Workspace beigetreten",
-        "denied": "Anfrage abgelehnt",
-        "errorTitle": "Anfrage konnte nicht aktualisiert werden"
-      },
-      "teams": {
-        "title": "Gruppen",
-        "description": "Gruppen von Workspace-Mitgliedern, denen gemeinsam Zugriff auf Team-Spaces gewährt werden kann.",
-        "new": "Neue Gruppe",
-        "empty": "Noch keine Gruppen.",
-        "createFirst": "Erstelle deine erste Gruppe",
-        "addMembersLabel": "Mitglieder hinzufügen",
-        "createTitle": "Gruppe erstellen",
-        "nameLabel": "Gruppenname",
-        "memberCount_one": "{{count}} Mitglied",
-        "memberCount_other": "{{count}} Mitglieder",
-        "membersButton": "Mitglieder",
-        "grantsAccessToSpaces_one": "Gewährt Zugriff auf {{count}} Space",
-        "grantsAccessToSpaces_other": "Gewährt Zugriff auf {{count}} Spaces",
-        "couldNotCreate": "Gruppe konnte nicht erstellt werden",
-        "created": "{{team}} erstellt",
-        "deleted": "{{team}} gelöscht",
-        "deleteConfirmTitle": "{{team}} löschen?",
-        "deleteConfirmDescription": "Die Gruppe wird archiviert. Ihre Mitglieder verlieren den dadurch gewährten Zugriff.",
-        "deleteConfirmSpaceAccess_one": "Diese Gruppe gewährt Zugriff auf {{count}} Space. Ihre Mitglieder verlieren diesen Zugriff.",
-        "deleteConfirmSpaceAccess_other": "Diese Gruppe gewährt Zugriff auf {{count}} Spaces. Ihre Mitglieder verlieren diesen Zugriff.",
-        "members": {
-          "title": "Mitglieder von {{team}}",
-          "removeConfirm": "{{name}} aus {{team}} entfernen?",
-          "leave": "Gruppe verlassen",
-          "leftTeam": "Du hast {{team}} verlassen",
-          "leaveConfirm": "{{team}} verlassen?",
-          "leaveConfirmDescription": "Du verlierst den Zugriff auf die Spaces, denen diese Gruppe zugewiesen ist, sofern du nicht direkt hinzugefügt wurdest oder eine andere Gruppe dich einschließt."
-        }
-      },
-      "invites": {
-        "title": "Ausstehende Einladungen",
-        "expiresIn_one": "Läuft in {{count}} Tag ab",
-        "expiresIn_other": "Läuft in {{count}} Tagen ab",
-        "expired": "Abgelaufen",
-        "loadError": "Einladungen konnten nicht geladen werden.",
-        "resend": "Erneut senden",
-        "resending": "Sende erneut…",
-        "revoke": "Widerrufen",
-        "resent": "Einladung erneut gesendet",
-        "resentNoEmail": "Einladung aktualisiert, aber die E-Mail konnte nicht zugestellt werden.",
-        "revoked": "Einladung widerrufen",
-        "revokeFailed": "Einladung konnte nicht widerrufen werden",
-        "revokeConfirm": {
-          "title": "Diese Einladung widerrufen?",
-          "description": "Der Einladungslink für {{email}} funktioniert dann nicht mehr."
-        }
-      },
-      "billing": {
-        "plan": "Plan",
-        "seats": "Plätze",
-        "ownerOnly": "Nur der Workspace-Inhaber kann das Abonnement verwalten.",
-        "nextInvoice": "Nächste Rechnung",
-        "manageStripe": "In Stripe verwalten",
-        "startSubscription": "Abonnement starten",
-        "planLabel": {
-          "business": "Business",
-          "pro": "Pro",
-          "free": "Free",
-          "enterprise": "Enterprise"
-        },
-        "status": {
-          "active": "Aktiv",
-          "trialing": "Testphase",
-          "past_due": "Überfällig",
-          "canceled": "Gekündigt",
-          "incomplete": "Unvollständig",
-          "unpaid": "Unbezahlt"
-        }
-      },
-      "developer": {
-        "title": "API-Schlüssel",
-        "description": "Programmatischer Zugriff auf diesen Workspace.",
-        "empty": "Noch keine API-Schlüssel. Erstellen Sie einen für Integrationen.",
-        "loadError": "API-Schlüssel konnten nicht geladen werden.",
-        "new": "Neuer Schlüssel",
-        "create": "Schlüssel erstellen",
-        "createTitle": "API-Schlüssel erstellen",
-        "createDescription": "Wählen Sie die Berechtigungen. Sie können den Schlüssel jederzeit widerrufen.",
-        "nameLabel": "Schlüsselname",
-        "namePlaceholder": "Produktionsintegration",
-        "revoke": "Schlüssel widerrufen",
-        "revoked": "Schlüssel {{name}} widerrufen",
-        "lastUsed": "Zuletzt verwendet {{date}}",
-        "neverUsed": "Nie verwendet",
-        "keyCreatedTitle": "API-Schlüssel erstellt",
-        "keyCreatedDescription": "Kopieren Sie diesen Schlüssel jetzt — Sie können ihn nicht erneut sehen.",
-        "revokeConfirm": {
-          "title": "Diesen Schlüssel widerrufen?",
-          "description": "{{name}} funktioniert sofort nicht mehr. Alle Integrationen, die ihn verwenden, schlagen dann fehl."
-        },
-        "scopes": {
-          "notes": {
-            "title": "Notizen",
-            "read": "Notizen lesen",
-            "write": "Notizen schreiben"
-          },
-          "folders": {
-            "title": "Ordner",
-            "read": "Ordner lesen",
-            "write": "Ordner schreiben"
-          },
-          "transcriptions": {
-            "title": "Transkriptionen",
-            "read": "Transkriptionen lesen"
-          },
-          "members": {
-            "title": "Mitglieder",
-            "read": "Mitglieder lesen",
-            "write": "Mitglieder verwalten"
-          },
-          "billing": {
-            "title": "Abrechnung",
-            "read": "Abrechnung lesen"
-          },
-          "full": {
-            "title": "Vollzugriff",
-            "admin": "Workspace-Administrator"
-          }
-        }
-      },
-      "enterpriseConsole": {
-        "title": "Enterprise-Konsole",
-        "description": "SSO, Richtlinien und Mitglieder im Web verwalten",
-        "open": "Konsole öffnen"
-      }
-    },
-    "unifiedBilling": {
-      "workspaceTitle": "Workspace-Abrechnung",
-      "workspaceDescription": "Jeder Workspace hat seinen eigenen Plan, eigene Plätze und einen Abrechnungsinhaber.",
-      "billableSeat": "Ihr Platz wird abgerechnet",
-      "nonBillableSeat": "Nur Admin-Zugriff · kein kostenpflichtiger Platz",
-      "managedBy": "Die Abrechnung wird von {{owner}} verwaltet.",
-      "addSeat": "Platz hinzufügen",
-      "seatUpdated_one": "Workspace-Kapazität auf {{count}} Platz aktualisiert",
-      "seatUpdated_other": "Workspace-Kapazität auf {{count}} Plätze aktualisiert",
-      "seatUpdateFailed": "Workspace-Plätze konnten nicht aktualisiert werden",
-      "businessWorkspaceOnly": "Für Workspaces verfügbar",
-      "personalPlanTitle": "Persönlicher Plan",
-      "providedBy": "Persönlicher Plan: Free · Bezahlter Zugriff bereitgestellt von {{workspaces}}",
-      "confirmSeats": {
-        "title": "Workspace-Platz hinzufügen?",
-        "description_one": "{{workspace}} auf {{count}} Platz erweitern. Stripe berechnet die Änderung anteilig.",
-        "description_other": "{{workspace}} auf {{count}} Plätze erweitern. Stripe berechnet die Änderung anteilig.",
-        "newCapacity": "Neue Kapazität",
-        "chargeToday": "Heute fällig",
-        "confirm": "Platz hinzufügen"
-      }
-    },
-    "account": {
-      "badges": {
-        "free": "Kostenlos",
-        "limitReached": "Limit erreicht",
-        "pastDue": "Überfällig",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "Testversion"
-      },
-      "billing": {
-        "couldNotOpenDescription": "Die Abrechnungsseite konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
-        "couldNotOpenTitle": "Abrechnung konnte nicht geöffnet werden",
-        "manageBilling": "Abrechnung verwalten",
-        "opening": "Wird geöffnet...",
-        "updatePaymentMethod": "Zahlungsmethode aktualisieren",
-        "contactOwnerTitle": "Wenden Sie sich an den Workspace-Inhaber",
-        "contactOwnerDescription": "Nur der Workspace-Inhaber kann die Abrechnung für diesen Workspace ändern."
-      },
-      "checkout": {
-        "couldNotOpenDescription": "Die Checkout-Seite konnte nicht geöffnet werden. Bitte versuchen Sie es erneut.",
-        "couldNotOpenTitle": "Checkout konnte nicht geöffnet werden",
-        "opening": "Wird geöffnet...",
-        "upgradeToPro": "Auf Pro upgraden"
-      },
-      "disabled": "Deaktiviert",
-      "featuresDisabled": "Kontofunktionen deaktiviert",
-      "featuresDisabledDescription": "Setzen Sie VITE_AUTH_URL in Ihrer .env-Datei, um Kontofunktionen zu aktivieren.",
-      "notConfigured": "Authentifizierung ist nicht konfiguriert",
-      "notSignedIn": "Nicht angemeldet",
-      "notSignedInDescription": "Erstellen Sie ein Konto, um Premium-Funktionen freizuschalten.",
-      "offline": "Offline",
-      "pastDue": {
-        "description": "Sie sind vorerst im kostenlosen Tarif. Aktualisieren Sie Ihre Zahlungsmethode, um wieder Pro zu erhalten.",
-        "title": "Ihre Zahlung konnte nicht verarbeitet werden"
-      },
-      "planDescriptions": {
-        "freeUsage": "{{used}} / {{limit}} Wörter diese Woche",
-        "nextBilling": "Nächste Abrechnung: {{date}}",
-        "pastDue": "{{used}} / {{limit}} kostenlose Wörter diese Woche – Zahlung aktualisieren, um Pro wiederherzustellen",
-        "trial": "Noch {{days}} Tage – unbegrenzte Transkriptionen",
-        "unlimited": "Unbegrenzt"
-      },
-      "planLabels": {
-        "free": "Kostenlos",
-        "pro": "Pro",
-        "business": "Business",
-        "trial": "Testversion"
-      },
-      "pricing": {
-        "title": "Tarife",
-        "billedYearly": "Jährliche Abrechnung",
-        "free": {
-          "name": "Free",
-          "price": "$0",
-          "period": "für immer",
-          "features": [
-            "## OpenWhispr Cloud",
-            "2.000 Wörter/Woche Transkription",
-            "5 Stunden Meeting-Aufnahmen/Monat",
-            "## Immer kostenlos",
-            "Unbegrenzte lokale KI-Modelle",
-            "Unbegrenzte Cloud-Transkription mit eigenen API-Schlüsseln",
-            "Über 100 Sprachen unterstützt",
-            "Benutzerdefiniertes Wörterbuch",
-            "Keine Datenspeicherung",
-            "Community-Support"
-          ]
-        },
-        "pro": {
-          "name": "Pro",
-          "monthlyPrice": "$8",
-          "monthlyPeriod": "/Monat",
-          "annualPrice": "$80",
-          "annualPeriod": "/Jahr",
-          "annualEquivalent": "$6.67",
-          "includesPrefix": "Alle Free-Funktionen +",
-          "features": [
-            "Unbegrenzte Cloud-Transkription",
-            "20 Stunden Meeting-Aufnahmen/Monat",
-            "Geräteübergreifende Synchronisierung",
-            "Notizen per öffentlichem Link teilen",
-            "Persönlicher API-Zugang",
-            "MCP-Integration in all deinen Apps",
-            "Mobile App",
-            "E-Mail-Support"
-          ],
-          "cta": "Jetzt starten",
-          "switchToAnnual": "Zum Jahresabo wechseln"
-        },
-        "business": {
-          "name": "Business",
-          "monthlyPrice": "$16",
-          "monthlyPeriod": "/Monat",
-          "annualPrice": "$160",
-          "annualPeriod": "/Jahr",
-          "annualEquivalent": "$13.33",
-          "includesPrefix": "Alle Pro-Funktionen +",
-          "badge": "Beliebteste Wahl",
-          "features": [
-            "Unbegrenzte Meeting-Aufnahmen",
-            "Workspace-Rollen & Mitgliederverwaltung",
-            "Assistentenmodus",
-            "Chat über Ihre Daten",
-            "Prioritäts-Support"
-          ],
-          "cta": "Jetzt starten",
-          "switchToAnnual": "Zum Jahresabo wechseln"
-        },
-        "enterprise": {
-          "name": "Enterprise",
-          "price": "Individuell",
-          "subtitle": "Für erweiterte Sicherheit & Support",
-          "includesPrefix": "Alle Business-Funktionen +",
-          "features": [
-            "Verwaltete API-Guthaben",
-            "Cloud-Synchronisierung über Geräte hinweg",
-            "Team-Funktionen & Verwaltung",
-            "SSO & Compliance",
-            "Dedizierter Support"
-          ],
-          "cta": "Vertrieb kontaktieren",
-          "upgradeCta": "Auf Enterprise upgraden",
-          "askOwner": "Bitte {{name}}, euren Workspace zu upgraden."
-        },
-        "currentPlan": "Aktueller Tarif",
-        "coveredByWorkspace": "In Ihrem Workspace-Tarif enthalten",
-        "upgrade": "Upgrade",
-        "downgrade": "Downgrade",
-        "planSwitched": "Plan erfolgreich aktualisiert",
-        "confirmSwitch": {
-          "title": "Planwechsel bestätigen",
-          "description": "Zu {{plan}} ({{interval}}) wechseln",
-          "monthly": "monatlich",
-          "yearly": "jährlich",
-          "chargeToday": "Heutige Belastung",
-          "accountCredit": "Kontoguthaben",
-          "newPrice": "Neuer Preis",
-          "nextBilling": "Nächste Abrechnung",
-          "mo": "mo",
-          "yr": "yr",
-          "cancel": "Abbrechen",
-          "confirm": "Bestätigen"
-        }
-      },
-      "rollingWeeklyLimit": "Rollierendes Wochenlimit",
-      "signOut": {
-        "failedDescription": "Beim Abmelden ist ein Fehler aufgetreten. Bitte versuchen Sie es erneut.",
-        "failedTitle": "Abmeldung fehlgeschlagen",
-        "signOut": "Abmelden",
-        "signingOut": "Abmeldung läuft..."
-      },
-      "title": "Konto",
-      "toasts": {
-        "approachingLimit": {
-          "description": "Sie haben diese Woche {{used}} von {{limit}} kostenlosen Wörtern verwendet. Upgraden Sie auf Pro für unbegrenzte Nutzung.",
-          "title": "Wochenlimit fast erreicht"
-        }
-      },
-      "trialCta": {
-        "button": "Kostenloses Konto erstellen",
-        "description": "Unbegrenzte Transkriptionen, bevorzugte Verarbeitung und mehr.",
-        "title": "Pro 7 Tage kostenlos testen"
-      },
-      "signedOutPlans": {
-        "button": "Kostenloses Konto erstellen"
-      },
-      "user": "Benutzer",
-      "wordsRemaining": "{{remaining}} verbleibend",
-      "deleteAccount": {
-        "label": "Konto löschen",
-        "labelDescription": "Konto und persönliche Cloud-Daten dauerhaft löschen. Andere lokale Benutzer und Arbeitsbereichsdaten bleiben erhalten.",
-        "button": "Mein Konto löschen",
-        "deleting": "Wird gelöscht...",
-        "title": "Konto löschen?",
-        "description": "Dies löscht dauerhaft Ihr OpenWhispr-Konto und Ihre persönlichen Daten. Arbeitsbereichsdaten und Daten anderer lokaler Benutzer bleiben auf diesem Gerät erhalten.",
-        "confirmText": "Konto löschen",
-        "eraseDeviceLabel": "Auch alle Daten von diesem Gerät löschen",
-        "eraseDeviceDescription": "Löscht Notizen und Arbeitsbereichscaches aller lokalen Benutzer, heruntergeladene Modelle, Einstellungen, Kalenderverbindungen, Anmeldedaten und Aufnahmen.",
-        "eraseDeviceWarning": "Diese geräteweite Löschung kann nicht rückgängig gemacht werden und betrifft alle lokalen Benutzer.",
-        "successTitle": "Konto gelöscht",
-        "successDescription": "Ihr Konto und Ihre persönlichen Daten wurden gelöscht. Andere lokale Benutzer, Arbeitsbereiche, Modelle und Geräteeinstellungen blieben erhalten.",
-        "partialCleanupDescription": "Ihr Konto wurde gelöscht, aber ein Teil der lokalen Bereinigung konnte nicht abgeschlossen werden. Andere Benutzer und Arbeitsbereichsdaten blieben erhalten.",
-        "failedTitle": "Löschung fehlgeschlagen",
-        "failedDescription": "Die Kontolöschung konnte nicht abgeschlossen werden. Es wurde keine geräteweite Löschung gestartet. Bitte versuchen Sie es erneut."
-      },
-      "profile": {
-        "name": {
-          "label": "Anzeigename",
-          "placeholder": "Ihr Name",
-          "save": "Speichern",
-          "saving": "Wird gespeichert...",
-          "saved": "Anzeigename aktualisiert",
-          "error": "Ihr Name konnte nicht aktualisiert werden"
-        },
-        "password": {
-          "label": "Passwort",
-          "description": "Ändern Sie das Passwort, mit dem Sie sich anmelden.",
-          "change": "Passwort ändern",
-          "dialogTitle": "Passwort ändern",
-          "dialogDescription": "Geben Sie Ihr aktuelles Passwort ein und wählen Sie ein neues.",
-          "currentLabel": "Aktuelles Passwort",
-          "newLabel": "Neues Passwort",
-          "confirmLabel": "Neues Passwort bestätigen",
-          "minLength": "Passwort muss mindestens 8 Zeichen lang sein",
-          "mismatch": "Die Passwörter stimmen nicht überein",
-          "revokeOthers": "Andere Geräte abmelden",
-          "submit": "Passwort aktualisieren",
-          "saving": "Wird aktualisiert...",
-          "cancel": "Abbrechen",
-          "saved": "Passwort aktualisiert"
-        },
-        "errors": {
-          "invalidPassword": "Ihr aktuelles Passwort ist falsch.",
-          "passwordTooShort": "Passwort muss mindestens 8 Zeichen lang sein.",
-          "passwordTooLong": "Das Passwort ist zu lang.",
-          "noPassword": "Für dieses Konto ist kein Passwort festgelegt.",
-          "generic": "Etwas ist schiefgelaufen. Bitte versuchen Sie es erneut."
-        }
-      },
-      "planUnavailable": {
-        "title": "Tarif nicht verfügbar",
-        "description": "Ihr Tarif konnte gerade nicht geladen werden. Ihr Zugriff bleibt unverändert."
-      }
-    },
     "agentConfig": {
       "agentName": "Assistent-Name",
       "description": "Benennen Sie Ihren KI-Assistenten, damit Sie ihn beim Diktieren direkt ansprechen können",
@@ -1968,11 +1314,9 @@
       "enableTextCleanup": "Textbereinigung aktivieren",
       "enableTextCleanupDescription": "KI entfernt Füllwörter, korrigiert Grammatik und Zeichensetzung",
       "modes": {
-        "openwhispr": "OpenWhispr Cloud",
         "providers": "Cloud-Anbieter",
         "local": "Lokal",
         "selfHosted": "Selbst gehostet",
-        "openwhisprDesc": "Zuverlässige Ergebnisse. Keine Einrichtung nötig.",
         "providersDesc": "Eigenen API-Schlüssel nutzen.",
         "localDesc": "Modelle auf dem Gerät. Voll privat.",
         "selfHostedDesc": "Eigener Server in Ihrem Netzwerk."
@@ -2005,15 +1349,6 @@
           "title": "Enterprise",
           "description": "Verwendet das Cloud-Konto Ihrer Organisation."
         }
-      },
-      "managedEnterprise": {
-        "errorTitle": "Verwaltete Unternehmens-KI erfordert Aufmerksamkeit",
-        "title": "Von Ihrer Organisation verwaltet",
-        "description": "Die Anmeldung stellt automatisch kurzlebigen Zugriff bereit. Cloud-Schlüssel oder CLI-Einrichtung sind nicht erforderlich.",
-        "usePersonalSetup": "Persönliche Einrichtung verwenden",
-        "availableTitle": "Einrichtung der Organisation verfügbar",
-        "availableDescription": "{{provider}} ohne Verwaltung von Anmeldedaten nutzen.",
-        "useManaged": "Verwaltet nutzen"
       }
     },
     "developer": {
@@ -2263,11 +1598,6 @@
       "troubleshootingTitle": "Fehlerbehebung"
     },
     "privacy": {
-      "cloudBackup": "Cloud-Backup",
-      "cloudBackupDescription": "Sichern Sie Ihre Transkriptionen und Notizen in der Cloud für nahtlosen Zugriff auf allen Geräten.",
-      "cloudBackupTeamCaveat": "Notizen in Team-Bereichen und geteilte Notizen werden unabhängig von dieser Einstellung immer synchronisiert.",
-      "cloudNotesMigration": "Notizen werden gesichert… {{done}} / {{total}}",
-      "cloudNotesMigrationDone": "Alle Notizen gesichert",
       "description": "Steuern Sie, welche Daten Ihr Gerät verlassen. Standardmäßig ist alles deaktiviert.",
       "title": "Datenschutz",
       "audioRetention": "Audio-Aufbewahrung",
@@ -2286,10 +1616,6 @@
       "transcriptRetention": "Transkript-Aufbewahrung",
       "transcriptRetentionDescription": "Gespeicherte Transkriptionen, deren Audio und deren Insights-Zähler nach diesem Zeitraum automatisch löschen.",
       "transcriptRetentionForever": "Unbegrenzt",
-      "hoursAgo": "vor {{count}} Std.",
-      "justNow": "gerade eben",
-      "lastSynced": "Zuletzt synchronisiert {{time}}",
-      "minutesAgo": "vor {{count}} Min.",
       "saveDiscarded": "Verworfene Diktate speichern",
       "saveDiscardedDescription": "Wenn Sie ein Diktat mit Escape abbrechen, bleibt das Audio im Verlauf, damit Sie es wiederherstellen können. Erfordert aktive Daten- und Audio-Aufbewahrung."
     },
@@ -2327,11 +1653,9 @@
       "customSetupDescription": "Verwenden Sie Ihren eigenen Anbieter und API-Schlüssel.",
       "description": "Wählen Sie, wie OpenWhispr Ihre Stimme transkribiert",
       "modes": {
-        "openwhispr": "OpenWhispr Cloud",
         "providers": "Cloud-Anbieter",
         "local": "Lokal",
         "selfHosted": "Selbst gehostet",
-        "openwhisprDesc": "Zuverlässige Ergebnisse. Keine Einrichtung nötig.",
         "providersDesc": "Eigenen API-Schlüssel nutzen.",
         "localDesc": "Modelle auf dem Gerät. Voll privat.",
         "selfHostedDesc": "Eigener Server in Ihrem Netzwerk."
@@ -2432,34 +1756,6 @@
       "endpointUrl": "Endpunkt-URL",
       "serverUrl": "Server-URL",
       "apiKeyOptional": "API-Schlüssel (optional)"
-    },
-    "enterpriseCheckout": {
-      "title": "Auf Enterprise upgraden",
-      "description": "Workspace, Plätze und Abrechnungszeitraum wählen. Die Zahlung erfolgt im Stripe-Checkout.",
-      "allSubscribed": "Die Workspaces, die dir gehören, sind bereits auf Enterprise oder können hier nicht geändert werden. Für Plan-Änderungen kontaktiere den Vertrieb.",
-      "workspaceLabel": "Workspace",
-      "seatsLabel": "Plätze",
-      "seatsHint_one": "{{count}} Platz derzeit belegt",
-      "seatsHint_other": "{{count}} Plätze derzeit belegt",
-      "intervalLabel": "Abrechnungszeitraum",
-      "interval": {
-        "monthly": "Monatlich",
-        "annual": "Jährlich"
-      },
-      "proratedCharge": "Anteiliger Betrag",
-      "prorationNote": "Die anteilige Differenz wird der nächsten Rechnung hinzugefügt.",
-      "errors": {
-        "previewFailed": "Upgrade-Vorschau konnte nicht geladen werden.",
-        "alreadyEnterprise": "Dieser Workspace ist bereits auf Enterprise.",
-        "subscriptionInactive": "Das Abonnement dieses Workspace ist nicht aktiv. Zahlungsdaten aktualisieren und erneut versuchen.",
-        "priceNotConfigured": "Enterprise-Preise sind derzeit nicht verfügbar. Bitte den Vertrieb kontaktieren."
-      },
-      "priceNote": "Der endgültige Preis wird beim Checkout angezeigt.",
-      "continueCta": "Weiter zum Checkout",
-      "upgradeDescription": "Upgrade von {{workspace}} von {{plan}} auf Enterprise. Plätze und Abrechnungszeitraum bleiben erhalten; die Änderung gilt sofort.",
-      "upgradeCta": "Jetzt upgraden",
-      "upgradedTitle": "Upgrade auf Enterprise abgeschlossen",
-      "upgradedDescription": "{{workspace}} ist jetzt auf Enterprise."
     }
   },
   "models": {
@@ -2627,7 +1923,7 @@
     "activityMore": "Mehr",
     "dayTooltip_one": "{{date}}: {{count}} Wort",
     "dayTooltip_other": "{{date}}: {{count}} Wörter",
-    "dataRetentionDisabled": "Die Datenaufbewahrung ist deaktiviert, daher werden neue Diktate in den Statistiken nicht gezählt – weder auf diesem Gerät noch in Ihrem Konto. Bereits synchronisierte Zähler bleiben in Ihrem Konto.",
+    "dataRetentionDisabled": "Die Datenaufbewahrung ist deaktiviert, daher werden neue Diktate in den Statistiken nicht gezählt.",
     "onDevice": "Auf diesem Gerät",
     "onDevicePrivacy": "Diese Insights werden auf diesem Gerät berechnet, um deine Privatsphäre zu schützen.",
     "emptyTitle": "Noch keine Diktate",
@@ -2640,100 +1936,12 @@
     "notes": "Notizen",
     "upload": "Hochladen",
     "dictionary": "Wörterbuch",
-    "inviteTeam": "Team einladen",
     "settings": "Einstellungen",
     "support": "Support",
-    "limitReached": "Wochenlimit erreicht",
-    "limitReachedDescription": "Upgraden Sie auf Pro für unbegrenzte Transkriptionen.",
-    "viewPlans": "Tarife ansehen",
-    "upgradeTitle": "Auf Pro upgraden",
-    "upgradeDescription": "Unbegrenzte, genauere und schnellere Transkription.",
-    "upgradeInstantSetup": "Sofort einsatzbereit",
-    "upgradeZeroRetention": "Keine Datenaufbewahrung",
-    "upgradeEnterpriseSecurity": "Enterprise-Sicherheit SOC 2 Type II, HIPAA, ISO27001",
-    "learnMore": "Mehr erfahren",
     "integrations": "Integrationen",
-    "defaultUser": "Benutzer",
-    "notSignedIn": "Nicht angemeldet",
     "chat": "Chat",
     "collapse": "Seitenleiste einklappen",
     "expand": "Seitenleiste ausklappen"
-  },
-  "workspaces": {
-    "switcher": {
-      "workspaces": "Workspaces",
-      "create": "Workspace erstellen…"
-    },
-    "create": {
-      "title": "Workspace erstellen",
-      "description": "Ein Workspace bündelt die Mitglieder und Abrechnung Ihrer Organisation. Darin erstellen Sie Team-Bereiche für gemeinsame Notizen.",
-      "nameLabel": "Workspace-Name",
-      "namePlaceholder": "Acme Corp",
-      "submit": "Workspace erstellen",
-      "submitting": "Erstelle…",
-      "errorTitle": "Workspace konnte nicht erstellt werden"
-    },
-    "created": {
-      "title": "Workspace erstellt",
-      "description": "Sie sind nun Inhaber von {{name}}."
-    },
-    "invite": {
-      "title": "Zu {{workspace}} einladen",
-      "description": "Fügen Sie Teammitglieder per E-Mail hinzu. Sie erhalten einen Beitrittslink.",
-      "emailLabel": "E-Mail",
-      "emailPlaceholder": "teammitglied@example.com",
-      "roleLabel": "Rolle",
-      "seatUsage": "{{used}} von {{seats}} Plätzen belegt",
-      "seatCost": "Bei Annahme wird deinem Tarif ein Platz hinzugefügt · geschätzte anteilige Kosten: {{amount}}.",
-      "submit": "Einladung senden",
-      "submitting": "Sende…",
-      "sentTitle": "Einladung gesendet",
-      "sentDescription": "Einladung an {{email}} gesendet.",
-      "sentNoEmailTitle": "Einladung erstellt, aber nicht per E-Mail gesendet",
-      "sentNoEmailDescription": "{{email}} wurde eingeladen, aber die E-Mail konnte nicht zugestellt werden. Senden Sie sie später erneut oder teilen Sie den Einladungslink anders.",
-      "errorTitle": "Einladung konnte nicht gesendet werden",
-      "role": {
-        "admin": "Administrator",
-        "member": "Mitglied"
-      },
-      "roleDescription": {
-        "admin": "Verwaltet Mitglieder und Abrechnung",
-        "member": "Nutzt den Workspace"
-      }
-    },
-    "join": {
-      "title": "Team beitreten",
-      "domainTitle": "Dein Team ist schon auf OpenWhispr",
-      "description": "In diesen Workspaces ist jemand aus deiner E-Mail-Domain.",
-      "invitedDescription": "Du wurdest zu einem Workspace eingeladen.",
-      "invitedBy": "Eingeladen von {{inviter}} als {{role}}",
-      "memberCount_one": "{{count}} Mitglied",
-      "memberCount_other": "{{count}} Mitglieder",
-      "join": "Beitreten",
-      "requestErrorTitle": "Anfrage konnte nicht gesendet werden",
-      "requestedDescription": "Ein Admin von {{workspace}} sieht sie sich an.",
-      "requestedTitle": "Anfrage gesendet",
-      "requested": "Angefragt",
-      "request": "Zutritt anfragen",
-      "notNow": "Jetzt nicht",
-      "successTitle": "Beigetreten",
-      "successDescription": "Du bist jetzt Mitglied von {{workspace}}.",
-      "errorTitle": "Beitritt fehlgeschlagen"
-    },
-    "accept": {
-      "title": "Workspace beitreten",
-      "description": "{{inviter}} hat Sie eingeladen, {{workspace}} als {{role}} beizutreten.",
-      "loading": "Lade Einladung…",
-      "accept": "Einladung annehmen",
-      "accepting": "Annehmen…",
-      "signInToAccept": "Anmelden zum Annehmen",
-      "switchAccount": "Konto wechseln",
-      "successTitle": "Beigetreten",
-      "successDescription": "Sie sind jetzt Mitglied von {{name}}. Verwalten Sie ihn unter Einstellungen → Workspace.",
-      "errorTitle": "Einladung konnte nicht angenommen werden",
-      "sentTo": "Einladung gesendet an {{email}}",
-      "wrongAccount": "Diese Einladung wurde an {{email}} gesendet. Sie sind als {{current}} angemeldet."
-    }
   },
   "chat": {
     "newChat": "Neuer Chat",
@@ -2775,143 +1983,12 @@
     },
     "spaces": {
       "privateSpaces": "Private Notizen",
-      "teamSpaces": "Teamspaces",
       "personal": "Persönlich",
-      "privateTooltip": "Nur du kannst deinen persönlichen Bereich sehen",
-      "newSpace": "Neuer Team-Bereich",
-      "newSpaceInWorkspace": "Neuer Team-Bereich in {{workspace}}",
-      "createTitle": "Team-Bereich erstellen",
-      "createDescription": "Ein gemeinsamer Bereich in einem Workspace für die Personen und Gruppen, die du hinzufügst.",
-      "nameAndIconLabel": "Name und Symbol",
-      "create": "Erstellen",
-      "couldNotCreate": "Bereich konnte nicht erstellt werden",
-      "created": "{{space}} erstellt",
-      "changeEmoji": "Emoji ändern",
-      "settings": "Einstellungen",
-      "settingsTitle": "Space-Einstellungen",
-      "couldNotRename": "Bereich konnte nicht umbenannt werden",
-      "couldNotChangeEmoji": "Emoji konnte nicht geändert werden",
-      "deleteSpace": "Bereich löschen",
-      "deleteHintTeam": "Entfernt diesen Space für alle. Seine Gruppen bleiben bestehen.",
-      "deleteHintLocal": "Löscht diesen Space mit seinen Ordnern und Notizen auf diesem Gerät endgültig.",
-      "leaveTitle": "Space verlassen",
-      "leaveDescription": "Deine Notizen bleiben für die anderen Mitglieder verfügbar.",
-      "leave": "Space verlassen",
-      "leaveConfirmTitle": "{{space}} verlassen?",
-      "leaveConfirmDescription": "Du wirst aus {{teams}} entfernt und verlierst den Zugriff auf alle anderen Spaces, die diese Gruppen öffnen können.",
-      "leaveDirectDescription": "Du verlierst den Zugriff auf diesen Space.",
-      "leaveKeepsGroupAccess": "Du behältst den Zugriff über {{groups}}.",
-      "left": "Du hast {{space}} verlassen",
-      "stillViaGroups": "Du hast weiterhin Zugriff auf {{space}} über {{groups}}.",
-      "couldNotLeave": "Space konnte nicht verlassen werden",
-      "deleteConfirmTitle": "Bereich löschen?",
-      "deleteConfirmDescription": "Dadurch werden {{space}} und alle zugehörigen Ordner und Notizen auf diesem Gerät endgültig gelöscht.",
-      "deleteConfirmTeamDescription": "Dies löscht {{space}} für alle. Die Gruppen bleiben bestehen, aber Mitglieder verlieren den Zugriff auf alle Ordner und Notizen.",
-      "deleteTypeName": "Geben Sie {{space}} zur Bestätigung ein",
-      "couldNotDelete": "Bereich konnte nicht gelöscht werden",
-      "deleted": "{{space}} gelöscht",
-      "moveTo": "Verschieben nach",
-      "moveToSpace": "In Bereich verschieben…",
-      "searchSpaces": "Bereiche suchen...",
-      "noSpacesFound": "Keine Bereiche gefunden",
-      "spaceRoot": "Oberste Ebene",
-      "moveConfirm": "Verschieben",
-      "confirmMoveInTitle": "Nach {{space}} verschieben?",
-      "confirmMoveIn": "Alle in {{space}} können diese Notiz sehen und bearbeiten. Notizen können später nicht wieder aus einem Team-Bereich herausbewegt werden.",
-      "confirmMoveInFolder": "Alle in {{space}} können diesen Ordner und seine Notizen sehen und bearbeiten. Ordner und Notizen können später nicht wieder aus einem Team-Bereich herausbewegt werden.",
-      "cantMoveOut": "Notizen können nicht aus einem Team-Bereich herausbewegt werden.",
-      "cantMoveTeammate": "Nur der Besitzer der Notiz oder ein Workspace-Admin kann sie in einen anderen Bereich verschieben.",
       "moved": "„{{title}}“ nach {{target}} verschoben",
-      "couldNotMove": "Ordner konnte nicht verschoben werden",
       "couldNotMoveNote": "Notiz konnte nicht verschoben werden",
-      "folderNameTaken": "„{{name}}“ konnte nicht verschoben werden – dort existiert bereits ein Ordner mit diesem Namen",
       "undo": "Rückgängig",
-      "emptySpace": "Noch keine Notizen. Notizen hier sind für alle in {{space}} sichtbar.",
-      "emptyTeamHint": "Mit Ihnen geteilte Bereiche erscheinen hier.",
       "noteCount_one": "{{count}} Notiz",
-      "noteCount_other": "{{count}} Notizen",
-      "accessRevoked": "Du hast keinen Zugriff mehr auf {{space}}",
-      "accessRevokedActiveNote": "Du hast keinen Zugriff mehr auf {{space}} — „{{title}}“ ist auf diesem Gerät nicht mehr verfügbar",
-      "movedToPersonal": "Du hast keinen Zugriff mehr auf {{space}} — „{{title}}“ wurde in deinen persönlichen Bereich verschoben",
-      "updateDeniedNote": "Du darfst „{{title}}“ nicht ändern — deine nicht synchronisierten Änderungen wurden als Kopie in deinem persönlichen Bereich gespeichert",
-      "deleteDeniedNote": "„{{title}}“ wurde nicht gelöscht — nur der Besitzer der Notiz oder ein Admin kann sie löschen",
-      "updateDeniedFolder": "Du darfst „{{name}}“ nicht ändern — deine nicht synchronisierten Änderungen wurden in deinem persönlichen Bereich gespeichert",
-      "deleteDeniedFolder": "„{{name}}“ wurde nicht gelöscht — nur ein Admin kann einen Bereichs-Ordner löschen",
-      "conflictBanner": "Es existiert eine neuere Version dieser Notiz.",
-      "conflictRefresh": "Aktualisieren",
-      "conflictKeep": "Weiter bearbeiten",
-      "editedBy": "Bearbeitet von {{name}} · {{time}}",
-      "members": {
-        "addPeople": "Personen hinzufügen",
-        "addedToTeam": "{{name}} wurde zu {{team}} hinzugefügt",
-        "removedFromTeam": "{{name}} wurde aus {{team}} entfernt",
-        "stillViaGroups": "{{name}} hat weiterhin Zugriff über {{groups}}",
-        "roleUpdated": "Rolle aktualisiert",
-        "you": "Du",
-        "addFailed": "{{failed}} von {{total}} Personen konnten nicht hinzugefügt werden",
-        "searchPlaceholder": "Personen suchen…",
-        "noResults": "Keine Personen gefunden",
-        "roleAdmin": "Administrator",
-        "roleMember": "Mitglied",
-        "roleAdminDescription": "Verwaltet Personen und Einstellungen.",
-        "roleMemberDescription": "Kann Notizen ansehen und bearbeiten.",
-        "remove": "Entfernen",
-        "removeConfirm": "{{name}} aus {{space}} entfernen?",
-        "removeConfirmDescription": "Diese Person verliert den Zugriff auf alle Notizen in diesem Bereich.",
-        "removeKeepsGroupAccess": "Der Zugriff über {{groups}} bleibt bestehen.",
-        "inviteFooter": "{{email}} in den Workspace einladen…",
-        "empty": "Noch niemand hinzugefügt",
-        "viaGroup": "über {{group}}",
-        "managedByGroup": "Über {{group}} hinzugefügt. Entferne die Person dort.",
-        "roleFromGroup": "Admin über {{group}}. Ändere es dort.",
-        "invited": "Einladung an {{email}} gesendet"
-      },
-      "invitedTo_one": "Sie treten {{count}} Team-Bereich bei",
-      "invitedTo_other": "Sie treten {{count}} Team-Bereichen bei",
-      "invitedToSpaces": "Du trittst {{spaces}} bei",
-      "teamsMembers": {
-        "title": "Mitglieder von {{space}}",
-        "noTeams": "Diesem Space sind noch keine Gruppen zugewiesen.",
-        "addTeamLabel": "Gruppe zu diesem Space hinzufügen",
-        "chooseTeam": "Gruppe auswählen…",
-        "teamAdded": "{{team}} wurde zu {{space}} hinzugefügt",
-        "teamRemoved": "{{team}} wurde aus {{space}} entfernt",
-        "removeTeamFromSpace": "Aus dem Space entfernen",
-        "removeTeamConfirm": "{{team}} aus {{space}} entfernen?",
-        "removeTeamConfirmDescription": "Ihre Mitglieder verlieren den Zugriff auf diesen Space, sofern sie nicht direkt hinzugefügt wurden oder eine andere Gruppe sie einschließt.",
-        "accessLabel": "Space-Zugriff",
-        "accessAdmin": "Admin",
-        "accessMember": "Mitglied",
-        "accessChanged": "Zugriff für {{team}} aktualisiert",
-        "accessHint": "Admins von {{team}} verwalten diesen Space nur, wenn sein Zugriff auf Admin gesetzt ist."
-      },
-      "teams": {
-        "newTeam": "Neue Gruppe",
-        "loadError": "Gruppen konnten nicht geladen werden."
-      },
-      "groups": {
-        "title": "Gruppen mit Zugriff",
-        "optional": "Gruppen (optional)"
-      }
-    },
-    "structureIntro": {
-      "title": "Wo Ihre Notizen gespeichert sind",
-      "description": "OpenWhispr trennt private Gedanken von gemeinsamer Arbeit, damit nur die richtigen Personen Ihre Notizen sehen.",
-      "personal": {
-        "title": "Persönlicher Bereich",
-        "description": "Nur Sie können die Ordner und Notizen hier sehen."
-      },
-      "workspace": {
-        "title": "Workspace",
-        "description": "Hier werden Mitglieder, Rollen und Team-Bereiche Ihres Workspace verwaltet."
-      },
-      "teamSpace": {
-        "title": "Team-Bereich",
-        "description": "Ein gemeinsamer Bereich in einem Workspace. Füge Personen oder Gruppen hinzu, um ihnen Zugriff zu geben."
-      },
-      "contents": "Jeder Bereich kann Ordner und Notizen enthalten.",
-      "done": "Verstanden",
-      "reopen": "Organisation der Bereiche erklären"
+      "noteCount_other": "{{count}} Notizen"
     },
     "folders": {
       "defaults": {
@@ -2935,7 +2012,6 @@
       "newNote": "Neue Notiz",
       "untitled": "Unbenannt",
       "untitledNote": "Unbenannte Notiz",
-      "shared": "Geteilt",
       "timeNow": "Jetzt",
       "minutesAgo": "vor {{count}}m",
       "hoursAgo": "vor {{count}}h",
@@ -2944,7 +2020,6 @@
     "createMenu": {
       "note": "Notiz",
       "assistantChat": "Assistent-Chat",
-      "teamSpace": "Team-Bereich",
       "chooseType": "Auswählen, was erstellt werden soll"
     },
     "editor": {
@@ -3022,7 +2097,6 @@
       "dropToUpload": "Zum Hochladen ablegen",
       "transcribe": "Transkribieren",
       "cancel": "Abbrechen",
-      "transcribingCloud": "Wird über die Cloud transkribiert...",
       "transcribingLocal": "Wird lokal transkribiert...",
       "transcribingProvider": "Wird über {{provider}} transkribiert...",
       "cancelTranscription": "Transkription abbrechen",
@@ -3038,7 +2112,6 @@
       "newFolder": "Neuer Ordner",
       "folderName": "Ordnername",
       "create": "Erstellen",
-      "openwhisprCloud": "OpenWhispr Cloud",
       "custom": "Benutzerdefiniert",
       "selectFolder": "Ordner auswählen",
       "transcriptionFailed": "Transkription fehlgeschlagen",
@@ -3047,18 +2120,8 @@
       "noProviderTitle": "Kein Transkriptionsanbieter eingerichtet",
       "noProviderDescription": "Fügen Sie einen API-Schlüssel hinzu oder laden Sie ein lokales Modell herunter, um mit der Transkription zu beginnen.",
       "noProviderAction": "Transkriptionseinstellungen öffnen",
-      "fileTooLarge": "Diese Datei überschreitet das Limit von 500 MB.",
-      "paidPlanRequired": "Cloud-Transkription für Dateien über 25 MB erfordert einen kostenpflichtigen Plan. Große Dateien werden mit OpenWhispr Cloud für zuverlässige, hochwertige Ergebnisse verarbeitet.",
-      "largeFileNote": "Große Dateien werden aufgeteilt und parallel transkribiert.",
-      "chunkProgress": "Transkribiere Teil {{completed}} von {{total}}...",
       "byokTooLarge": "API-Schlüssel von Drittanbietern unterstützen nur Dateien bis {{size}} MB.",
       "byokTooLargeDetail": "Für Dateien über {{size}} MB übernimmt OpenWhispr Cloud das Aufteilen, die parallele Verarbeitung und das Zusammenführen — so erhältst du zuverlässige Ergebnisse ohne die Einschränkungen von Drittanbietern.",
-      "byokTooLargeNeedsAccount": "Erstelle ein Konto und wechsle zu einem kostenpflichtigen Plan, um größere Dateien mit OpenWhispr Cloud zu transkribieren.",
-      "byokTooLargeNeedsUpgrade": "Wechsle zu einem kostenpflichtigen Plan, um größere Dateien mit OpenWhispr Cloud zu transkribieren.",
-      "switchToCloudForLargeFiles": "Wechsle zu OpenWhispr Cloud, um diese Datei zu transkribieren.",
-      "createAccount": "Konto erstellen",
-      "upgrade": "Upgraden",
-      "switchToCloud": "OpenWhispr Cloud",
       "orDivider": "oder",
       "urlPlaceholder": "YouTube- oder Audio-URL einfügen",
       "urlDownloading": "Audio wird heruntergeladen...",
@@ -3088,7 +2151,6 @@
       "batchSaveFailed": "Notiz konnte nicht gespeichert werden",
       "batchUnknownError": "Unbekannter Fehler",
       "removeFromQueue": "Aus Warteschlange entfernen",
-      "diarizationRunsLocally": "Die Sprechererkennung läuft lokal auf Ihrem Gerät.",
       "urlSubmit": "Link hinzufügen",
       "urlsSkipped": "Einige Links konnten nicht hinzugefügt werden ({{n}})",
       "queueFailed": "{{n}} fehlgeschlagen",
@@ -3267,22 +2329,17 @@
     },
     "overview": {
       "subtitle": {
-        "team": "Notizen sind für alle in diesem Space sichtbar.",
         "private": "Nur du kannst diese Notizen sehen."
       },
       "meta": {
         "folders_one": "{{count}} Ordner",
-        "folders_other": "{{count}} Ordner",
-        "members_one": "{{count}} Mitglied",
-        "members_other": "{{count}} Mitglieder"
+        "folders_other": "{{count}} Ordner"
       },
       "banner": {
         "title": {
-          "team": "Dein Team-Space",
           "private": "Dein privater Space"
         },
         "body": {
-          "team": "Verwandle Gespräche in geteiltes Wissen. Stelle Nutzerinterviews, Vertriebsgespräche und Team-Meetings dort ein, wo alle sie finden.",
           "private": "Bewahre Meeting-Notizen, Ideen und Entwürfe an einem Ort auf – und frag nach allem in diesem Space."
         },
         "dismiss": "Ausblenden"
@@ -3295,12 +2352,8 @@
           "inFlight": "Zeig laufende Projekte"
         }
       },
-      "invite": "Einladen",
       "list": {
         "empty": "Hier gibt es noch keine Notizen"
-      },
-      "author": {
-        "you": "Du"
       }
     }
   },
@@ -3463,8 +2516,6 @@
       "relaunchHint": "Die Bildschirmaufnahme wurde erteilt, während OpenWhispr lief. Beenden und öffnen Sie OpenWhispr erneut, um Screenshots aufzunehmen."
     },
     "modes": {
-      "openwhispr": "OpenWhispr Cloud",
-      "openwhisprDesc": "Den von OpenWhispr verwalteten Assistenten nutzen, kein API-Schlüssel nötig.",
       "providers": "Eigenen Schlüssel nutzen",
       "providersDesc": "Mit Ihrem eigenen API-Schlüssel an OpenAI, Anthropic, Gemini oder Groq anbinden.",
       "local": "Lokal",
@@ -3483,11 +2534,9 @@
       "systemPromptDescription": "Benutzerdefinierte Anweisungen für den Assistenten",
       "systemPromptPlaceholder": "Benutzerdefinierten System-Prompt eingeben...",
       "modes": {
-        "openwhispr": "OpenWhispr Cloud",
         "providers": "Cloud-Anbieter",
         "local": "Lokal",
         "selfHosted": "Selbst gehostet",
-        "openwhisprDesc": "Zuverlässige Ergebnisse. Keine Einrichtung nötig.",
         "providersDesc": "Eigenen API-Schlüssel verwenden.",
         "localDesc": "Modelle auf dem Gerät. Vollständig privat.",
         "selfHostedDesc": "Eigener Server in Ihrem Netzwerk."
@@ -3530,9 +2579,7 @@
       "create_noteStatus": "Notiz wird erstellt...",
       "update_noteStatus": "Notiz wird aktualisiert...",
       "copiedToClipboard": "In die Zwischenablage kopiert",
-      "openNote": "Notiz öffnen",
-      "unknownTool": "Unbekanntes Werkzeug: {{name}}",
-      "invalidArgs": "Ungültige Tool-Argumente für {{name}}"
+      "openNote": "Notiz öffnen"
     }
   },
   "assistant": {
@@ -3586,16 +2633,9 @@
       "learnMore": "Dokumentation lesen",
       "copyDocsLink": "Doku-Link kopieren",
       "docsLinkCopied": "Doku-Link kopiert",
-      "viewPlans": "Pläne ansehen",
       "local": {
         "label": "Lokal",
-        "freeBadge": "Kostenlos",
         "description": "Greife direkt auf deine lokalen Notizen zu. Kein Login oder API-Key — funktioniert, solange OpenWhispr läuft."
-      },
-      "cloud": {
-        "label": "Cloud",
-        "description": "Synchronisiere geräteübergreifend mit deinem API-Key.",
-        "proRequired": "Upgrade auf einen kostenpflichtigen Plan, um die CLI im Cloud-Modus zu nutzen."
       }
     },
     "plan": {
@@ -3605,7 +2645,6 @@
       "freeLimit": "5 Meetings / Monat",
       "essential": "Essential",
       "essentialLimit": "20 Meetings / Monat",
-      "pro": "Pro",
       "proLimit": "Unbegrenzt",
       "upgrade": "Upgrade"
     },
@@ -3643,51 +2682,8 @@
     "deleteConfirmDescription": "Diese Notiz wird dauerhaft gelöscht und kann nicht wiederhergestellt werden.",
     "deleteConfirm": "Löschen",
     "share": {
-      "button": "Teilen",
       "dialog": {
-        "title": "Notiz teilen",
-        "description": "Lade Personen per E-Mail ein oder teile einen Link zu dieser Notiz.",
-        "searchPlaceholder": "Personen, Ordner oder E-Mails suchen",
-        "noResults": "Keine Treffer gefunden",
-        "emailLabel": "Personen, Ordner oder E-Mail",
-        "shareButton": "Teilen",
-        "createLink": "Link erstellen",
-        "copyLink": "Link kopieren",
-        "copied": "Kopiert",
-        "export": "Exportieren",
-        "owner": "Eigentümer",
-        "editor": "Kann bearbeiten",
-        "viewer": "Kann ansehen",
-        "teamAudience": "Alle in diesem Team-Bereich",
-        "pending": "Ausstehend",
-        "accepted": "Hat Zugriff",
-        "resend": "Einladung erneut senden",
-        "revoke": "Entfernen",
-        "invitationActions": "Einladungsaktionen",
-        "resendSent": "Einladung gesendet",
-        "resendThrottled": "Einladung wurde kürzlich gesendet. Versuche es in einer Minute erneut.",
-        "syncPrompt": "Beim Teilen wird eine Kopie dieser Notiz in deiner OpenWhispr-Cloud gespeichert. Nur du kannst sie sehen, bis du auswählst, mit wem du sie teilst.",
-        "syncAndShare": "Notiz synchronisieren",
-        "visibility": {
-          "label": "Sichtbarkeit",
-          "private": "Privat",
-          "privateOption": "Privat — nur du",
-          "link": "Jeder mit dem Link",
-          "domain": "Alle bei {{domain}} mit dem Link",
-          "invited": "Nur eingeladene Personen"
-        },
-        "error": {
-          "invalidEmail": "Gib eine gültige E-Mail-Adresse ein",
-          "alreadyInvited": "{{email}} ist bereits eingeladen",
-          "inviteFailed": "Die Einladung konnte nicht gesendet werden. Versuche es erneut.",
-          "visibilityFailed": "Die Freigabe konnte nicht aktualisiert werden. Versuche es erneut.",
-          "copyFailed": "Der Link konnte nicht kopiert werden. Versuche es erneut.",
-          "revokeFailed": "Die Einladung konnte nicht entfernt werden. Versuche es erneut.",
-          "resendFailed": "Die Einladung konnte nicht erneut gesendet werden. Versuche es erneut.",
-          "syncFailed": "Die Notiz konnte nicht synchronisiert werden. Versuche es erneut.",
-          "loadFailed": "Freigabeeinstellungen konnten nicht geladen werden",
-          "retry": "Erneut versuchen"
-        }
+        "export": "Exportieren"
       }
     }
   },
@@ -3707,23 +2703,6 @@
       "navigate": "Navigieren",
       "open": "Öffnen",
       "dismiss": "Schließen"
-    }
-  },
-  "emojiPicker": {
-    "search": "Emoji suchen…",
-    "recent": "Zuletzt verwendet",
-    "noResults": "Kein Emoji gefunden",
-    "remove": "Entfernen",
-    "groups": {
-      "smileys": "Smileys & Emotionen",
-      "people": "Personen & Körper",
-      "animals": "Tiere & Natur",
-      "food": "Essen & Trinken",
-      "travel": "Reisen & Orte",
-      "activities": "Aktivitäten",
-      "objects": "Objekte",
-      "symbols": "Symbole",
-      "flags": "Flaggen"
     }
   },
   "permissionsGate": {

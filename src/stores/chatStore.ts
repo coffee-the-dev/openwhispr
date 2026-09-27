@@ -3,7 +3,6 @@ import { create } from "zustand";
 interface ConversationItem {
   id: number;
   title: string;
-  cloud_id?: string | null;
   client_conversation_id?: string | null;
   archived_at?: string | null;
   note_id?: number | null;

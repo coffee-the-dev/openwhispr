@@ -22,8 +22,6 @@ import {
 import { streamText, stepCountIs } from "ai";
 import { getAIModel } from "./ai/providers";
 import { createEnterpriseChatModel } from "./ai/enterpriseChatModel";
-import { getManagedScopeResolution } from "../stores/enterpriseIdentityStore";
-import type { InferenceScope } from "../config/inferenceScopes";
 import { PROVIDER_REGISTRY, type ProviderContext } from "./ai/inferenceProviders";
 import {
   canBorrowCleanupCustomKey,
@@ -125,40 +123,6 @@ class ReasoningService extends BaseReasoningService {
   private hasLanCleanupConfiguration(): boolean {
     const settings = getSettings();
     return settings.cleanupMode === "self-hosted" && !!settings.cleanupRemoteUrl?.trim();
-  }
-
-  // Managed enterprise access owns the route. Manual self-hosted and BYOK overrides are
-  // dropped so a leftover endpoint or key can never outrank the administrator's provider.
-  private resolveManagedScope<T extends ReasoningConfig, P extends string | undefined>(
-    model: string,
-    provider: P,
-    config: T,
-    fallbackScope: InferenceScope
-  ): { model: string; provider: P; config: T; isManaged: boolean } {
-    const inferenceScope = config.inferenceScope || fallbackScope;
-    const managed = getManagedScopeResolution(inferenceScope, getSettings().enterpriseSetupMode);
-    if (managed.kind === "error") {
-      throw Object.assign(new Error(managed.message), {
-        code: managed.code,
-        messageKey: managed.messageKey,
-      });
-    }
-    if (managed.kind !== "managed") {
-      return { model, provider, config: { ...config, inferenceScope }, isManaged: false };
-    }
-    return {
-      model: managed.model,
-      provider: managed.provider as P,
-      config: {
-        ...config,
-        inferenceScope,
-        provider: managed.provider,
-        lanUrl: undefined,
-        baseUrl: undefined,
-        customApiKey: undefined,
-      },
-      isManaged: true,
-    };
   }
 
   private async getApiKey(
@@ -440,8 +404,7 @@ class ReasoningService extends BaseReasoningService {
     agentName: string | null = null,
     config: ReasoningConfig = {}
   ): Promise<string> {
-    const managed = this.resolveManagedScope(model, config.provider, config, "dictationCleanup");
-    ({ model, config } = managed);
+    config = { ...config, inferenceScope: config.inferenceScope || "dictationCleanup" };
     const trimmedModel = model?.trim?.() || "";
     const settings = getSettings();
     const validateCleanup =
@@ -740,12 +703,7 @@ class ReasoningService extends BaseReasoningService {
     config: ReasoningConfig & { systemPrompt: string },
     tools?: Record<string, import("ai").Tool>
   ): AsyncGenerator<AgentStreamChunk, void, unknown> {
-    ({ model, provider, config } = this.resolveManagedScope(
-      model,
-      provider,
-      config,
-      "chatIntelligence"
-    ));
+    config = { ...config, inferenceScope: config.inferenceScope || "chatIntelligence" };
     const route = resolveChatRoute({
       provider,
       lanUrl: config.lanUrl,
@@ -813,7 +771,7 @@ class ReasoningService extends BaseReasoningService {
     const openrouterDisableThinking = provider === "openrouter" && config.disableThinking === true;
     // Resolving a Tinfoil model refreshes the registry, so read model config after it.
     const aiModel = isEnterprise
-      ? createEnterpriseChatModel(provider as EnterpriseProvider, model, config.inferenceScope)
+      ? createEnterpriseChatModel(provider as EnterpriseProvider, model)
       : await getAIModel(aiProvider, model, apiKey, baseURL, {
           disableThinking: openrouterDisableThinking,
         });
@@ -1182,15 +1140,6 @@ class ReasoningService extends BaseReasoningService {
   async isAvailable(): Promise<boolean> {
     try {
       const settings = getSettings();
-      // Mirrors processText's precedence: managed access outranks every manual route.
-      if (
-        getManagedScopeResolution("dictationCleanup", settings.enterpriseSetupMode).kind ===
-        "managed"
-      ) {
-        logger.logReasoning("API_KEY_CHECK", { managedEnterprise: true });
-        return true;
-      }
-
       if (isCloudCleanupMode()) {
         logger.logReasoning("API_KEY_CHECK", { cloudCleanupMode: true });
         return true;

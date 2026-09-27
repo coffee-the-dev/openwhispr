@@ -1,8 +1,5 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { once } = require("node:events");
-const { WebSocketServer } = require("ws");
-const { OrukeetStreaming } = require("../../src/helpers/orukeetStreaming");
 const { loadAudioManager } = require("./harness/audioManager");
 
 async function loadManagerClass(t, mockModules) {
@@ -465,60 +462,6 @@ test("acknowledged streaming silence does not trigger another transcription", as
   assert.equal(fallbackCalls, 0);
 });
 
-test("a stream without a final falls back to batch for every provider, tagged only for Orukeet", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  globalThis.__streamingFinalizationSettings = {
-    ...globalThis.__streamingFinalizationSettings,
-    cloudTranscriptionMode: "openwhispr",
-    isSignedIn: true,
-  };
-  const uploads = [];
-  for (const providerName of ["orukeet", "openai-realtime", "deepgram"]) {
-    const { manager } = createFinalizingManager(AudioManager);
-    manager.recordingStartTime = Date.now() - 5000;
-    manager.mergeRecordedSegments = async () => new Blob([new Uint8Array(100)]);
-    manager.getStreamingProviderName = () => providerName;
-    manager.processWithOpenWhisprCloud = async (_blob, metadata) => {
-      uploads.push([providerName, metadata.streamingFallbackReason]);
-      return { text: "" };
-    };
-    await manager.stopStreamingRecording();
-  }
-
-  assert.deepEqual(uploads, [
-    ["orukeet", "stream_no_final"],
-    ["openai-realtime", undefined],
-    ["deepgram", undefined],
-  ]);
-});
-
-test("a no-final stream whose Cloud upload finds no speech keeps the recording quietly", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  globalThis.__streamingFinalizationSettings = {
-    ...globalThis.__streamingFinalizationSettings,
-    cloudTranscriptionMode: "openwhispr",
-    isSignedIn: true,
-  };
-  const { manager } = createFinalizingManager(AudioManager);
-  manager.recordingStartTime = Date.now() - 5000;
-  manager.mergeRecordedSegments = async () => new Blob([new Uint8Array(100)]);
-  const saved = [];
-  const errors = [];
-  const completions = [];
-  manager.saveFailedTranscription = (message, code) => saved.push({ message, code });
-  manager.onError = (error) => errors.push(error);
-  manager.onTranscriptionComplete = (result) => completions.push(result);
-  manager.processWithOpenWhisprCloud = async () => {
-    throw Object.assign(new Error("No speech detected in audio"), { code: "NO_SPEECH_DETECTED" });
-  };
-
-  await manager.stopStreamingRecording();
-
-  assert.deepEqual(saved, [{ message: "No speech detected in audio", code: "NO_SPEECH_DETECTED" }]);
-  assert.deepEqual(errors, []);
-  assert.deepEqual(completions, [{ success: true, text: "" }]);
-});
-
 test("Orukeet uses the acknowledged final even if the transcript event is delayed", async (t) => {
   const AudioManager = await loadManagerClass(t);
   const { manager } = createFinalizingManager(AudioManager);
@@ -702,87 +645,6 @@ function refusedStartProvider() {
   });
 }
 
-test("a refused managed Orukeet start keeps its capture and uploads the opening words", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  const provider = startingOrukeetProvider({
-    start: async () => ({ success: false, error: "Orukeet connection closed" }),
-  });
-  const { manager, errors, uploads } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider,
-  });
-
-  assert.equal(await manager.startStreamingRecording(), true);
-  assert.equal(manager.isRecording, true);
-  manager.streamingProcessor.port.onmessage({ data: speechPcm() });
-  assert.deepEqual(provider.sent, [], "a failed-over recording feeds no socket");
-
-  // Stopped well under the 2 s floor a streamed recording needs to fall back.
-  await manager.stopStreamingRecording();
-
-  assert.deepEqual(uploads, [{ audio: "opening words", reason: "session_unavailable" }]);
-  assert.deepEqual(errors, []);
-});
-
-test("a managed Orukeet stream refused mid-recording keeps recording and uploads it", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  let raise;
-  const provider = startingOrukeetProvider({
-    onError: (listener) => {
-      raise = listener;
-      return () => {};
-    },
-  });
-  const { manager, errors, uploads } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider,
-  });
-
-  assert.equal(await manager.startStreamingRecording(), true);
-  raise("Account already has an active recording");
-
-  assert.equal(manager.isStreaming, true, "the recording is not cut off");
-  assert.equal(manager._streamingStopPromise, null);
-  await manager.stopStreamingRecording();
-  assert.deepEqual(uploads, [{ audio: "opening words", reason: "stream_no_final" }]);
-  assert.deepEqual(errors, []);
-});
-
-test("a managed Orukeet error while stop awaits the final still uploads a short capture", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  let raise;
-  const provider = startingOrukeetProvider({
-    onError: (listener) => {
-      raise = listener;
-      return () => {};
-    },
-    // The refusal (commit capacity, a dropped socket or a final timeout)
-    // lands a round trip after the commit, once stop has finished the
-    // fallback recorder.
-    finalize: async () => {
-      while (manager.streamingFallbackRecorder) await new Promise(setImmediate);
-      raise("Orukeet transcription failed: capacity");
-      return { success: false, error: "Orukeet transcription failed: capacity" };
-    },
-  });
-  const { manager, errors, uploads } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider,
-  });
-
-  assert.equal(await manager.startStreamingRecording(), true);
-  await manager.stopStreamingRecording();
-
-  assert.deepEqual(uploads, [{ audio: "opening words", reason: "stream_no_final" }]);
-  assert.deepEqual(errors, []);
-});
-
 test("a managed Orukeet drop without a fallback recorder surfaces and auto-stops", async (t) => {
   const AudioManager = await loadManagerClass(t);
   useManagedOrukeetSettings();
@@ -841,33 +703,6 @@ test("a refused managed Orukeet start without a fallback recorder records in bat
   assert.deepEqual(uploads, []);
 });
 
-test("a stop pressed while a refused managed Orukeet start settles uploads once", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  let refuse;
-  const provider = startingOrukeetProvider({
-    start: () =>
-      new Promise((resolve) => {
-        refuse = () => resolve({ success: false, error: "Orukeet connection closed" });
-      }),
-  });
-  const { manager, errors, uploads } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider,
-  });
-
-  const starting = manager.startStreamingRecording();
-  while (!refuse) await new Promise((resolve) => setImmediate(resolve));
-  await manager.stopStreamingRecording();
-  refuse();
-  await starting;
-
-  assert.equal(manager.isRecording, false, "the deferred stop ends the recording");
-  assert.deepEqual(uploads, [{ audio: "opening words", reason: "session_unavailable" }]);
-  assert.deepEqual(errors, []);
-});
-
 test("the recording after a failed-over one streams to its socket again", async (t) => {
   const AudioManager = await loadManagerClass(t);
   useManagedOrukeetSettings();
@@ -890,107 +725,6 @@ test("the recording after a failed-over one streams to its socket again", async 
   manager.streamingProcessor.port.onmessage({ data: pcm });
 
   assert.deepEqual(provider.sent, [pcm]);
-});
-
-test("opening words streamed before a mid-recording drop still count as speech", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  let raise;
-  const provider = startingOrukeetProvider({
-    onError: (listener) => {
-      raise = listener;
-      return () => {};
-    },
-  });
-  const { manager, uploads } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider,
-  });
-
-  assert.equal(await manager.startStreamingRecording(), true);
-  manager.streamingProcessor.port.onmessage({ data: speechPcm() });
-  raise("Orukeet connection closed");
-  manager.streamingProcessor.port.onmessage({ data: silentPcm() });
-  await manager.stopStreamingRecording();
-
-  assert.deepEqual(uploads, [{ audio: "opening words", reason: "stream_no_final" }]);
-});
-
-test("a capacity-refused managed commit closes and uploads the whole short capture once", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  const server = new WebSocketServer({ host: "127.0.0.1", port: 0 });
-  await once(server, "listening");
-  let commits = 0;
-  server.on("connection", (socket) => {
-    socket.send(
-      JSON.stringify({
-        type: "ready",
-        channels: 1,
-        sample_rate: 16000,
-        encoding: "pcm_s16le",
-        max_seconds: 600,
-      })
-    );
-    socket.on("message", (data, binary) => {
-      if (!binary && JSON.parse(data).type === "commit") {
-        commits++;
-        // A busy gateway keeps the PCM and socket until the client retries or closes.
-        socket.send(JSON.stringify({ type: "error", code: "capacity", retry_after_ms: 100 }));
-      }
-    });
-  });
-  const adapter = new OrukeetStreaming({ timeoutMs: 500, retryCapacity: false });
-  t.after(async () => {
-    await adapter.disconnect();
-    for (const socket of server.clients) socket.terminate();
-    await new Promise((resolve) => server.close(resolve));
-  });
-  const provider = startingOrukeetProvider({
-    start: async () => {
-      await adapter.connect({
-        baseUrl: `http://127.0.0.1:${server.address().port}`,
-        apiKey: "test-key",
-      });
-      return { success: true };
-    },
-    send: (pcm) => adapter.sendAudio(pcm),
-    onError: (listener) => {
-      adapter.onError = (error) => listener(error.message);
-      return () => {
-        adapter.onError = null;
-      };
-    },
-    finalize: async () => {
-      try {
-        return { success: true, ...(await adapter.finalize()) };
-      } catch (error) {
-        return { success: false, error: error.message };
-      }
-    },
-    stop: async () => ({ success: true, ...(await adapter.disconnect()) }),
-  });
-  const { manager, errors, uploads } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider,
-  });
-  const upload = manager.processWithOpenWhisprCloud;
-  manager.processWithOpenWhisprCloud = async (...args) => {
-    assert.equal(adapter.intentionalClose, true);
-    assert.equal(adapter.retryTimer, undefined);
-    assert.match(adapter.failure.message, /capacity/);
-    return upload(...args);
-  };
-
-  await manager.startStreamingRecording();
-  manager.streamingProcessor.port.onmessage({ data: speechPcm() });
-  await Promise.all([manager.stopStreamingRecording(), manager.stopStreamingRecording()]);
-
-  assert.equal(commits, 1);
-  assert.deepEqual(uploads, [{ audio: "opening words", reason: "stream_no_final" }]);
-  assert.deepEqual(errors, []);
 });
 
 test("other streaming providers still surface a dropped stream and auto-stop", async (t) => {
@@ -1016,110 +750,6 @@ test("other streaming providers still surface a dropped stream and auto-stop", a
   assert.equal(errors[0].title, "Streaming Error");
   assert.ok(manager._streamingStopPromise, "the recording auto-stops");
   await manager._streamingStopPromise;
-});
-
-test("a failed-over upload error is reported and kept for retry, not shown as silence", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  const provider = startingOrukeetProvider({
-    start: async () => ({ success: false, error: "Orukeet connection closed" }),
-  });
-  const { manager, errors, completions } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider,
-  });
-  const saved = [];
-  manager.saveFailedTranscription = async (message, code) => saved.push([message, code]);
-  manager.processWithOpenWhisprCloud = async () => {
-    const error = new Error("You're offline.");
-    error.code = "OFFLINE";
-    throw error;
-  };
-
-  await manager.startStreamingRecording();
-  await manager.stopStreamingRecording();
-
-  assert.equal(errors.length, 1);
-  assert.equal(errors[0].code, "OFFLINE");
-  assert.deepEqual(saved, [["You're offline.", "OFFLINE"]]);
-  assert.deepEqual(completions, []);
-});
-
-test("cancelling a failed-over upload does not keep it as a failed transcription", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  const { manager, errors } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider: refusedStartProvider(),
-  });
-  const saved = [];
-  manager.saveFailedTranscription = async (message, code) => saved.push([message, code]);
-  // Main answers an upload cancelled mid-flight with TRANSCRIPTION_CANCELLED.
-  let cancelUpload;
-  let uploadStarted;
-  const uploading = new Promise((resolve) => {
-    uploadStarted = resolve;
-  });
-  globalThis.window.electronAPI.cancelCloudTranscription = () => cancelUpload();
-  manager.processWithOpenWhisprCloud = () =>
-    new Promise((_resolve, reject) => {
-      cancelUpload = () =>
-        reject(Object.assign(new Error("Cancelled"), { code: "TRANSCRIPTION_CANCELLED" }));
-      uploadStarted();
-    });
-
-  await manager.startStreamingRecording();
-  const stopping = manager.stopStreamingRecording();
-  await uploading;
-  await manager.cancelStreamingRecording();
-  await stopping;
-
-  assert.deepEqual(saved, []);
-  assert.deepEqual(errors, []);
-});
-
-test("a failed-over upload that echoes the dictionary reads as silence and keeps the audio", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  const { manager, errors, completions } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider: refusedStartProvider(),
-  });
-  const saved = [];
-  manager.saveFailedTranscription = async (message, code) => saved.push([message, code]);
-  manager.processWithOpenWhisprCloud = async () => {
-    throw Object.assign(new Error("No audio detected"), { code: "DICTIONARY_ECHO" });
-  };
-
-  await manager.startStreamingRecording();
-  await manager.stopStreamingRecording();
-
-  assert.deepEqual(saved, [["No audio detected", "DICTIONARY_ECHO"]]);
-  assert.deepEqual(errors, []);
-  assert.deepEqual(completions, [{ success: true, text: "" }]);
-});
-
-test("a start refused as disabled keeps its tag after the cached config is dropped", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  const { manager, uploads } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider: startingOrukeetProvider({
-      start: async () => ({ success: false, code: "FEATURE_NOT_ENABLED", error: "Disabled" }),
-    }),
-  });
-  // Resolve the provider from the cached config, as the real manager does.
-  delete manager.getStreamingProviderName;
-  manager.sttConfig = { dictation: { mode: "streaming" }, streamingProvider: "orukeet" };
-
-  await manager.startStreamingRecording();
-  await manager.stopStreamingRecording();
-
-  assert.deepEqual(uploads, [{ audio: "opening words", reason: "feature_disabled" }]);
 });
 
 test("signing out during a failed-over recording reports it and keeps the audio", async (t) => {
@@ -1149,34 +779,6 @@ test("signing out during a failed-over recording reports it and keeps the audio"
   assert.deepEqual(completions, []);
 });
 
-test("a failed-over upload that reaches the word limit carries it to the upgrade prompt", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  const { manager, completions } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider: refusedStartProvider(),
-  });
-  globalThis.window.dispatchEvent = () => true;
-  manager.processWithOpenWhisprCloud = async () => ({
-    text: "Last words of the day.",
-    source: "openwhispr",
-    limitReached: true,
-    wordsUsed: 2000,
-    wordsRemaining: 0,
-  });
-
-  await manager.startStreamingRecording();
-  await manager.stopStreamingRecording();
-
-  assert.equal(completions.length, 1);
-  const { text, limitReached, wordsUsed, wordsRemaining } = completions[0];
-  assert.deepEqual(
-    { text, limitReached, wordsUsed, wordsRemaining },
-    { text: "Last words of the day.", limitReached: true, wordsUsed: 2000, wordsRemaining: 0 }
-  );
-});
-
 test("a silent failed-over tap is not uploaded", async (t) => {
   const AudioManager = await loadManagerClass(t);
   useManagedOrukeetSettings();
@@ -1193,36 +795,6 @@ test("a silent failed-over tap is not uploaded", async (t) => {
   assert.deepEqual(uploads, []);
   assert.deepEqual(errors, []);
   assert.deepEqual(completions, [{ success: true, text: "" }]);
-});
-
-test("a failed-over selection edit that fails is reported as a selection edit failure", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  useManagedOrukeetSettings();
-  installCapture(t);
-  const { manager, errors } = createStartingManager(AudioManager, {
-    providerName: "orukeet",
-    provider: refusedStartProvider(),
-  });
-  manager.saveFailedTranscription = async () => {};
-  manager.processWithOpenWhisprCloud = async () => {
-    throw Object.assign(new Error("Selection edit could not safely read the selection: gone"), {
-      code: "SELECTION_EDIT_CAPTURE_FAILED",
-      messageKey: "hooks.audioRecording.selectionEditing.unavailable",
-      selectionEditFatal: true,
-    });
-  };
-
-  await manager.startStreamingRecording();
-  await manager.stopStreamingRecording();
-
-  assert.deepEqual(errors, [
-    {
-      title: "Selection Edit Failed",
-      description: "Selection edit could not safely read the selection: gone",
-      code: "SELECTION_EDIT_CAPTURE_FAILED",
-      messageKey: "hooks.audioRecording.selectionEditing.unavailable",
-    },
-  ]);
 });
 
 test("a managed Orukeet session fails over even if its route changes mid-recording", async (t) => {
@@ -1329,70 +901,6 @@ async function stopManagedDictation(
   return { manager, uploads, reasonCalls, usage, published, errors, stopResult };
 }
 
-test("a confident unsupported estimate re-transcribes the kept recording through Cloud", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  const { uploads, usage, published } = await stopManagedDictation(AudioManager, {
-    final: JA_FINAL,
-    upload: async () => ({ text: "明日の会議", rawText: "明日の会議" }),
-  });
-  assert.equal(uploads.length, 1);
-  assert.equal(uploads[0].streamingFallbackReason, "language_detected_unsupported");
-  assert.deepEqual(uploads[0].detectedLanguageFields, JA_DETECTION);
-  assert.equal(Object.hasOwn(uploads[0], "language"), false);
-  assert.equal(published[0].text, "明日の会議");
-  assert.equal(published[0].rawText, "明日の会議");
-  // /api/transcribe metered the re-transcription; the stream is not metered too.
-  assert.equal(usage.length, 0);
-});
-
-test("language re-transcription skips streaming cleanup", async (t) => {
-  const AudioManager = await loadManagerClass(t, {
-    "/stores/settingsStore": `
-      export const getSettings = () => globalThis.__streamingFinalizationSettings;
-      export const getEffectiveCleanupModel = () => null;
-      export const selectResolvedLLMConfig = () => ({ model: null, provider: null });
-      export const isCloudCleanupMode = () => true;
-      export const isCloudDictationAgentMode = () => false;
-      export const isCloudTranslationMode = () => false;
-    `,
-  });
-  const originalNavigator = globalThis.navigator;
-  Object.defineProperty(globalThis, "navigator", { value: { onLine: true }, configurable: true });
-  t.after(() =>
-    Object.defineProperty(globalThis, "navigator", {
-      value: originalNavigator,
-      configurable: true,
-    })
-  );
-  const transcribeOpts = [];
-  globalThis.window.electronAPI.cloudTranscribe = async (_audio, opts) => {
-    transcribeOpts.push(opts);
-    return { success: true, text: "明日の会議", sttProvider: "openai" };
-  };
-  const { reasonCalls, usage, published } = await stopManagedDictation(AudioManager, {
-    final: JA_FINAL,
-    settings: { useCleanupModel: true, cleanupCloudMode: "openwhispr", customPrompts: {} },
-    overrides: {
-      isDictionaryEcho: () => false,
-      getWhisperPrompt: () => null,
-      finalizeChineseScript: async (text) => text,
-    },
-  });
-  // The real batch path ran: an "auto" upload that never declares the estimate.
-  assert.equal(transcribeOpts.length, 1);
-  assert.equal(Object.hasOwn(transcribeOpts[0], "language"), false);
-  assert.equal(transcribeOpts[0].streamingFallbackReason, "language_detected_unsupported");
-  assert.equal(transcribeOpts[0].sttDetectedLanguage, "ja");
-  // One cleanup, on the Cloud transcript; Orukeet's text never reaches /api/reason.
-  assert.deepEqual(
-    reasonCalls.map(([text]) => text),
-    ["明日の会議"]
-  );
-  assert.equal(reasonCalls[0][1].sttDetectedLanguage, "ja");
-  assert.equal(published[0].text, "明日の会議。");
-  assert.equal(usage.length, 0);
-});
-
 test("a low score, short window, supported or unknown estimate keeps the Orukeet text", async (t) => {
   const AudioManager = await loadManagerClass(t);
   for (const [final, expected] of [
@@ -1445,97 +953,6 @@ test("an older gateway sends no detection fields", async (t) => {
   assert.equal(uploads.length, 0);
   assert.equal(published[0].text, "hello there");
   assert.deepEqual(detectionFields(usage[0]), {});
-});
-
-test("a failed re-transcription is reported and kept for retry, never pasting Orukeet's text", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  const saved = [];
-  const { uploads, reasonCalls, usage, published, errors } = await stopManagedDictation(
-    AudioManager,
-    {
-      final: JA_FINAL,
-      upload: async () => {
-        throw new Error("Cloud transcription failed");
-      },
-      overrides: { saveFailedTranscription: (...args) => saved.push(args) },
-    }
-  );
-  assert.equal(uploads.length, 1);
-  assert.deepEqual(
-    errors.map(({ title, description }) => [title, description]),
-    [["Transcription Error", "Transcription failed: Cloud transcription failed"]]
-  );
-  assert.deepEqual(
-    saved.map(([message, code]) => [message, code]),
-    [["Cloud transcription failed", null]]
-  );
-  assert.deepEqual(published, []);
-  assert.deepEqual(reasonCalls, []);
-  assert.deepEqual(usage, []);
-});
-
-test("a re-transcription that returns no text ends empty and keeps the recording", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  const saved = [];
-  const { reasonCalls, usage, published, errors } = await stopManagedDictation(AudioManager, {
-    final: JA_FINAL,
-    upload: async () => ({ text: "" }),
-    overrides: { saveFailedTranscription: (...args) => saved.push(args) },
-  });
-  assert.deepEqual(published, [{ success: true, text: "" }]);
-  assert.deepEqual(
-    saved.map(([, code]) => code),
-    ["NO_SPEECH_DETECTED"]
-  );
-  assert.deepEqual(errors, []);
-  assert.deepEqual(reasonCalls, []);
-  assert.deepEqual(usage, []);
-});
-
-test("Cloud finding no speech ends the dictation empty and keeps the recording", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  const { dictionaryEchoError } = await import("../../src/utils/dictionaryEchoFilter.js");
-  for (const error of [
-    Object.assign(new Error("No speech detected in audio"), { code: "NO_SPEECH_DETECTED" }),
-    dictionaryEchoError(),
-  ]) {
-    const saved = [];
-    const { uploads, reasonCalls, usage, published } = await stopManagedDictation(AudioManager, {
-      final: JA_FINAL,
-      upload: async () => {
-        throw error;
-      },
-      overrides: { saveFailedTranscription: (...args) => saved.push(args) },
-    });
-    assert.equal(uploads.length, 1, error.code);
-    assert.deepEqual(published, [{ success: true, text: "" }], error.code);
-    // Neither Orukeet's text nor a second metering (an echo was already metered).
-    assert.deepEqual(reasonCalls, [], error.code);
-    assert.deepEqual(usage, [], error.code);
-    assert.deepEqual(
-      saved.map(([, code]) => code),
-      [error.code]
-    );
-  }
-});
-
-test("a re-transcription that reaches the word limit opens the upgrade prompt", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  const { published } = await stopManagedDictation(AudioManager, {
-    final: JA_FINAL,
-    upload: async () => ({
-      text: "明日の会議",
-      rawText: "明日の会議",
-      source: "openwhispr",
-      limitReached: true,
-      wordsUsed: 2000,
-      wordsRemaining: 0,
-    }),
-  });
-  assert.equal(published[0].source, "openwhispr");
-  assert.equal(published[0].limitReached, true);
-  assert.equal(published[0].wordsUsed, 2000);
-  assert.equal(published[0].wordsRemaining, 0);
 });
 
 test("only a signed-in OpenWhispr Cloud recording is re-transcribed", async (t) => {
@@ -1620,57 +1037,4 @@ test("a non-Orukeet provider is untouched", async (t) => {
   assert.equal(uploads.length, 0);
   assert.equal(published[0].text, "ashita no kaigi");
   assert.deepEqual(detectionFields(usage[0]), {});
-});
-
-test("an empty Orukeet final with a confident unsupported estimate still re-transcribes", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  const { uploads, usage, published } = await stopManagedDictation(AudioManager, {
-    final: { ...JA_FINAL, text: "" },
-    upload: async () => ({ text: "明日の会議", rawText: "明日の会議" }),
-  });
-  assert.equal(uploads.length, 1);
-  assert.equal(published[0].text, "明日の会議");
-  assert.equal(usage.length, 0);
-});
-
-test("a selection edit that fails during the language re-transcription surfaces its error", async (t) => {
-  const AudioManager = await loadManagerClass(t);
-  const selectionEditFailure = () =>
-    Object.assign(new Error("Selection edit failed"), {
-      selectionEditFatal: true,
-      code: "SELECTION_EDIT_REASONING_FAILED",
-    });
-  const saved = [];
-  const { reasonCalls, usage, published, errors } = await stopManagedDictation(AudioManager, {
-    final: JA_FINAL,
-    upload: async () => {
-      throw selectionEditFailure();
-    },
-    overrides: { saveFailedTranscription: (...args) => saved.push(args) },
-  });
-  // As a failed batch selection edit ends: its own title, recording kept.
-  assert.deepEqual(
-    errors.map(({ title, description, code }) => [title, description, code]),
-    [["Selection Edit Failed", "Selection edit failed", "SELECTION_EDIT_REASONING_FAILED"]]
-  );
-  assert.deepEqual(
-    saved.map(([, code]) => code),
-    ["SELECTION_EDIT_REASONING_FAILED"]
-  );
-  // Orukeet's discarded text is neither published nor edited with.
-  assert.deepEqual(published, []);
-  assert.deepEqual(reasonCalls, []);
-  assert.deepEqual(usage, []);
-
-  // A cancelled dictation ends quietly instead.
-  const cancelled = await stopManagedDictation(AudioManager, {
-    final: JA_FINAL,
-    upload: async (manager) => {
-      manager._requestStreamingCancellation();
-      throw selectionEditFailure();
-    },
-  });
-  assert.equal(cancelled.stopResult, true);
-  assert.deepEqual(cancelled.errors, []);
-  assert.deepEqual(cancelled.published, []);
 });

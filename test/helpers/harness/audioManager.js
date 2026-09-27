@@ -21,8 +21,6 @@ const defaultMockModules = (settingsKey) => ({
   `,
   "/services/ReasoningService":
     "export default class ReasoningService { static cancelAllRequests() {} }",
-  "/services/SyncService.js": "export const syncService = {};",
-  "/lib/auth": "export const withSessionRefresh = (fn) => fn();",
   "/utils/permissions": "export const isAccessibilitySkipped = () => false;",
 });
 

@@ -1,5 +1,4 @@
 const { OrukeetStreaming } = require("./orukeetStreaming");
-const { connectManagedOrukeet } = require("./orukeetCloudSession");
 const { ipcMain, app, shell, BrowserWindow, systemPreferences, net, session } = require("electron");
 const path = require("path");
 const fs = require("fs");
@@ -14,10 +13,6 @@ const { broadcastToWindows } = require("./windowBroadcast");
 const { openExternalUrl } = require("./externalUrlOpener");
 const { resolveFailedGpuBackends } = require("./whisper");
 const { BYOK_API_KEYS } = require("../config/secretKeys");
-const tokenStore = require("./tokenStore");
-const accountScopeBinding = require("./accountScopeBinding");
-const { createCloudApiRequestHandler } = require("./cloudApiRequest");
-const { createEnterpriseIdentityManager } = require("./enterpriseIdentityManager");
 const { createCloudConfigRequestHandler } = require("./cloudConfigRequest");
 const { extractAnthropicText, describeMissingAnthropicText } = require("./anthropicResponse");
 const {
@@ -168,7 +163,6 @@ const CLOUD_CHUNK_SEGMENT_SECONDS = 240;
 const { createAbortError } = require("./abortError");
 const { testProviderConnection } = require("./providerConnectionTest");
 const { createUploadCancelRegistry } = require("./uploadCancelRegistry");
-const { applyOpenWhisprOriginHeader } = require("./sessionHeaders");
 const {
   CLOUD_UPLOAD_TIMEOUT_MS,
   CLOUD_CHUNK_MAX_ATTEMPTS,
@@ -200,9 +194,7 @@ const cloudUploadSessions = new Map();
 
 function getCloudUploadSession(partition) {
   if (!cloudUploadSessions.has(partition)) {
-    const uploadSession = session.fromPartition(partition);
-    applyOpenWhisprOriginHeader(uploadSession);
-    cloudUploadSessions.set(partition, uploadSession);
+    cloudUploadSessions.set(partition, session.fromPartition(partition));
   }
   return cloudUploadSessions.get(partition);
 }
@@ -588,8 +580,6 @@ class IPCHandlers {
     this.windowsLoopbackAudioManager = managers.windowsLoopbackAudioManager;
     this.meetingAecManager = managers.meetingAecManager;
     this.getSemanticSearch = managers.getSemanticSearch;
-    this.oauthProtocolRegistered = managers.oauthProtocolRegistered === true;
-    this.oauthProtocol = managers.oauthProtocol || "openwhispr";
     this.sessionId = crypto.randomUUID();
     // requestId -> AbortControllers for in-flight audio-upload work (cloud
     // upload, or local transcription + diarization sharing one id), so a
@@ -644,19 +634,6 @@ class IPCHandlers {
     // Warm the OS default mic answer before the first hotkey press (~2s on Windows).
     resolveSystemDefaultMicrophone();
     this.setupHandlers();
-    // Lives for the app's lifetime; IPCHandlers has no teardown path.
-    tokenStore.subscribe(({ generation, token }) => {
-      this.enterpriseIdentityManager?.clear();
-      if (!token) {
-        this.databaseManager.setActiveAccountId(null);
-        accountScopeBinding.clear();
-        broadcastToWindows("active-account-scope-changed", null);
-      }
-      broadcastToWindows("auth-token-state-changed", {
-        generation,
-        hasToken: Boolean(token),
-      });
-    });
 
     if (this.whisperManager?.serverManager) {
       // Remember the failed backend so it isn't re-attempted (and its model
@@ -1750,34 +1727,6 @@ class IPCHandlers {
       return this.databaseManager.applyDictionaryChanges({ add, remove });
     });
 
-    ipcMain.handle("db-get-pending-dictionary", async () => {
-      return this.databaseManager.getPendingDictionary();
-    });
-
-    ipcMain.handle("db-get-pending-dictionary-deletes", async () => {
-      return this.databaseManager.getPendingDictionaryDeletes();
-    });
-
-    ipcMain.handle("db-get-dictionary-by-client-id", async (_event, clientDictId) => {
-      return this.databaseManager.getDictionaryEntryByClientId(clientDictId);
-    });
-
-    ipcMain.handle("db-upsert-dictionary-from-cloud", async (_event, cloudEntry) => {
-      return this.databaseManager.upsertDictionaryFromCloud(cloudEntry);
-    });
-
-    ipcMain.handle("db-mark-dictionary-synced", async (_event, id, cloudId) => {
-      return this.databaseManager.markDictionaryEntrySynced(id, cloudId);
-    });
-
-    ipcMain.handle("db-hard-delete-dictionary", async (_event, id) => {
-      return this.databaseManager.hardDeleteDictionaryEntry(id);
-    });
-
-    ipcMain.handle("db-clear-dictionary-cloud-id", async (_event, id) => {
-      return this.databaseManager.clearDictionaryCloudId(id);
-    });
-
     ipcMain.handle("db-broadcast-dictionary-updated", async () => {
       // Emit the normalized list straight from SQLite so renderers see the
       // post-dedupe truth, never a caller-supplied payload.
@@ -1795,43 +1744,6 @@ class IPCHandlers {
         throw new Error("snippets must be an array");
       }
       return this.databaseManager.setSnippets(snippets);
-    });
-
-    ipcMain.handle("db-get-pending-snippets", async () => {
-      return this.databaseManager.getPendingSnippets();
-    });
-
-    ipcMain.handle("db-get-pending-snippet-deletes", async () => {
-      return this.databaseManager.getPendingSnippetDeletes();
-    });
-
-    ipcMain.handle("db-get-snippet-for-cloud-merge", async (_event, cloudEntry) => {
-      return this.databaseManager.getSnippetForCloudMerge(cloudEntry);
-    });
-
-    ipcMain.handle("db-upsert-snippet-from-cloud", async (_event, cloudEntry) => {
-      return this.databaseManager.upsertSnippetFromCloud(cloudEntry);
-    });
-
-    ipcMain.handle(
-      "db-mark-snippet-synced",
-      async (_event, id, cloudId, serverUpdatedAt, expectedTrigger, expectedReplacement) => {
-        return this.databaseManager.markSnippetSynced(
-          id,
-          cloudId,
-          serverUpdatedAt,
-          expectedTrigger,
-          expectedReplacement
-        );
-      }
-    );
-
-    ipcMain.handle("db-hard-delete-snippet", async (_event, id) => {
-      return this.databaseManager.hardDeleteSnippet(id);
-    });
-
-    ipcMain.handle("db-clear-snippet-cloud-id", async (_event, id) => {
-      return this.databaseManager.clearSnippetCloudId(id);
     });
 
     ipcMain.handle("db-broadcast-snippets-updated", async () => {
@@ -1983,18 +1895,6 @@ class IPCHandlers {
       }
     );
 
-    ipcMain.handle("db-update-note-cloud-id", async (event, id, cloudId) => {
-      return this.databaseManager.updateNoteCloudId(id, cloudId);
-    });
-
-    ipcMain.handle("db-update-note-share-state", async (event, id, state) => {
-      const note = this.databaseManager.updateNoteShareState(id, state);
-      if (note) {
-        setImmediate(() => broadcastToWindows("note-updated", note));
-      }
-      return note;
-    });
-
     ipcMain.handle("db-get-folders", async (event, spaceId) => {
       return this.databaseManager.getFolders(spaceId);
     });
@@ -2018,11 +1918,6 @@ class IPCHandlers {
       const result = this.databaseManager.deleteFolder(id);
       if (result?.success) {
         this.notifyVectorChanges();
-        // Other accounts' notes were released to the space root; their mirror
-        // files leave with the folder directory, so rewrite the live ones.
-        for (const note of result.relocatedNotes ?? []) {
-          if (!note.deleted_at) this._asyncMirrorWrite(note);
-        }
         setImmediate(() => {
           broadcastToWindows("folder-deleted", { id });
           if (folderName) this._mirrorDeleteFolderIfUnshared(folderName);
@@ -2046,18 +1941,6 @@ class IPCHandlers {
       return result;
     });
 
-    ipcMain.handle("db-move-folder-to-space", async (event, id, spaceId) => {
-      const result = this.databaseManager.moveFolderToSpace(id, spaceId);
-      if (result?.success) {
-        // Qdrant payloads carry space_id — the triggers journaled the moved notes.
-        this.notifyVectorChanges();
-        if (result.folder) {
-          setImmediate(() => broadcastToWindows("folder-synced", result.folder));
-        }
-      }
-      return result;
-    });
-
     ipcMain.handle("db-get-folder-note-counts", async () => {
       return this.databaseManager.getFolderNoteCounts();
     });
@@ -2066,106 +1949,8 @@ class IPCHandlers {
       return this.databaseManager.getSpaces();
     });
 
-    ipcMain.handle("set-active-account-scope", async (_event, accountId, expectedGeneration) => {
-      const state = tokenStore.getState();
-      const verdict = accountScopeBinding.evaluateScopeRequest({
-        accountId,
-        expectedGeneration,
-        token: state.token,
-        generation: state.generation,
-      });
-      if (!verdict.ok) {
-        return {
-          success: false,
-          code: verdict.code,
-          error:
-            verdict.code === "INVALID_ACCOUNT"
-              ? "Invalid account scope"
-              : "Authentication context changed before account scoping",
-        };
-      }
-      if (accountId !== null) accountScopeBinding.persist(accountId, state.token);
-      else accountScopeBinding.clear();
-      broadcastToWindows(
-        "active-account-scope-changed",
-        accountId !== null ? { accountId, authGeneration: state.generation } : null
-      );
-      return { success: true };
-    });
-
-    ipcMain.handle("get-active-account-scope", () =>
-      accountScopeBinding.resolveActiveAccountScope({
-        ...tokenStore.getState(),
-        binding: accountScopeBinding.read(),
-      })
-    );
-
-    ipcMain.handle("delete-account-data", async (_event, accountId, expectedGeneration) => {
-      const state = tokenStore.getState();
-      if (
-        typeof accountId !== "string" ||
-        accountId.trim().length === 0 ||
-        !state.token ||
-        state.generation !== expectedGeneration
-      ) {
-        return {
-          success: false,
-          code: "AUTH_CONTEXT_CHANGED",
-          error: "Authentication context changed before local account cleanup",
-        };
-      }
-      try {
-        const result = this.databaseManager.deleteAccountData(accountId);
-        this.notifyVectorChanges();
-        for (const noteId of result.deletedNoteIds) {
-          this._asyncMirrorDelete(noteId);
-        }
-        return { success: true, ...result };
-      } catch (error) {
-        return { success: false, code: "LOCAL_ACCOUNT_CLEANUP_FAILED", error: error.message };
-      }
-    });
-
     ipcMain.handle("db-update-space", async (event, id, updates) => {
-      const result = this.databaseManager.updateSpace(id, updates);
-      if (result?.success && result.space) {
-        setImmediate(() => broadcastToWindows("space-synced", result.space));
-      }
-      return result;
-    });
-
-    ipcMain.handle("db-purge-space", async (event, id, options) => {
-      if (options?.expectedAuthGeneration !== undefined) {
-        const state = tokenStore.getState();
-        if (!state.token || state.generation !== options.expectedAuthGeneration) {
-          return {
-            success: false,
-            error: "Authentication context changed before account cleanup",
-            code: "AUTH_CONTEXT_CHANGED",
-          };
-        }
-      }
-      const result = this.databaseManager.purgeSpace(id, options);
-      if (result?.success) {
-        if (!result.preservedForOtherAccounts) {
-          // The purge row and the relocated notes' trigger rows drain together.
-          this.databaseManager.addPendingVectorPurge(result.spaceId);
-          this.notifyVectorChanges();
-          for (const note of result.relocatedNotes ?? []) {
-            this._asyncMirrorWrite(note);
-          }
-          for (const noteId of result.noteIds ?? []) {
-            this._asyncMirrorDelete(noteId);
-          }
-        }
-        setImmediate(() => {
-          broadcastToWindows("space-purged", { spaceId: result.spaceId });
-          for (const folderName of result.folderNames ?? []) {
-            this._mirrorDeleteFolderIfUnshared(folderName);
-          }
-        });
-      }
-      return result;
+      return this.databaseManager.updateSpace(id, updates);
     });
 
     ipcMain.handle("db-get-actions", async () => {
@@ -2293,10 +2078,6 @@ class IPCHandlers {
       return this.databaseManager.unarchiveAgentConversation(id);
     });
 
-    ipcMain.handle("db-update-agent-conversation-cloud-id", async (event, id, cloudId) => {
-      return this.databaseManager.updateAgentConversationCloudId(id, cloudId);
-    });
-
     ipcMain.handle("db-semantic-search-conversations", async (event, query, limit) => {
       if (this.vectorIndex?.isReady?.()) {
         try {
@@ -2318,238 +2099,6 @@ class IPCHandlers {
         }
       }
       return this.databaseManager.searchAgentConversations(query, limit);
-    });
-
-    // Notes sync
-    ipcMain.handle("db-get-pending-notes", (_, spaceKind) =>
-      this.databaseManager.getPendingNotes(spaceKind)
-    );
-    ipcMain.handle("db-get-pending-note-deletes", () =>
-      this.databaseManager.getPendingNoteDeletes()
-    );
-    ipcMain.handle("db-get-note-by-client-id", (_, clientNoteId) =>
-      this.databaseManager.getNoteByClientId(clientNoteId)
-    );
-    ipcMain.handle("db-upsert-note-from-cloud", (_, cloudNote, localFolderId, localSpaceId) => {
-      const note = this.databaseManager.upsertNoteFromCloud(cloudNote, localFolderId, localSpaceId);
-      if (note) {
-        setImmediate(() => broadcastToWindows("note-synced", note));
-        this.notifyVectorChanges();
-      }
-      return note;
-    });
-    ipcMain.handle(
-      "db-acknowledge-note-create",
-      (_, id, snapshot, cloudId, cloudUpdatedAt, ownerUserId, settleIfUnchanged) =>
-        this.databaseManager.acknowledgeNoteCreate(
-          id,
-          snapshot,
-          cloudId,
-          cloudUpdatedAt,
-          ownerUserId,
-          settleIfUnchanged
-        )
-    );
-    ipcMain.handle(
-      "db-mark-note-synced-if-unchanged",
-      (_, id, snapshot, expectedCloudId, cloudUpdatedAt, ownerUserId) =>
-        this.databaseManager.markNoteSyncedIfUnchanged(
-          id,
-          snapshot,
-          expectedCloudId,
-          cloudUpdatedAt,
-          ownerUserId
-        )
-    );
-    ipcMain.handle("db-set-note-cloud-base", (_, id, cloudUpdatedAt) =>
-      this.databaseManager.setNoteCloudBase(id, cloudUpdatedAt)
-    );
-    ipcMain.handle("db-set-note-owner-from-cloud", (_, id, ownerUserId) =>
-      this.databaseManager.setNoteOwnerFromCloud(id, ownerUserId)
-    );
-    ipcMain.handle("db-count-team-notes-missing-owner", () =>
-      this.databaseManager.countTeamNotesMissingOwner()
-    );
-    ipcMain.handle("db-mark-note-sync-error", (_, id) =>
-      this.databaseManager.markNoteSyncError(id)
-    );
-    ipcMain.handle("db-restore-note-after-denied-delete", (_, id) =>
-      this.databaseManager.restoreNoteAfterDeniedDelete(id)
-    );
-    ipcMain.handle("db-hard-delete-note", (_, id) => {
-      const result = this.databaseManager.hardDeleteNote(id);
-      if (result?.success) {
-        this.notifyVectorChanges();
-        this._asyncMirrorDelete(id);
-        setImmediate(() => broadcastToWindows("note-deleted", { id }));
-      }
-      return result;
-    });
-
-    // Folders sync
-    ipcMain.handle("db-get-pending-folders", (_, spaceKind) =>
-      this.databaseManager.getPendingFolders(spaceKind)
-    );
-    ipcMain.handle("db-get-folder-by-client-id", (_, clientFolderId) =>
-      this.databaseManager.getFolderByClientId(clientFolderId)
-    );
-    ipcMain.handle("db-upsert-folder-from-cloud", (_, cloudFolder, localSpaceId) => {
-      const folder = this.databaseManager.upsertFolderFromCloud(cloudFolder, localSpaceId);
-      if (folder) setImmediate(() => broadcastToWindows("folder-synced", folder));
-      return folder;
-    });
-    ipcMain.handle(
-      "db-acknowledge-folder-create",
-      (_, id, snapshot, expectedCloudId, responseClientFolderId, cloudId, cloudUpdatedAt) =>
-        this.databaseManager.acknowledgeFolderCreate(
-          id,
-          snapshot,
-          expectedCloudId,
-          responseClientFolderId,
-          cloudId,
-          cloudUpdatedAt
-        )
-    );
-    ipcMain.handle("db-mark-folder-synced-if-unchanged", (_, id, snapshot, expectedCloudId) =>
-      this.databaseManager.markFolderSyncedIfUnchanged(id, snapshot, expectedCloudId)
-    );
-    ipcMain.handle("db-get-folder-id-map", () => this.databaseManager.getFolderIdMap());
-    ipcMain.handle("db-get-pending-folder-deletes", () =>
-      this.databaseManager.getPendingFolderDeletes()
-    );
-    ipcMain.handle("db-restore-folder-after-denied-delete", (_, id) => {
-      const result = this.databaseManager.restoreFolderAfterDeniedDelete(id);
-      if (result?.success) {
-        this.notifyVectorChanges();
-        for (const note of result.notes ?? []) {
-          this._asyncMirrorWrite(note);
-        }
-        setImmediate(() => {
-          if (result.folder) broadcastToWindows("folder-synced", result.folder);
-          for (const note of result.notes ?? []) {
-            broadcastToWindows("note-synced", note);
-          }
-        });
-      }
-      return result;
-    });
-    ipcMain.handle("db-hard-delete-folder", (_, id) => {
-      const result = this.databaseManager.hardDeleteFolder(id);
-      if (result?.success) {
-        this.notifyVectorChanges();
-        // Other accounts' notes were released to the space root; their mirror
-        // files leave with the folder directory, so rewrite the live ones.
-        for (const note of result.relocatedNotes ?? []) {
-          if (!note.deleted_at) this._asyncMirrorWrite(note);
-        }
-        setImmediate(() => {
-          broadcastToWindows("folder-deleted", { id });
-          if (result.name) this._mirrorDeleteFolderIfUnshared(result.name);
-        });
-      }
-      return result;
-    });
-    ipcMain.handle("db-relocate-revoked-folder", (_, id, privateSpaceId, preserveFolder) => {
-      const result = this.databaseManager.relocateRevokedFolder(id, privateSpaceId, preserveFolder);
-      if (result?.success) {
-        // The triggers journaled the relocated and deleted notes. Mirror files live by
-        // folder, so rewrite the relocated notes and drop the server-owned ones.
-        this.notifyVectorChanges();
-        for (const note of result.relocatedNotes ?? []) {
-          this._asyncMirrorWrite(note);
-        }
-        for (const noteId of result.deletedNoteIds ?? []) {
-          this._asyncMirrorDelete(noteId);
-        }
-        setImmediate(() => {
-          if (result.folder) broadcastToWindows("folder-synced", result.folder);
-          else broadcastToWindows("folder-deleted", { id });
-          for (const note of result.relocatedNotes ?? []) {
-            broadcastToWindows("note-updated", note);
-          }
-          for (const noteId of result.deletedNoteIds ?? []) {
-            broadcastToWindows("note-deleted", { id: noteId });
-          }
-          const folderGone = !result.folder || result.folder.name !== result.folderName;
-          if (result.folderName && folderGone) {
-            this._mirrorDeleteFolderIfUnshared(result.folderName);
-          }
-        });
-      }
-      return result;
-    });
-
-    // Renderer-side sync events (conflicts, revocation toasts, …) happen in
-    // whichever window ran the pass — rebroadcast them to ALL windows.
-    ipcMain.handle("broadcast-sync-event", (_, name, payload) => {
-      broadcastToWindows("sync-event", { name, payload });
-      return { success: true };
-    });
-
-    // Spaces sync
-    ipcMain.handle("db-upsert-space-from-cloud", (_, cloudSpace) => {
-      const space = this.databaseManager.upsertSpaceFromCloud(cloudSpace);
-      if (space) setImmediate(() => broadcastToWindows("space-synced", space));
-      return space;
-    });
-    ipcMain.handle("db-set-space-sync-status", (_, id, status) => {
-      const result = this.databaseManager.setSpaceSyncStatus(id, status);
-      if (result?.success && result.space) {
-        // Live skeleton toggling: the tree keys pending/synced off this flag.
-        setImmediate(() => broadcastToWindows("space-synced", result.space));
-      }
-      return result;
-    });
-
-    // Conversations sync
-    ipcMain.handle("db-get-pending-conversations", () =>
-      this.databaseManager.getPendingConversations()
-    );
-    ipcMain.handle("db-get-pending-conversation-deletes", () =>
-      this.databaseManager.getPendingConversationDeletes()
-    );
-    ipcMain.handle("db-get-conversation-by-client-id", (_, clientId) =>
-      this.databaseManager.getConversationByClientId(clientId)
-    );
-    ipcMain.handle("db-upsert-conversation-from-cloud", (_, cloudConv, messages) =>
-      this.databaseManager.upsertConversationFromCloud(cloudConv, messages)
-    );
-    ipcMain.handle("db-acknowledge-conversation-create", (_, id, snapshot, cloudId) =>
-      this.databaseManager.acknowledgeConversationCreate(id, snapshot, cloudId)
-    );
-    ipcMain.handle("db-mark-conversation-synced", (_, id, cloudId) =>
-      this.databaseManager.markConversationSynced(id, cloudId)
-    );
-    ipcMain.handle("db-hard-delete-conversation", (_, id) => {
-      const result = this.databaseManager.hardDeleteConversation(id);
-      if (result?.success) {
-        setImmediate(() => broadcastToWindows("conversation-deleted", { id }));
-      }
-      return result;
-    });
-
-    // Transcriptions sync
-    ipcMain.handle("db-get-pending-transcriptions", () =>
-      this.databaseManager.getPendingTranscriptions()
-    );
-    ipcMain.handle("db-get-transcription-by-client-id", (_, clientId) =>
-      this.databaseManager.getTranscriptionByClientId(clientId)
-    );
-    ipcMain.handle("db-upsert-transcription-from-cloud", (_, cloudTranscription) => {
-      return this.databaseManager.upsertTranscriptionFromCloud(cloudTranscription);
-    });
-    ipcMain.handle("db-mark-transcription-synced", (_, id, cloudId) =>
-      this.databaseManager.markTranscriptionSynced(id, cloudId)
-    );
-    ipcMain.handle("db-get-pending-transcription-deletes", () =>
-      this.databaseManager.getPendingTranscriptionDeletes()
-    );
-    ipcMain.handle("db-hard-delete-transcription", (_, id) => {
-      const result = this.databaseManager.hardDeleteTranscription(id);
-      if (result?.success) {
-        setImmediate(() => broadcastToWindows("transcription-deleted", { id }));
-      }
-      return result;
     });
 
     ipcMain.handle("export-note", async (event, noteId, format) => {
@@ -3681,7 +3230,6 @@ class IPCHandlers {
       if (process.env.NODE_ENV === "development") return app.quit();
       const { launcherPath, args } = getRelaunchOptions({
         argv: process.argv,
-        protocol: this.oauthProtocol,
         appImagePath: process.env.APPIMAGE,
       });
       if (launcherPath) {
@@ -3777,8 +3325,7 @@ class IPCHandlers {
         errors.push(`LLM models: ${e.message}`);
       }
 
-      // These caches are not owned by one account. Remove them only through
-      // the explicit device-erasure path, never during normal account deletion.
+      // Shared model and search caches outside userData.
       const homeCacheRoot = path.join(os.homedir(), ".cache", "openwhispr");
       for (const cacheName of ["embedding-models", "qdrant-data", "qdrant-data-dev", "yt-dlp"]) {
         try {
@@ -3808,23 +3355,7 @@ class IPCHandlers {
         errors.push(`Environment settings: ${e.message}`);
       }
       try {
-        const tokenCleanup = tokenStore.clear();
-        if (!tokenCleanup.success) throw new Error("Could not clear the stored bearer token");
-      } catch (e) {
-        errors.push(`Authentication token: ${e.message}`);
-      }
-      try {
-        this.enterpriseIdentityManager?.clear();
-      } catch (e) {
-        errors.push(`Enterprise settings: ${e.message}`);
-      }
-      try {
-        for (const fileName of [
-          "managed-enterprise-config.json",
-          "globe-preference-state.json",
-          ".system-audio-permission",
-          "account-scope-binding.json",
-        ]) {
+        for (const fileName of ["globe-preference-state.json", ".system-audio-permission"]) {
           fs.rmSync(path.join(app.getPath("userData"), fileName), { force: true });
         }
       } catch (e) {
@@ -3846,7 +3377,7 @@ class IPCHandlers {
         errors.push(`Launch at login: ${e.message}`);
       }
 
-      // Clear browser-held account/session state, including cookies, IndexedDB,
+      // Clear browser-held state, including cookies, IndexedDB,
       // Cache Storage and localStorage persisted by any app window.
       try {
         const win = BrowserWindow.fromWebContents(event.sender);
@@ -4559,12 +4090,7 @@ class IPCHandlers {
 
         const resolveModel = (abortSignal) =>
           runAbortableOperation(async () => {
-            runtime = await resolveEnterpriseRuntime(
-              event,
-              provider,
-              config?.model || "test",
-              config
-            );
+            runtime = resolveEnterpriseRuntime(provider, config?.model || "test", config);
             abortSignal?.throwIfAborted();
             validateEnterpriseEndpoint(runtime.enterprise.azureEndpoint);
             return getEnterpriseAIModel(
@@ -4658,7 +4184,7 @@ class IPCHandlers {
             const useTemperature = config?.supportsTemperature !== false;
             const resolveModel = (abortSignal) =>
               runAbortableOperation(async () => {
-                runtime = await resolveEnterpriseRuntime(event, provider, modelId, config || {});
+                runtime = resolveEnterpriseRuntime(provider, modelId, config || {});
                 abortSignal?.throwIfAborted();
                 if (!runtime.model) throw new Error("No model specified for enterprise reasoning");
                 validateEnterpriseEndpoint(runtime.enterprise.azureEndpoint);
@@ -4774,7 +4300,7 @@ class IPCHandlers {
         if (!streamId || !isEnterpriseProvider(provider)) {
           throw new Error(`Unsupported enterprise provider: ${provider}`);
         }
-        runtime = await resolveEnterpriseRuntime(event, provider, modelId, config || {});
+        runtime = resolveEnterpriseRuntime(provider, modelId, config || {});
         if (!runtime.model) throw new Error("No model specified for enterprise streaming");
         validateEnterpriseEndpoint(runtime.enterprise.azureEndpoint);
 
@@ -4834,12 +4360,7 @@ class IPCHandlers {
     ipcMain.handle("bedrock-list-models", async (event, config) => {
       const { mapEnterpriseError } = require("./enterpriseProviderErrors");
       try {
-        const runtime = await resolveEnterpriseRuntime(
-          event,
-          "bedrock",
-          config?.model || "test",
-          config
-        );
+        const runtime = resolveEnterpriseRuntime("bedrock", config?.model || "test", config);
         const {
           BedrockClient,
           ListFoundationModelsCommand,
@@ -4849,9 +4370,7 @@ class IPCHandlers {
 
         const region = runtime.enterprise.bedrockRegion || "us-east-1";
         let credentials;
-        if (runtime.enterprise.managedCredentialProvider) {
-          credentials = runtime.enterprise.managedCredentialProvider;
-        } else if (runtime.enterprise.bedrockProfile) {
+        if (runtime.enterprise.bedrockProfile) {
           const { fromNodeProviderChain } = require("@aws-sdk/credential-providers");
           credentials = fromNodeProviderChain({ profile: runtime.enterprise.bedrockProfile });
         } else if (
@@ -5680,42 +5199,6 @@ class IPCHandlers {
       });
     });
 
-    ipcMain.handle("auth-clear-session", async (event) => {
-      try {
-        const tokenState = tokenStore.clear();
-        const win = BrowserWindow.fromWebContents(event.sender);
-        if (win) {
-          await win.webContents.session.clearStorageData({ storages: ["cookies"] });
-        }
-        return {
-          success: tokenState.success,
-          tokenState,
-          ...(tokenState.success ? {} : { error: "Could not clear persisted bearer token" }),
-        };
-      } catch (error) {
-        debugLogger.error("Failed to clear auth session:", error);
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("auth-get-token", () => tokenStore.get());
-    ipcMain.handle("auth-get-token-state", () => tokenStore.getState());
-    ipcMain.handle("auth-set-token", (_event, token, expectedGeneration) => {
-      if (typeof token !== "string" || !token) {
-        // Surface silent rotation-to-empty so we can spot regressions where the
-        // renderer thinks it's persisting a token but the value never lands.
-        debugLogger.debug("auth-set-token ignored: empty or non-string token", {
-          type: typeof token,
-        });
-        return {
-          success: false,
-          code: "AUTH_CONTEXT_UNVALIDATED",
-          ...tokenStore.getState(),
-        };
-      }
-      return tokenStore.setIfGeneration(token, expectedGeneration);
-    });
-
     // In production, VITE_* env vars aren't available in the main process because
     // Vite only inlines them into the renderer bundle at build time. Load the
     // runtime-env.json that the Vite build writes to src/dist/ as a fallback.
@@ -5734,182 +5217,21 @@ class IPCHandlers {
       runtimeEnv.VITE_OPENWHISPR_API_URL ||
       "";
 
-    const getAuthUrl = () =>
-      process.env.AUTH_URL ||
-      process.env.VITE_AUTH_URL ||
-      runtimeEnv.VITE_AUTH_URL ||
-      "https://auth.openwhispr.com";
-
-    const getSessionCookiesFromWindow = async (win) => {
-      const scopedUrls = [getAuthUrl(), getApiUrl()].filter(Boolean);
-      const cookiesByName = new Map();
-
-      for (const url of scopedUrls) {
-        try {
-          const scopedCookies = await win.webContents.session.cookies.get({ url });
-          for (const cookie of scopedCookies) {
-            if (!cookiesByName.has(cookie.name)) {
-              cookiesByName.set(cookie.name, cookie.value);
-            }
-          }
-        } catch (error) {
-          debugLogger.warn("Failed to read scoped auth cookies", {
-            url,
-            error: error.message,
-          });
-        }
-      }
-
-      // Fallback for older sessions where cookies are not URL-scoped as expected.
-      if (cookiesByName.size === 0) {
-        const allCookies = await win.webContents.session.cookies.get({});
-        for (const cookie of allCookies) {
-          if (!cookiesByName.has(cookie.name)) {
-            cookiesByName.set(cookie.name, cookie.value);
-          }
-        }
-      }
-
-      const cookieHeader = [...cookiesByName.entries()]
-        .map(([name, value]) => `${name}=${value}`)
-        .join("; ");
-
-      debugLogger.debug(
-        "Resolved auth cookies for cloud request",
-        {
-          cookieCount: cookiesByName.size,
-          scopedUrls,
-        },
-        "auth"
-      );
-
-      return cookieHeader;
-    };
-
-    const getSessionCookies = async (event) => {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      if (!win) return "";
-      return getSessionCookiesFromWindow(win);
-    };
-
-    // Bearer auth is preferred. Cookie fallback covers the brief window before
-    // main.js's startup migration bridge runs (or if it failed for this user).
-    const getAuthHeaderFromWindow = async (win) => {
-      const token = tokenStore.get();
-      if (token) return { Authorization: `Bearer ${token}` };
-      const cookieHeader = win ? await getSessionCookiesFromWindow(win) : "";
-      return cookieHeader ? { Cookie: cookieHeader } : {};
-    };
-
-    const getAuthHeader = async (event) => {
-      const win = BrowserWindow.fromWebContents(event.sender);
-      return getAuthHeaderFromWindow(win);
-    };
+    // This build has no OpenWhispr account, so every OpenWhispr Cloud request
+    // stops at its "Not authenticated" check before reaching the network.
+    const getAuthHeaderFromWindow = async () => ({});
+    const getAuthHeader = async () => ({});
 
     // Honors system proxy via Electron's net stack. useSessionCookies:false so
     // Electron doesn't auto-attach jar cookies on top of our explicit headers.
     const proxyFetch = (url, init = {}) => net.fetch(url, { ...init, useSessionCookies: false });
-    const handleCloudApiRequest = createCloudApiRequestHandler({
-      getApiUrl,
-      getAppVersion: () => app.getVersion(),
-      proxyFetch,
-      tokenStore,
-      logger: debugLogger,
+    const resolveEnterpriseRuntime = (provider, model, config = {}) => ({
+      provider,
+      model,
+      apiKey: config.apiKey || "",
+      enterprise: require("./enterpriseProviderErrors").pickEnterpriseConfig(config),
     });
-    this.enterpriseIdentityManager = createEnterpriseIdentityManager({
-      cachePath: path.join(app.getPath("userData"), "managed-enterprise-config.json"),
-      getApiUrl,
-      getAppVersion: () => app.getVersion(),
-      proxyFetch,
-      tokenStore,
-      broadcast: (snapshot) => broadcastToWindows("managed-enterprise-config-changed", snapshot),
-      logger: debugLogger,
-    });
-    const resolveEnterpriseRuntime = async (event, provider, model, config = {}) => {
-      const manual = {
-        provider,
-        model,
-        apiKey: config.apiKey || "",
-        enterprise: require("./enterpriseProviderErrors").pickEnterpriseConfig(config),
-      };
-      const context = config.managedContext;
-      if (!context) return manual;
-      const authHeaders = await getAuthHeader(event);
-      const resolved = await this.enterpriseIdentityManager.resolveProvider({
-        accountId: context.accountId,
-        workspaceId: context.workspaceId,
-        expectedAuthGeneration: context.authGeneration,
-        inferenceScope: context.inferenceScope,
-        setupMode: context.setupMode,
-        authHeaders,
-      });
-      if (!resolved.managed) {
-        throw Object.assign(
-          new Error("Managed enterprise configuration changed. Retry the request."),
-          { code: "MANAGED_CONFIG_CHANGED" }
-        );
-      }
-      if (
-        resolved.provider !== context.provider ||
-        resolved.generation !== context.generation ||
-        resolved.version !== context.providerVersion
-      ) {
-        throw Object.assign(
-          new Error("Managed enterprise configuration changed. Retry the request."),
-          { code: "MANAGED_CONFIG_CHANGED" }
-        );
-      }
-      if (resolved.provider === "bedrock") {
-        return {
-          provider: resolved.provider,
-          model: resolved.model,
-          apiKey: "",
-          enterprise: {
-            bedrockRegion: resolved.config.region,
-            managedCredentialProvider: resolved.credentialProvider,
-          },
-        };
-      }
-      return {
-        provider: resolved.provider,
-        model: resolved.model,
-        apiKey: "",
-        enterprise: {
-          azureEndpoint: resolved.config.endpoint,
-          azureApiVersion: resolved.config.apiVersion,
-          managedTokenProvider: resolved.tokenProvider,
-        },
-      };
-    };
-    const { createManagedTranscriptionExecutor } = require("./managedTranscriptionExecutor");
-    const executeManagedTranscription = createManagedTranscriptionExecutor({
-      resolveEnterpriseRuntime,
-      proxyFetch,
-      buildUrl: async (endpoint, deployment, apiVersion) => {
-        const { buildManagedAzureTranscriptionUrl } = await import("../utils/urlUtils.ts");
-        return buildManagedAzureTranscriptionUrl(endpoint, deployment, apiVersion);
-      },
-    });
-    this.executeManagedTranscription = executeManagedTranscription;
 
-    ipcMain.handle(
-      "managed-transcribe",
-      serializeIpcError(
-        async (event, { audioBuffer, fileName, mimeType, language, prompt, managed }) => {
-          const text = await executeManagedTranscription(
-            event,
-            { provider: managed.provider, context: managed.context, language },
-            {
-              audioBuffer: Buffer.from(audioBuffer),
-              fileName: fileName || "audio.webm",
-              contentType: mimeType || "audio/webm",
-              prompt,
-            }
-          );
-          return { text };
-        }
-      )
-    );
     const handleSttConfigRequest = createCloudConfigRequestHandler({
       getApiUrl,
       getAuthHeader,
@@ -5940,8 +5262,7 @@ class IPCHandlers {
         if (!Object.keys(authHeader).length) throw new Error("Not authenticated");
 
         const audioData = Buffer.from(audioBuffer);
-        // Reused for the local SQLite row so SyncService upserts the existing
-        // cloud row (filling in text) instead of creating a duplicate.
+        // Reused for the local SQLite row, matching the cloud row's id.
         const clientTranscriptionId = crypto.randomUUID();
         const multipartFields = {
           language: opts.language,
@@ -6087,7 +5408,6 @@ class IPCHandlers {
         const route = resolveTranscriptionRoute({
           settings: settings || {},
           providers: transcriptionProviderBaseUrls(),
-          managed: settings?.managed,
           request: { effectiveLanguage: language },
         });
 
@@ -6104,14 +5424,7 @@ class IPCHandlers {
           throw err;
         }
 
-        if (route.transport === "managed") {
-          const text = await this.executeManagedTranscription(event, route, {
-            audioBuffer: buffer,
-            fileName: "audio.webm",
-            contentType: "audio/webm",
-          });
-          result = { text, source: "azure-managed", model: route.deployment };
-        } else if (route.transport === "http-batch" && route.provider === "self-hosted") {
+        if (route.transport === "http-batch" && route.provider === "self-hosted") {
           const formData = new FormData();
           formData.append("file", new Blob([buffer], { type: "audio/webm" }), "audio.webm");
           if (route.model) {
@@ -8172,19 +7485,16 @@ class IPCHandlers {
         this._dictationStreaming = streaming;
         try {
           if (provider === "orukeet") {
+            // Only a self-hosted Orukeet server is reachable without an account.
             if (isCloud) {
-              await connectManagedOrukeet({
-                streaming,
-                getApiUrl,
-                proxyFetch,
-                tokenStore,
-              });
-            } else {
-              await streaming.connect({
-                apiKey: this.environmentManager.getCustomTranscriptionKey(),
-                baseUrl: options.baseUrl,
+              throw Object.assign(new Error("OpenWhispr Cloud streaming is not available"), {
+                code: "ACCOUNT_REQUIRED",
               });
             }
+            await streaming.connect({
+              apiKey: this.environmentManager.getCustomTranscriptionKey(),
+              baseUrl: options.baseUrl,
+            });
             return;
           }
           const apiKey = await fetchRealtimeToken(event, {
@@ -9386,100 +8696,6 @@ class IPCHandlers {
       }
     });
 
-    ipcMain.handle(
-      "cloud-streaming-usage",
-      async (event, text, audioDurationSeconds, opts = {}) => {
-        try {
-          const apiUrl = getApiUrl();
-          if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
-
-          const authHeader = await getAuthHeader(event);
-          if (!Object.keys(authHeader).length) throw new Error("Not authenticated");
-
-          const response = await proxyFetch(`${apiUrl}/api/streaming-usage`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              ...authHeader,
-            },
-            body: JSON.stringify({
-              text,
-              audioDurationSeconds,
-              sessionId: this.sessionId,
-              clientType: "desktop",
-              appVersion: app.getVersion(),
-              clientVersion: app.getVersion(),
-              sttProvider: opts.sttProvider,
-              sttModel: opts.sttModel,
-              sttProcessingMs: opts.sttProcessingMs,
-              sttLanguage: opts.sttLanguage,
-              sttDetectedLanguage: opts.sttDetectedLanguage,
-              sttDetectedLanguageConfidence: opts.sttDetectedLanguageConfidence,
-              sttDetectedLanguageAudioSeconds: opts.sttDetectedLanguageAudioSeconds,
-              sttDetectedLanguageStatus: opts.sttDetectedLanguageStatus,
-              audioSizeBytes: opts.audioSizeBytes,
-              audioFormat: opts.audioFormat,
-              clientTotalMs: opts.clientTotalMs,
-              sendLogs: opts.sendLogs,
-              clientTranscriptionId: opts.clientTranscriptionId,
-            }),
-          });
-
-          if (response.status === 401) {
-            return { success: false, error: "Session expired", code: "AUTH_EXPIRED" };
-          }
-          if (response.status === 503) {
-            return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
-          }
-          if (!response.ok) {
-            throw new Error(`API error: ${response.status}`);
-          }
-
-          const data = await response.json();
-          return { success: true, ...data };
-        } catch (error) {
-          debugLogger.error("Cloud streaming usage error", { error: error.message }, "cloud-api");
-          return { success: false, error: error.message };
-        }
-      }
-    );
-
-    ipcMain.handle("cloud-usage", async (event) => {
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) throw new Error("Not authenticated");
-
-        // Never serve entitlement from Chromium's HTTP cache: a cached
-        // response can outlive the account that produced it.
-        const response = await proxyFetch(`${apiUrl}/api/usage`, {
-          headers: authHeader,
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            return { success: false, error: "Session expired", code: "AUTH_EXPIRED" };
-          }
-          if (response.status === 503) {
-            return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
-          }
-          const errorData = await response.json().catch(() => ({}));
-          const message = errorData.error || `API error: ${response.status}`;
-          debugLogger.error(`Cloud usage fetch error: ${message}`);
-          return { success: false, error: message, code: errorData.code };
-        }
-
-        const data = await response.json();
-        return { success: true, ...data };
-      } catch (error) {
-        debugLogger.error("Cloud usage fetch error:", error);
-        return { success: false, error: error.message };
-      }
-    });
-
     const fetchStripeUrl = async (event, endpoint, errorPrefix, body) => {
       try {
         const apiUrl = getApiUrl();
@@ -9518,98 +8734,7 @@ class IPCHandlers {
       }
     };
 
-    ipcMain.handle("cloud-checkout", (event, opts) =>
-      fetchStripeUrl(event, "/api/stripe/checkout", "Cloud checkout error", opts || undefined)
-    );
-
-    ipcMain.handle("cloud-billing-portal", (event) =>
-      fetchStripeUrl(event, "/api/stripe/portal", "Cloud billing portal error")
-    );
-
-    ipcMain.handle("cloud-switch-plan", async (event, opts) => {
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) throw new Error("Not authenticated");
-
-        const response = await proxyFetch(`${apiUrl}/api/stripe/switch-plan`, {
-          method: "POST",
-          headers: { ...authHeader, "Content-Type": "application/json" },
-          body: JSON.stringify(opts),
-        });
-
-        if (response.status === 401) {
-          return { success: false, error: "Session expired", code: "AUTH_EXPIRED" };
-        }
-        if (response.status === 503) {
-          return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
-        }
-
-        const data = await response.json();
-        if (!response.ok) {
-          return { success: false, error: data.error || "Failed to switch plan" };
-        }
-        return data;
-      } catch (error) {
-        debugLogger.error(`Cloud switch plan error: ${error.message}`);
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("cloud-preview-switch", async (event, opts) => {
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) throw new Error("Not authenticated");
-
-        const response = await proxyFetch(`${apiUrl}/api/stripe/preview-switch`, {
-          method: "POST",
-          headers: { ...authHeader, "Content-Type": "application/json" },
-          body: JSON.stringify(opts),
-        });
-
-        if (response.status === 401) {
-          return { success: false, error: "Session expired", code: "AUTH_EXPIRED" };
-        }
-        if (response.status === 503) {
-          return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
-        }
-
-        const data = await response.json();
-        if (!response.ok) {
-          return { success: false, error: data.error || "Failed to preview plan change" };
-        }
-        return { success: true, ...data };
-      } catch (error) {
-        debugLogger.error(`Cloud preview switch error: ${error.message}`);
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("cloud-api-request", (_event, opts) => handleCloudApiRequest(opts));
-
     ipcMain.handle("get-stt-config", handleSttConfigRequest);
-
-    ipcMain.handle(
-      "get-managed-enterprise-config",
-      async (event, accountId, workspaceId, expectedAuthGeneration, forceRefresh = false) => {
-        const authHeaders = await getAuthHeader(event);
-        return this.enterpriseIdentityManager.getConfig({
-          accountId,
-          workspaceId,
-          expectedAuthGeneration,
-          authHeaders,
-          forceRefresh,
-        });
-      }
-    );
-    ipcMain.handle("clear-managed-enterprise-identity", async () => {
-      this.enterpriseIdentityManager.clear();
-    });
 
     ipcMain.handle("get-note-recording-config", handleNoteRecordingConfigRequest);
 
@@ -9716,7 +8841,6 @@ class IPCHandlers {
           transcriptionMode,
           remoteTranscriptionUrl,
           remoteTranscriptionModel,
-          managed,
         }
       ) => {
         const fs = require("fs");
@@ -9741,7 +8865,6 @@ class IPCHandlers {
               cortiTenant: tenant,
             },
             providers: transcriptionProviderBaseUrls(),
-            managed,
             request: { effectiveLanguage: language || undefined },
           });
 
@@ -9758,18 +8881,6 @@ class IPCHandlers {
           const upload = await prepareProviderUpload(sourcePath);
           cleanupUpload = upload.cleanup;
           const realByok = upload.path;
-
-          if (route.transport === "managed") {
-            if (fs.statSync(realByok).size > route.sizeCapBytes) {
-              return { success: false, error: byokSizeCapError(route.sizeCapBytes) };
-            }
-            const text = await this.executeManagedTranscription(event, route, {
-              audioBuffer: fs.readFileSync(realByok),
-              fileName: path.basename(realByok),
-              contentType: providerContentType(realByok),
-            });
-            return { success: true, text };
-          }
 
           if (route.transport === "http-batch" && route.provider === "self-hosted") {
             // User's own server, so the 25 MB third-party cap does not apply.
@@ -10098,10 +9209,6 @@ class IPCHandlers {
     ipcMain.handle("get-post-migration-state", () => ({
       justMigrated: postMigrationDetector.isReturningFromOldBundle(),
     }));
-
-    ipcMain.handle("get-oauth-protocol-registered", () => this.oauthProtocolRegistered);
-
-    ipcMain.handle("get-oauth-protocol", () => this.oauthProtocol);
 
     ipcMain.handle("mark-bundle-migrated", () => {
       postMigrationDetector.markBundleMigrated();

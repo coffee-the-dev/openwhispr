@@ -27,25 +27,6 @@ test("dynamic prose and identity values keep their own direction", () => {
     ],
     ["src/components/notes/SpacesTree.tsx", /<span\s+dir="auto"[^>]*>\s*\{title\}\s*<\/span>/],
     [
-      "src/components/notes/SpacesTree.tsx",
-      /<span\s+dir="auto"[^>]*\s+title=\{workspace\.name\}[\s\S]*?\{workspace\.name\}/,
-    ],
-    ["src/components/EmailVerificationStep.tsx", /<span\s+dir="ltr"[^>]*>\s*\{email\}/],
-    [
-      "src/components/SettingsModal.tsx",
-      /<p\s+dir="auto"[^>]*>\s*\{user\.name \|\| t\("settingsPage\.account\.user"\)\}/,
-    ],
-    ["src/components/SettingsModal.tsx", /<bdi dir="ltr">\{user\.email\}<\/bdi>/],
-    [
-      "src/components/settings/WorkspaceMembersTab.tsx",
-      /<p\s+dir="auto"[^>]*>\s*\{member\.name \|\| member\.email\}/,
-    ],
-    [
-      "src/components/settings/WorkspaceMembersTab.tsx",
-      /<p\s+dir="auto"[^>]*>\s*\{request\.name \?\? request\.email\}/,
-    ],
-    ["src/components/settings/WorkspaceMembersTab.tsx", /<bdi dir="ltr">\{inv\.email\}<\/bdi>/],
-    [
       "src/components/notes/UploadAudioView.tsx",
       /<p\s+dir="auto"[^>]*>\s*\{downloadProgress\.title\}/,
     ],
@@ -61,36 +42,19 @@ test("dynamic prose and identity values keep their own direction", () => {
   );
   assert.equal(
     treeContainerLabels?.length,
-    2,
-    "space and localized folder labels must both detect their content direction"
+    1,
+    "localized folder labels must detect their content direction"
   );
 });
 
 test("technical output values remain LTR inside an Arabic document", () => {
   const expectations = [
     ["src/components/DeveloperSection.tsx", /<code\s+dir="ltr"[\s\S]*?\{logPath\}/],
-    [
-      "src/components/TestConnectionButton.tsx",
-      /<code\s+dir="ltr"[^>]*>\s*\{errorInfo\.copyCommand\}/,
-    ],
     ["src/components/ui/TechnicalErrorDetails.tsx", /<pre\s+dir="ltr"[\s\S]*?\{text\}/],
     ["src/components/ui/NixOsPasteInfo.tsx", /<div\s+dir="ltr"[\s\S]*?<pre/],
     [
-      "src/components/settings/WorkspaceBillingCard.tsx",
-      /<span\s+dir="ltr"[^>]*>\s*\{seatsUsed\} \/ \{seatsTotal\}/,
-    ],
-    ["src/components/settings/WorkspaceMembersTab.tsx", /<bdi dir="ltr">\{member\.email\}<\/bdi>/],
-    [
       "src/components/dictation/AssistantPanel.tsx",
       /<kbd\s+dir="ltr"[\s\S]*?\{readableVoiceHotkey\}/,
-    ],
-    [
-      "src/components/EnterpriseProviderConfig.tsx",
-      /<select\s+dir="ltr"\s+value=\{store\.bedrockRegion\}/,
-    ],
-    [
-      "src/components/EnterpriseProviderConfig.tsx",
-      /<select\s+dir="ltr"\s+value=\{store\.vertexLocation\}/,
     ],
     [
       "src/components/notes/UploadAudioView.tsx",
@@ -122,14 +86,6 @@ test("localized sentences isolate technical interpolations without changing word
     [
       "src/components/SettingsPage.tsx",
       /<BidiInterpolatedText[\s\S]*?resetToDefault[\s\S]*?value=\{formatHotkeyLabel\(effectiveDefaultHotkey\)\}/,
-    ],
-    [
-      "src/components/MemberRoster.tsx",
-      /<BidiInterpolatedText[\s\S]*?members\.inviteFooter[\s\S]*?value=\{addSearch\.trim\(\)\}/,
-    ],
-    [
-      "src/components/notes/SpaceMembersPanel.tsx",
-      /<BidiInterpolatedText[\s\S]*?members\.invited[\s\S]*?value=\{invitedEmail\}/,
     ],
   ];
 
@@ -178,17 +134,6 @@ test("user-authored names and previews detect direction at their display boundar
       "src/components/notes/MeetingTranscriptChat.tsx",
       /<span\s+dir="auto"[^>]*>\s*\{displayLabel\}/,
     ],
-    ["src/components/notes/CreateSpaceDialog.tsx", /<span\s+dir="auto"[^>]*>\s*\{item\.name\}/],
-    ["src/components/notes/CreateSpaceDialog.tsx", /<p\s+dir="auto"[^>]*>\s*\{workspace\.name\}/],
-    ["src/components/notes/CreateSpaceDialog.tsx", /<span\s+dir="auto"[^>]*>\s*\{team\.name\}/],
-    ["src/components/notes/SpaceGroupsSection.tsx", /<span\s+dir="auto"[^>]*>\s*\{teamRef\.name\}/],
-    ["src/components/notes/SpaceGroupsSection.tsx", /<span\s+dir="auto"[^>]*>\s*\{team\.name\}/],
-    [
-      "src/components/settings/WorkspaceSection.tsx",
-      /<h2\s+dir="auto"[^>]*>\s*\{workspace\.name\}/,
-    ],
-    ["src/components/settings/WorkspaceSection.tsx", /<span\s+dir="auto"[^>]*>\s*\{w\.name\}/],
-    ["src/components/notes/NoteEditor.tsx", /<span\s+dir="auto"[^>]*>\s*\{space\.name\}/],
     ["src/components/notes/NoteEditor.tsx", /<span\s+dir="auto"[^>]*>\s*\{folderName\}/],
     [
       "src/components/notes/NoteEditor.tsx",

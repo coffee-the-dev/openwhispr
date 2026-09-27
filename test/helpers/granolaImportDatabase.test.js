@@ -75,7 +75,6 @@ test("importNotes inserts backdated meeting notes into the Imported folder", (t)
   assert.equal(note.created_at, "2024-05-01 10:00:00");
   assert.equal(note.updated_at, "2024-05-01 10:00:00");
   assert.equal(note.note_type, "meeting");
-  assert.equal(note.sync_status, "pending");
   assert.equal(note.source_file, "granola:a");
   assert.equal(note.space_id, db.getPrivateSpaceId());
   assert.equal(note.folder_id, result.folderId);

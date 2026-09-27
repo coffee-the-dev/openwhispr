@@ -30,15 +30,11 @@ test("OpenWhispr reasoning labels only dictation-agent requests for server enfor
         name: "openwhispr-reason-purpose-dependencies",
         enforce: "pre",
         resolveId(source) {
-          if (source.endsWith("/lib/auth")) return "\0reason-purpose-auth";
           if (source.endsWith("/stores/settingsStore")) return "\0reason-purpose-settings";
           if (source.endsWith("/utils/logger")) return "\0reason-purpose-logger";
           return null;
         },
         load(id) {
-          if (id === "\0reason-purpose-auth") {
-            return "export async function withSessionRefresh(callback) { return callback(); }";
-          }
           if (id === "\0reason-purpose-settings") {
             return "export function getSettings() { return { customPrompts: { cleanup: '' } }; }";
           }

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { AlertCircle } from "./icons";
-import { CompactAuthenticationFlow } from "./CompactAuthenticationFlow";
 import UseCaseStep from "./onboarding/UseCaseStep";
 import { hasUseCaseIntent } from "./onboarding/useCases";
 import OnboardingShell, { OnboardingStepHeader } from "./onboarding/OnboardingShell";
@@ -14,7 +13,6 @@ import CalendarConnectionsStep from "./onboarding/CalendarConnectionsStep";
 import SetupChoiceStep from "./onboarding/SetupChoiceStep";
 import { ByokProviderStep, LocalModelSetupStep } from "./onboarding/ProviderSetupStep";
 import { AlertDialog } from "./ui/dialog";
-import { useAuth } from "../hooks/useAuth";
 import { usePermissions } from "../hooks/usePermissions";
 import { useClipboard } from "../hooks/useClipboard";
 import { useScreenRecordingPermission } from "../hooks/useScreenRecordingPermission";
@@ -23,7 +21,6 @@ import { useSettings } from "../hooks/useSettings";
 import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useHotkeyRegistration } from "../hooks/useHotkeyRegistration";
 import { useHotkeyModeInfo } from "../hooks/useHotkeyModeInfo";
-import { useWorkspace } from "../hooks/useWorkspace";
 import { useSettingsStore } from "../stores/settingsStore";
 import { getDefaultHotkey, parseHotkeyList, serializeHotkeyList } from "../utils/hotkeys";
 import {
@@ -37,8 +34,6 @@ import { getValidationMessage } from "../utils/hotkeyValidator";
 import { validateHotkeyForSlot } from "../utils/hotkeyValidation";
 import { getPlatform } from "../utils/platform";
 import { ACCESSIBILITY_SKIPPED_KEY, areRequiredPermissionsMet } from "../utils/permissions";
-import { cloudPost } from "../services/cloudApi";
-import { signOut } from "../lib/auth";
 import logger from "../utils/logger";
 import {
   COMPACT_STEPS,
@@ -46,13 +41,7 @@ import {
   getNotesFooterAction,
   getOnboardingProgress,
   getOnboardingRoute,
-  isSetupDecisionStep,
   reconcileStepWithRoute,
-  resetOnboardingProgress,
-  resolveEnterpriseWorkspaceForOnboarding,
-  shouldInitializeMacAccessibilityFeatures,
-  shouldSkipOnboardingSetupChoice,
-  type OnboardingAuthDraft,
   type OnboardingByokDraft,
   type OnboardingLocalModelDraft,
   type OnboardingResumeState,
@@ -69,7 +58,7 @@ interface OnboardingFlowProps {
   onComplete: (options?: { openSettings?: boolean }) => void;
 }
 
-type OnboardingCompletionMode = Exclude<OnboardingSetupMode, null> | "managed";
+type OnboardingCompletionMode = Exclude<OnboardingSetupMode, null>;
 
 function DemoHotkeyDescription({ text, hotkey }: { text: string; hotkey: string }) {
   const hotkeyStart = text.indexOf(hotkey);
@@ -89,7 +78,6 @@ function DemoHotkeyDescription({ text, hotkey }: { text: string; hotkey: string 
 export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const { t } = useTranslation();
   const platform = getPlatform();
-  const { isSignedIn } = useAuth();
   const settings = useSettings();
   const settingsStore = useSettingsStore();
   const {
@@ -97,21 +85,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setSession,
     goTo,
     goBack,
-    setAuthPath,
     setSetupMode,
     setSelfHostedRequested,
     setScreenContextRequested,
     clearSession,
   } = useOnboardingSession();
-
-  const handleLogout = useCallback(async () => {
-    await signOut();
-    resetOnboardingProgress(localStorage);
-    window.location.reload();
-  }, []);
-  // Set by Back on the permissions step: a signed-in user who asked to return to
-  // the auth step gets the welcome screen (where Log out lives), not auto-advance.
-  const [returnedToAuth, setReturnedToAuth] = useState(false);
 
   const { dictationHotkeyConfirmed, assistantHotkeyConfirmed } = session.resume;
   const [dictationHotkey, setDictationHotkey] = useState(() =>
@@ -175,18 +153,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     (successful: boolean) => updateResumeFlag("assistantDemoCompleted", successful),
     [updateResumeFlag]
   );
-  const updateAuthResumeState = useCallback(
-    (patch: Partial<OnboardingAuthDraft>) => {
-      setSession((current) => ({
-        ...current,
-        resume: {
-          ...current.resume,
-          auth: { ...current.resume.auth, ...patch },
-        },
-      }));
-    },
-    [setSession]
-  );
 
   useClipboard((dialog) =>
     setPermissionAlert({ title: dialog.title, description: dialog.description })
@@ -205,48 +171,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     loaded: hotkeyModeLoaded,
   } = useHotkeyModeInfo("onboarding", dictationHotkey);
   const { activationMode, setActivationMode } = settings;
-  // This hook also starts the membership fetch for already-authenticated users;
-  // relying on the login transition alone would leave resumed onboarding stuck
-  // waiting for workspace resolution after an app restart.
-  const {
-    active: activeWorkspace,
-    workspaces,
-    loaded: workspacesLoaded,
-    setActive: setActiveWorkspace,
-  } = useWorkspace();
-  const enterpriseWorkspace = useMemo(
-    () => resolveEnterpriseWorkspaceForOnboarding(activeWorkspace, workspaces),
-    [activeWorkspace, workspaces]
-  );
-  const skipSetupChoiceForEnterprise = shouldSkipOnboardingSetupChoice({
-    isSignedIn,
-    authPath: session.authPath,
-    setupMode: session.setupMode,
-    activeWorkspace: enterpriseWorkspace,
-  });
-
-  useEffect(() => {
-    if (
-      workspacesLoaded &&
-      !activeWorkspace &&
-      skipSetupChoiceForEnterprise &&
-      enterpriseWorkspace
-    ) {
-      setActiveWorkspace(enterpriseWorkspace.id);
-    }
-  }, [
-    activeWorkspace,
-    enterpriseWorkspace,
-    setActiveWorkspace,
-    skipSetupChoiceForEnterprise,
-    workspacesLoaded,
-  ]);
-
-  const workspaceResolutionPending =
-    isSignedIn &&
-    session.authPath === "account" &&
-    (!workspacesLoaded ||
-      (!activeWorkspace && skipSetupChoiceForEnterprise && Boolean(enterpriseWorkspace)));
   const hasConnectedCalendar = platform === "darwin" && settingsStore.appleCalendarConnected;
 
   // The setting turns on only once the permission is actually granted, so an
@@ -292,28 +216,23 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const route = useMemo(
     () =>
       getOnboardingRoute({
-        authPath: session.authPath,
         setupMode: session.setupMode,
-        skipSetupChoice: skipSetupChoiceForEnterprise,
       }),
-    [session.authPath, session.setupMode, skipSetupChoiceForEnterprise]
+    [session.setupMode]
   );
   const currentStepId = reconcileStepWithRoute(session.currentStepId, route);
   const compact = COMPACT_STEPS.has(currentStepId);
-  const setupDecisionPending =
-    workspaceResolutionPending && isSetupDecisionStep(currentStepId, route);
-  const notesFooterAction = getNotesFooterAction({ setupDecisionPending, hasConnectedCalendar });
+  const notesFooterAction = getNotesFooterAction({ hasConnectedCalendar });
   // Screen context only reaches the model once macOS has been relaunched after
   // the grant; until then the demo must not promise the assistant can see the card.
   const screenContextActive =
     settingsStore.voiceAgentScreenContext &&
     screenRecordingGranted &&
     !screenRecordingNeedsRelaunch;
-  const permissions = usePermissions(
-    (dialog) => setPermissionAlert({ title: dialog.title, description: dialog.description }),
-    {
-      macAccessibilityChecksEnabled: shouldInitializeMacAccessibilityFeatures(currentStepId),
-    }
+  // Every step starts at or after permissions, so macOS accessibility checks run
+  // for the whole flow.
+  const permissions = usePermissions((dialog) =>
+    setPermissionAlert({ title: dialog.title, description: dialog.description })
   );
   const updateCurrentByokDraft = useCallback(
     (state: OnboardingByokDraft) => {
@@ -370,10 +289,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   }, [compact]);
 
   useEffect(() => {
-    if (platform === "darwin" && shouldInitializeMacAccessibilityFeatures(currentStepId)) {
-      window.electronAPI?.markMacAccessibilityFeaturesReady?.();
-    }
-  }, [currentStepId, platform]);
+    if (platform === "darwin") window.electronAPI?.markMacAccessibilityFeaturesReady?.();
+  }, [platform]);
 
   useEffect(() => {
     setStageReady(false);
@@ -470,21 +387,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     [settings, t]
   );
 
-  const syncUseCases = useCallback(() => {
-    if (!isSignedIn || session.authPath === "guest") return;
-    cloudPost("/api/onboarding-intent", {
-      useCases: settings.onboardingUseCases,
-      note: settings.onboardingUseCaseNote || undefined,
-      spokenLanguages: settings.spokenLanguages,
-    }).catch((error) => logger.warn("Failed to sync onboarding intent", { error }, "onboarding"));
-  }, [
-    isSignedIn,
-    session.authPath,
-    settings.onboardingUseCaseNote,
-    settings.onboardingUseCases,
-    settings.spokenLanguages,
-  ]);
-
   const finalizeOnboarding = useCallback(
     async (mode: OnboardingCompletionMode, options: { localPending?: boolean } = {}) => {
       if (isFinishing) return;
@@ -497,14 +399,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           return;
         }
 
-        if (mode === "cloud") {
-          const health = await window.electronAPI?.cloudHealthCheck?.();
-          if (health && !health.ok && health.status === undefined) {
-            setFatalError(t(health.messageKey || "streaming.errors.cloudUnreachable.generic"));
-            return;
-          }
-        }
-
         await window.electronAPI?.saveAllKeysToEnv?.();
         await window.electronAPI?.markBundleMigrated?.();
         await window.electronAPI?.setOnboardingWindowMode?.("restore");
@@ -515,7 +409,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         // clears this flag) while the flag is set.
         //
         // Only preserve a pending download when the completed route still uses
-        // local models. A user who walks Back and finishes on Cloud/BYOK must not
+        // local models. A user who walks Back and finishes on BYOK must not
         // be switched back to a stale local selection when it completes later.
         const routeKeepsLocalModels = mode === "local";
         if (routeKeepsLocalModels && (options.localPending || hasPendingLocalModels())) {
@@ -525,9 +419,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           clearPendingLocalModels();
         }
 
-        const skippedAuth = session.authPath === "guest";
-        localStorage.setItem("authenticationSkipped", String(skippedAuth));
-        localStorage.setItem("skipAuth", String(skippedAuth));
         clearSession();
         localStorage.setItem("onboardingCompleted", "true");
         onComplete();
@@ -544,22 +435,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       isFinishing,
       onComplete,
       registerHotkey,
-      session.authPath,
       t,
       withExtraDictationHotkeys,
     ]
   );
-
-  // Sessions saved on the old setup-choice step reconcile back to the last
-  // guided step once an Enterprise workspace is confirmed. Finish them without
-  // writing provider or model settings, just as if that had been their final
-  // step originally.
-  useEffect(() => {
-    if (!skipSetupChoiceForEnterprise || session.currentStepId !== "setup-choice" || isFinishing) {
-      return;
-    }
-    void finalizeOnboarding("managed");
-  }, [finalizeOnboarding, isFinishing, session.currentStepId, skipSetupChoiceForEnterprise]);
 
   const applyReasoningSelectionToAllScopes = useCallback(
     (mode: "byok" | "local") => {
@@ -595,40 +474,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     async (mode: Exclude<OnboardingSetupMode, null>, options?: { selfHosted?: boolean }) => {
       setSetupMode(mode);
       setSelfHostedRequested(!!options?.selfHosted);
-      if (mode === "cloud") {
-        settingsStore.setCloudTranscriptionForAllScopes({
-          useLocalWhisper: false,
-          cloudTranscriptionMode: "openwhispr",
-          cloudTranscriptionProvider: "openwhispr",
-        });
-        settingsStore.setCloudReasoningForAllScopes({
-          cleanupCloudMode: "openwhispr",
-          cleanupProvider: "openwhispr",
-        });
-        await finalizeOnboarding("cloud");
-        return;
-      }
-      const nextRoute = getOnboardingRoute({
-        authPath: session.authPath,
-        setupMode: mode,
-      });
-      const next = getNextOnboardingStep("setup-choice", nextRoute);
+      const next = getNextOnboardingStep("setup-choice", getOnboardingRoute({ setupMode: mode }));
       if (next) goTo(next);
     },
-    [
-      finalizeOnboarding,
-      goTo,
-      session.authPath,
-      setSelfHostedRequested,
-      setSetupMode,
-      settingsStore,
-    ]
+    [goTo, setSelfHostedRequested, setSetupMode]
   );
 
   const continueFromCurrentStep = useCallback(async () => {
     // A banner from an earlier failed attempt must not outlive the retry.
     setFatalError(null);
-    if (setupDecisionPending) return;
     if (currentStepId === "permissions") {
       if (platform === "darwin" && !permissions.accessibilityPermissionGranted) {
         setAccessibilitySkipped(true);
@@ -637,8 +491,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       settings.setPreferredLanguage(
         settings.spokenLanguages.length === 1 ? settings.spokenLanguages[0] : "auto"
       );
-    } else if (currentStepId === "use-cases") {
-      syncUseCases();
     } else if (currentStepId === "dictation-hotkey") {
       const registered = await registerHotkey(withExtraDictationHotkeys(dictationHotkey));
       if (!registered) {
@@ -678,10 +530,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       return;
     }
 
-    if (skipSetupChoiceForEnterprise) {
-      await finalizeOnboarding("managed");
-      return;
-    }
     if (session.setupMode) await finalizeOnboarding(session.setupMode);
   }, [
     applyReasoningSelectionToAllScopes,
@@ -699,11 +547,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     setDictationHotkeyConfirmed,
     settings,
     settingsStore,
-    syncUseCases,
     t,
     withExtraDictationHotkeys,
-    setupDecisionPending,
-    skipSetupChoiceForEnterprise,
   ]);
 
   const skipLocalSetup = useCallback(async () => {
@@ -744,31 +589,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const renderStep = () => {
     switch (currentStepId) {
-      case "auth":
-        return (
-          <div className="min-h-full w-full">
-            <CompactAuthenticationFlow
-              resumeState={session.resume.auth}
-              onResumeStateChange={updateAuthResumeState}
-              autoContinue={!returnedToAuth}
-              onSignOut={() => void handleLogout()}
-              onContinueWithoutAccount={() => {
-                // Guests continue onto their route's permissions step — jumping
-                // straight to setup-choice would skip the permission grants and
-                // hotkey the guest route exists to guarantee (see flow.ts).
-                setReturnedToAuth(false);
-                setAuthPath("guest");
-                goTo("permissions");
-              }}
-              onAuthComplete={() => {
-                setReturnedToAuth(false);
-                setAuthPath("account");
-                goTo(session.setupMode === "cloud" ? "setup-choice" : "permissions");
-              }}
-            />
-          </div>
-        );
-
       case "permissions":
         return (
           <CompactPermissionsStep
@@ -780,14 +600,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               needsRelaunch: screenRecordingNeedsRelaunch,
               request: enableScreenContext,
             }}
-            onBack={
-              session.history.length > 0
-                ? () => {
-                    setReturnedToAuth(true);
-                    goBack();
-                  }
-                : undefined
-            }
+            onBack={session.history.length > 0 ? goBack : undefined}
             onContinue={() => void continueFromCurrentStep()}
           />
         );
@@ -1027,13 +840,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               description={t("onboarding.rehaul.setupChoice.description")}
             />
             <SetupChoiceStep
-              isSignedIn={isSignedIn}
               onSelect={(mode, options) => void handleSetupSelection(mode, options)}
-              onRequestAuthentication={() => {
-                setSetupMode("cloud");
-                setAuthPath(null);
-                goTo("auth");
-              }}
             />
           </div>
         );
@@ -1112,14 +919,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     hasShellNavigation &&
     !choiceStep &&
     !inlineProviderStep &&
-    (!inlineGatedStep || canContinue || setupDecisionPending) &&
+    (!inlineGatedStep || canContinue) &&
     (!notesStep || notesFooterAction !== "skip");
   // Practice remains skippable if it cannot complete. Calendar connections are
   // optional, so Notes starts with Skip and replaces it with Continue on connect.
-  // While the setup decision is pending, a disabled Continue stands in for Skip.
-  const showsSkip =
-    !setupDecisionPending &&
-    ((demoStep && !canContinue) || (notesStep && notesFooterAction === "skip"));
+  const showsSkip = (demoStep && !canContinue) || (notesStep && notesFooterAction === "skip");
 
   return (
     <>
@@ -1140,7 +944,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         }
         skipLabel={t("common.skip")}
         continueDisabled={!canContinue}
-        continueLoading={isFinishing || isRegistering || setupDecisionPending}
+        continueLoading={isFinishing || isRegistering}
         progress={getOnboardingProgress(currentStepId, route)}
         // Label Back only when it is the sole footer action. Unlike the source
         // commit, this branch also has demo Skip, so Back stays icon-only there.

@@ -13,11 +13,6 @@ import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
 import CliIntegrationCard from "./CliIntegrationCard";
 import appleCalendarIcon from "../assets/icons/apple-calendar.svg";
 
-interface IntegrationsViewProps {
-  isPaid: boolean;
-  onUpgrade: () => void;
-}
-
 function SectionLabel({ children }: { children: React.ReactNode }) {
   return (
     <div className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground/70 mb-2 ps-1">
@@ -71,7 +66,7 @@ function ProviderRow({ icon, i18nKey, connected, isConnecting, onConnect }: Prov
   );
 }
 
-export default function IntegrationsView({ isPaid, onUpgrade }: IntegrationsViewProps) {
+export default function IntegrationsView() {
   const { t } = useTranslation();
   const { appleCalendarConnected, setAppleCalendarConnected } = useSettingsStore();
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
@@ -179,7 +174,7 @@ export default function IntegrationsView({ isPaid, onUpgrade }: IntegrationsView
 
       <div>
         <SectionLabel>{t("integrations.sections.cli")}</SectionLabel>
-        <CliIntegrationCard isPaid={isPaid} onUpgrade={onUpgrade} />
+        <CliIntegrationCard />
       </div>
 
       {isMac && !appleCalendarConnected && (

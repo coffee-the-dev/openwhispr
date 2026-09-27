@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
-import ReasoningService, { type AgentStreamChunk } from "../../services/ReasoningService";
+import ReasoningService from "../../services/ReasoningService";
 import { isEnterpriseProvider } from "../../models/ModelRegistry";
 import { providerSupportsImages } from "../../services/ai/inferenceProviders";
 import { getSettings, useSettingsStore } from "../../stores/settingsStore";
@@ -242,7 +242,6 @@ export function useChatStreaming({
       const requestedAttachment = attachScreenContext ? (options?.attachment ?? null) : null;
       const llmMode = llmConfig.mode || "openwhispr";
       setAgentState("thinking");
-      const isCloudAgent = llmMode === "openwhispr" && settings.isSignedIn;
       const isLanAgent = llmMode === "self-hosted" && !!llmConfig.remoteUrl;
       const isCustomAgent = llmMode === "providers" && llmConfig.provider === "custom";
       const isLocalProvider =
@@ -259,7 +258,7 @@ export function useChatStreaming({
         ].includes(llmConfig.provider);
       const localModelCanUseTool =
         isLocalProvider && estimateModelSizeB(llmConfig.model) >= LOCAL_TOOL_MIN_PARAMS_B;
-      const supportsTools = isCloudAgent || !isLocalProvider || localModelCanUseTool;
+      const supportsTools = !isLocalProvider || localModelCanUseTool;
 
       const scope = searchScopeRef.current;
       let registry: ToolRegistry | null = null;
@@ -269,14 +268,12 @@ export function useChatStreaming({
         const calendarConnected = settings.appleCalendarConnected;
         // Triggers ride in the tool description, so a snippet edit rebuilds the registry.
         const snippetKey = settings.snippets.map((s) => s.trigger).join("|");
-        const cacheKey = `${settings.isSignedIn}-${calendarConnected}-${settings.cloudBackupEnabled}-${scopeKey}-${snippetKey}`;
+        const cacheKey = `${calendarConnected}-${scopeKey}-${snippetKey}`;
         if (toolRegistryRef.current?.key === cacheKey) {
           registry = toolRegistryRef.current.registry;
         } else {
           registry = createToolRegistry({
-            isSignedIn: settings.isSignedIn,
             calendarConnected,
-            cloudBackupEnabled: settings.cloudBackupEnabled,
             searchScope: scope,
             vocabulary: {
               getDictionary: () => getSettings().customDictionary,
@@ -317,20 +314,13 @@ export function useChatStreaming({
         );
       }
 
-      // A screenshot the resolver kept rides with the command it came with:
-      // BYOK models get it as an image part, the cloud agent as a dedicated
-      // field the server vision-routes (older servers strip the unknown field,
-      // which degrades to a plain command). A dropped one costs nothing but the
-      // image — the command still runs.
-      const attachment = requestedAttachment && !isCloudAgent ? requestedAttachment : null;
-      const cloudScreenContext =
-        requestedAttachment && isCloudAgent
-          ? { data: requestedAttachment.image, mediaType: requestedAttachment.mediaType }
-          : null;
+      // A screenshot the resolver kept rides with the command it came with as
+      // an image part. A dropped one costs nothing but the image — the command
+      // still runs.
+      const attachment = requestedAttachment;
       if (attachment) {
         // The screenshot needs its grounding instruction, exactly like the
-        // dictation path pairs the suffix with an attached image. Restore it
-        // for cloud context once openwhispr-api#157 vision-routes that field.
+        // dictation path pairs the suffix with an attached image.
         systemPrompt = appendScreenContextSuffix(systemPrompt, settings.uiLanguage);
       }
       if (options?.plainTextResponse) {
@@ -377,72 +367,26 @@ export function useChatStreaming({
       };
 
       try {
-        let stream: AsyncGenerator<AgentStreamChunk>;
-
-        if (isCloudAgent) {
-          const executeToolCall = registry
-            ? async (name: string, argsJson: string) => {
-                const tool = registry.get(name);
-                if (!tool)
-                  return {
-                    data: `Unknown tool: ${name}`,
-                    displayText: t("agentMode.tools.unknownTool", { name }),
-                  };
-                let args: Record<string, unknown>;
-                try {
-                  args = JSON.parse(argsJson);
-                } catch {
-                  return {
-                    data: `Invalid tool arguments for ${name}`,
-                    displayText: t("agentMode.tools.invalidArgs", { name }),
-                  };
-                }
-                const result = await tool.execute(args);
-                const data = result.success
-                  ? typeof result.data === "string"
-                    ? result.data
-                    : JSON.stringify(result.data)
-                  : result.displayText;
-                const metadata =
-                  result.success && result.data && typeof result.data === "object"
-                    ? (result.data as Record<string, unknown> | Array<Record<string, unknown>>)
-                    : undefined;
-                return { data, displayText: result.displayText, metadata };
-              }
-            : undefined;
-
-          stream = ReasoningService.processTextStreamingCloud(llmMessages, {
+        const aiTools = registry?.toAISDKFormat();
+        const stream = ReasoningService.processTextStreamingAI(
+          llmMessages,
+          llmConfig.model,
+          llmConfig.provider,
+          {
             systemPrompt,
-            tools: registry?.getAll().map((t) => ({
-              name: t.name,
-              description: t.description,
-              parameters: t.parameters,
-            })),
-            executeToolCall,
-            ...(cloudScreenContext ? { screenContext: cloudScreenContext } : {}),
-          });
-        } else {
-          const aiTools = registry?.toAISDKFormat();
-          stream = ReasoningService.processTextStreamingAI(
-            llmMessages,
-            llmConfig.model,
-            llmConfig.provider,
-            {
-              systemPrompt,
-              // Policy and managed enforcement judge the scope that actually
-              // answers: the panel's Chat fallback as Chat, and the vision
-              // override as the agent scope whose image lane it is.
-              inferenceScope:
-                llmConfig.scope === "dictationAgentVision" ? "dictationAgent" : llmConfig.scope,
-              lanUrl: isLanAgent ? llmConfig.remoteUrl : undefined,
-              baseUrl: isCustomAgent ? llmConfig.cloudBaseUrl || undefined : undefined,
-              customApiKey:
-                isCustomAgent || isLanAgent ? llmConfig.customApiKey || undefined : undefined,
-              disableThinking: llmConfig.disableThinking,
-            },
-            aiTools
-          );
-        }
+            // Requests are judged by the scope that actually answers: the
+            // panel's Chat fallback as Chat, and the vision override as the
+            // agent scope whose image lane it is.
+            inferenceScope:
+              llmConfig.scope === "dictationAgentVision" ? "dictationAgent" : llmConfig.scope,
+            lanUrl: isLanAgent ? llmConfig.remoteUrl : undefined,
+            baseUrl: isCustomAgent ? llmConfig.cloudBaseUrl || undefined : undefined,
+            customApiKey:
+              isCustomAgent || isLanAgent ? llmConfig.customApiKey || undefined : undefined,
+            disableThinking: llmConfig.disableThinking,
+          },
+          aiTools
+        );
 
         for await (const chunk of stream) {
           if (!mountedRef.current) {
