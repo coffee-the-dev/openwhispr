@@ -41,15 +41,11 @@ test("local Whisper recovers dictionary prompt echoes and fragments", async (t) 
   });
 
   const baseSettings = {
-    allowOpenAIFallback: false,
-    cloudTranscriptionProvider: "openai",
     useLocalWhisper: true,
     localTranscriptionProvider: "whisper",
     whisperModel: "base",
-    cloudTranscriptionMode: "byok",
-    isSignedIn: false,
   };
-  const { window, createManager, setSettings } = await loadAudioManager(t, {
+  const { window, createManager } = await loadAudioManager(t, {
     cachePrefix: "openwhispr-dictionary-prompt-recovery-test-",
     settingsKey: "__dictionaryPromptRecoverySettings",
     settings: baseSettings,
@@ -507,33 +503,5 @@ test("local Whisper recovers dictionary prompt echoes and fragments", async (t) 
     assert.equal(calls.length, 2);
     assert.deepEqual(lifecycle, ["idle", "no-audio"]);
     assert.deepEqual(saved, [{ message: "No audio detected", code: "DICTIONARY_ECHO" }]);
-  });
-
-  await t.test("a strict retry exception reaches the configured cloud fallback", async (t) => {
-    setSettings({ ...baseSettings, allowOpenAIFallback: true });
-    t.after(() => setSettings(baseSettings));
-    const calls = queueTranscriptions(window, [
-      { success: true, text: DICTIONARY_PROMPT },
-      new Error("IPC unavailable"),
-    ]);
-    const { manager } = createRecoveryManager();
-    let fallbackCalls = 0;
-    manager.processWithOpenAIAPI = async () => {
-      fallbackCalls += 1;
-      return {
-        success: true,
-        text: "Recovered by cloud fallback.",
-        rawText: "Recovered by cloud fallback.",
-        source: "openai",
-        timings: {},
-      };
-    };
-
-    const result = await manager.processWithLocalWhisper(AUDIO_BLOB, "base");
-
-    assert.equal(result.text, "Recovered by cloud fallback.");
-    assert.equal(result.source, "openai-fallback");
-    assert.equal(fallbackCalls, 1);
-    assert.equal(calls.length, 2);
   });
 });

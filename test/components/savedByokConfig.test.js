@@ -2,18 +2,11 @@ const assert = require("node:assert/strict");
 const test = require("node:test");
 
 const load = () => import("../../src/components/onboarding/savedByokConfig.ts");
-const loadDefaultTranscriptionBase = async () =>
-  (await import("../../src/config/constants.ts")).API_ENDPOINTS.TRANSCRIPTION_BASE;
-
 const DRAFT_KEYS = ["baseUrl", "customModel", "selectedModel", "selectedProvider"];
 
 // A fresh install: only store defaults, nothing the user configured.
 const firstRun = async () => ({
-  useLocalWhisper: false,
-  transcriptionMode: "openwhispr",
-  cloudTranscriptionProvider: "openai",
-  cloudTranscriptionModel: "gpt-4o-mini-transcribe",
-  cloudTranscriptionBaseUrl: await loadDefaultTranscriptionBase(),
+  transcriptionMode: "local",
   remoteTranscriptionUrl: "",
   remoteTranscriptionModel: "",
   chatAgentMode: "openwhispr",
@@ -22,12 +15,6 @@ const firstRun = async () => ({
   chatAgentRemoteUrl: "",
 });
 
-const CUSTOM_ENDPOINT = {
-  cloudTranscriptionProvider: "custom",
-  cloudTranscriptionBaseUrl: "https://stt.example.com/v1",
-  cloudTranscriptionModel: "parasail-whisper",
-};
-
 test("a first run has nothing to reopen", async () => {
   const { resolveSavedByokConfig } = await load();
   const settings = await firstRun();
@@ -35,54 +22,20 @@ test("a first run has nothing to reopen", async () => {
   assert.equal(resolveSavedByokConfig("byok-assistant", settings), null);
 });
 
-test("local, OpenWhispr Cloud and enterprise dictation reopen nothing", async () => {
-  const { resolveSavedByokConfig } = await load();
-  const base = await firstRun();
-  for (const settings of [
-    // Settings writes cloudTranscriptionMode "byok" for Local too, so the provider
-    // fields of a local user can look like a hosted setup.
-    {
-      ...base,
-      transcriptionMode: "local",
-      useLocalWhisper: true,
-      cloudTranscriptionProvider: "groq",
-    },
-    { ...base, transcriptionMode: "providers", useLocalWhisper: true },
-    { ...base, transcriptionMode: "openwhispr", ...CUSTOM_ENDPOINT },
-    { ...base, transcriptionMode: "enterprise", ...CUSTOM_ENDPOINT },
-  ]) {
-    assert.equal(
-      resolveSavedByokConfig("byok-dictation", settings),
-      null,
-      settings.transcriptionMode
-    );
-  }
-});
-
-test("a hosted dictation provider reopens with its model", async () => {
+test("local dictation reopens nothing, even with a saved server URL", async () => {
   const { resolveSavedByokConfig } = await load();
   const saved = resolveSavedByokConfig("byok-dictation", {
     ...(await firstRun()),
-    transcriptionMode: "providers",
-    cloudTranscriptionProvider: "groq",
-    cloudTranscriptionModel: "whisper-large-v3-turbo",
+    remoteTranscriptionUrl: "http://192.168.1.5:8178",
+    remoteTranscriptionModel: "large-v3",
   });
-  assert.deepEqual(saved, {
-    draft: {
-      selectedProvider: "groq",
-      selectedModel: "whisper-large-v3-turbo",
-      baseUrl: "",
-      customModel: "",
-    },
-    usesCustomKey: false,
-  });
+  assert.equal(saved, null);
 });
 
-test("the Settings self-hosted server reopens as a key-less endpoint and wins over custom fields", async () => {
+test("the self-hosted server reopens as an endpoint carrying the custom key", async () => {
   const { resolveSavedByokConfig } = await load();
   const saved = resolveSavedByokConfig("byok-dictation", {
     ...(await firstRun()),
-    ...CUSTOM_ENDPOINT,
     transcriptionMode: "self-hosted",
     remoteTranscriptionUrl: " http://192.168.1.5:8178 ",
     remoteTranscriptionModel: "large-v3",
@@ -94,67 +47,15 @@ test("the Settings self-hosted server reopens as a key-less endpoint and wins ov
       baseUrl: "http://192.168.1.5:8178",
       customModel: "large-v3",
     },
-    usesCustomKey: false,
+    usesCustomKey: true,
   });
 });
 
-test("the Settings self-hosted server wins over a stale local flag, as in the router", async () => {
+test("self-hosted mode without a URL reopens nothing", async () => {
   const { resolveSavedByokConfig } = await load();
   const saved = resolveSavedByokConfig("byok-dictation", {
     ...(await firstRun()),
     transcriptionMode: "self-hosted",
-    useLocalWhisper: true,
-    remoteTranscriptionUrl: "http://192.168.1.5:8178",
-    remoteTranscriptionModel: "large-v3",
-  });
-  assert.equal(saved?.draft.baseUrl, "http://192.168.1.5:8178");
-  assert.equal(saved?.usesCustomKey, false);
-});
-
-test("a custom endpoint reopens under either mode it is filed under", async () => {
-  const { resolveSavedByokConfig } = await load();
-  for (const transcriptionMode of ["providers", "self-hosted"]) {
-    const saved = resolveSavedByokConfig("byok-dictation", {
-      ...(await firstRun()),
-      ...CUSTOM_ENDPOINT,
-      transcriptionMode,
-    });
-    assert.deepEqual(
-      saved,
-      {
-        draft: {
-          selectedProvider: "",
-          selectedModel: "",
-          baseUrl: "https://stt.example.com/v1",
-          customModel: "parasail-whisper",
-        },
-        usesCustomKey: true,
-      },
-      transcriptionMode
-    );
-  }
-});
-
-test("an unconfigured custom endpoint reopens nothing", async () => {
-  const { resolveSavedByokConfig } = await load();
-  const base = await firstRun();
-  for (const cloudTranscriptionBaseUrl of ["", "  ", base.cloudTranscriptionBaseUrl]) {
-    const saved = resolveSavedByokConfig("byok-dictation", {
-      ...base,
-      transcriptionMode: "providers",
-      cloudTranscriptionProvider: "custom",
-      cloudTranscriptionBaseUrl,
-    });
-    assert.equal(saved, null, JSON.stringify(cloudTranscriptionBaseUrl));
-  }
-});
-
-test("self-hosted mode without a URL or custom provider reopens nothing", async () => {
-  const { resolveSavedByokConfig } = await load();
-  const saved = resolveSavedByokConfig("byok-dictation", {
-    ...(await firstRun()),
-    transcriptionMode: "self-hosted",
-    cloudTranscriptionProvider: "groq",
   });
   assert.equal(saved, null);
 });
@@ -219,9 +120,8 @@ test("a reopened draft only carries the four session fields", async () => {
   for (const [stepId, settings] of [
     [
       "byok-dictation",
-      { ...base, transcriptionMode: "providers", cloudTranscriptionProvider: "groq" },
+      { ...base, transcriptionMode: "self-hosted", remoteTranscriptionUrl: "http://x/v1" },
     ],
-    ["byok-dictation", { ...base, ...CUSTOM_ENDPOINT, transcriptionMode: "providers" }],
     [
       "byok-assistant",
       { ...base, chatAgentMode: "self-hosted", chatAgentRemoteUrl: "http://x/v1" },

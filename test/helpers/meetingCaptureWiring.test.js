@@ -8,29 +8,6 @@ const path = require("node:path");
 // the wiring at the source level.
 const source = fs.readFileSync(path.join(__dirname, "../../src/helpers/ipcHandlers.js"), "utf8");
 
-test("every meeting realtime connect labels the stream and gives system its own VAD threshold", () => {
-  assert.match(source, /const MEETING_SYSTEM_VAD_THRESHOLD = 0\.3;/);
-  assert.match(
-    source,
-    /withMeetingSourceConnectOpts = \(connectOpts, source\) => \(\{\s*\.\.\.connectOpts,\s*streamLabel: source,\s*\.\.\.\(source === "system" \? \{ vadThreshold: MEETING_SYSTEM_VAD_THRESHOLD \} : \{\}\),\s*\}\)/
-  );
-  // Initial connect and mid-meeting reconnect both go through the helper; a
-  // bare ...connectOpts spread would silently drop the system channel's
-  // threshold and its stream label.
-  assert.equal(
-    (source.match(/\.\.\.withMeetingSourceConnectOpts\(connectOpts, source\)/g) ?? []).length,
-    2
-  );
-  assert.doesNotMatch(source, /connect\(\{ apiKey: secret, token: secret, \.\.\.connectOpts \}\)/);
-});
-
-test("streaming dispatch logs system-channel levels", () => {
-  assert.match(
-    source,
-    /source === "system" && buffer\.length >= 2[\s\S]{0,400}?"Meeting system audio stats"/
-  );
-});
-
 test("silent system audio warning arms on start and clears on every teardown path", () => {
   // Armed only when a system-audio strategy is active (never for mic-only).
   assert.match(
@@ -44,7 +21,7 @@ test("silent system audio warning arms on start and clears on every teardown pat
   assert.ok(rollbackStart >= 0 && stopStart > rollbackStart);
   const rollbackSection = source.slice(
     rollbackStart,
-    source.indexOf("const setupDictationCallbacks")
+    source.indexOf("const startMeetingTranscription")
   );
   assert.match(rollbackSection, /clearMeetingSystemAudioSilenceTimer\(\);/);
   const stopSection = source.slice(
@@ -79,8 +56,11 @@ test("a silent Windows capture hands the live session to renderer loopback", () 
   // Leaking the latch across sessions would pin the fallback off for the rest
   // of the app's life, so it resets everywhere the heard-audio latch does.
   assert.equal(
-    (source.match(/meetingSystemAudioHeard = false;\s*\n\s*meetingSystemAudioDegraded = false;/g) ?? [])
-      .length,
+    (
+      source.match(
+        /meetingSystemAudioHeard = false;\s*\n\s*meetingSystemAudioDegraded = false;/g
+      ) ?? []
+    ).length,
     2
   );
 });
@@ -89,7 +69,7 @@ test("the system-audio watchdog is armed beside the silence timer and torn down 
   // Same gate as the one-shot warning: never armed for a mic-only session.
   assert.match(
     source,
-    /result\.systemAudioStrategy && result\.systemAudioStrategy !== "unsupported"[\s\S]{0,240}?startMeetingSystemAudioWatchdog\(meetingConnectionWin, result\.systemAudioStrategy\)/
+    /result\.systemAudioStrategy && result\.systemAudioStrategy !== "unsupported"[\s\S]{0,240}?startMeetingSystemAudioWatchdog\(win, result\.systemAudioStrategy\)/
   );
   // Only the macOS tap emits a chunk per period, so only it can be judged on
   // delivery gaps; the loopback helpers may legitimately go idle.
@@ -108,7 +88,10 @@ test("the system-audio watchdog is armed beside the silence timer and torn down 
   // that reported stalls it could not recover from.
   const armStart = source.indexOf("const startMeetingSystemAudioWatchdog");
   assert.ok(armStart >= 0);
-  const armSection = source.slice(armStart, source.indexOf("const rollbackMeetingTranscriptionStart"));
+  const armSection = source.slice(
+    armStart,
+    source.indexOf("const rollbackMeetingTranscriptionStart")
+  );
   assert.match(armSection, /clearMeetingSystemAudioTicker\(\);/);
   assert.doesNotMatch(armSection, /stopMeetingSystemAudioWatchdog\(\);/);
   assert.doesNotMatch(armSection, /detachCapture\(\)/);
@@ -116,11 +99,7 @@ test("the system-audio watchdog is armed beside the silence timer and torn down 
   // Every path that clears the one-shot timer also stops the watchdog, plus the
   // mic-only fallback, which strands the restart hook on a dead manager.
   for (const [label, from, to] of [
-    [
-      "rollback",
-      "const rollbackMeetingTranscriptionStart",
-      "const setupDictationCallbacks",
-    ],
+    ["rollback", "const rollbackMeetingTranscriptionStart", "const startMeetingTranscription"],
     ["stop", "const stopMeetingTranscription", "const meetingTranscriptionLifecycle"],
     ["mic-only fallback", "const fallBackToMicOnly", "const startMeetingSystemAudio = async"],
   ]) {
@@ -156,18 +135,4 @@ test("the watchdog sees every system chunk and the helper's device warning", () 
   // The interruption reaches the renderer; a log-only warning would leave the
   // user watching a recording that has stopped hearing the call.
   assert.match(source, /send\("meeting-system-audio-interrupted", payload\)/);
-});
-
-test("meeting connects forward the credential mode", () => {
-  // The Deepgram client picks its Authorization scheme from `mode`; both meeting
-  // connectOpts are built by hand, so omitting it re-authenticates Note Recording
-  // as managed (#2140). Scoped by sample rate so an unrelated connectOpts cannot
-  // drag the assertion off target.
-  const connectOptsBlocks =
-    source.match(/const connectOpts = \{[^}]*sampleRate: MEETING_STREAM_SAMPLE_RATE,\s*\};/g) ?? [];
-  assert.equal(connectOptsBlocks.length, 2, "initial connect and reconnect each build connectOpts");
-  for (const block of connectOptsBlocks) {
-    // Anchored: an unanchored match also accepts the key commented out.
-    assert.match(block, /^\s*mode: options\.mode,$/m);
-  }
 });

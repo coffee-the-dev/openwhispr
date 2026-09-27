@@ -356,9 +356,6 @@
         "modelIdPlaceholder": "モデル ID を入力",
         "testConnection": "接続をテスト",
         "proceed": "次へ進む",
-        "clinical": "臨床文字起こし向け",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
         "runTest": "テストを実行",
         "testing": "テスト中…",
         "connected": "接続済み",
@@ -522,13 +519,10 @@
   "streaming": {
     "errors": {
       "cloudUnreachable": {
-        "title": "OpenWhispr Cloud に接続できません",
-        "generic": "ネットワーク要求に失敗しました。接続を確認してください。",
         "dnsBlocked": "DNS が the server を解決できません — 広告ブロッカーやフィルターに遮断されている可能性があります。",
         "refused": "接続が拒否されました — ファイアウォールまたは VPN の可能性があります。",
         "timeout": "ネットワークがタイムアウトしました — VPN、キャプティブポータル、または不安定な接続。",
-        "tls": "TLS ハンドシェイクに失敗しました — システム時計または企業プロキシを確認してください。",
-        "fallback": "Cloud に接続できません — この録音にはローカルエンジンを使用します。"
+        "tls": "TLS ハンドシェイクに失敗しました — システム時計または企業プロキシを確認してください。"
       }
     }
   },
@@ -713,26 +707,13 @@
       "requiresMacOS": "macOS {{version}}+",
       "unavailable": "利用不可"
     },
-    "apiKeyOptional": "API キー（任意）",
-    "getKey": "キーを取得 ->",
-    "endpointUrl": "エンドポイント URL",
-    "azureHint": "Azure AI Foundry: リソースのエンドポイント（例: https://your-resource.cognitiveservices.azure.com）を入力し、モデルにデプロイの正確な名前を設定してください。",
-    "customProvider": "カスタム",
     "fallback": {
       "whisperModelDescription": "モデル",
       "parakeetModelDescription": "NVIDIA Parakeet モデル"
     },
     "whisperModels": "Whisper モデル",
     "corti": {
-      "clientId": "クライアントID",
-      "clientSecret": "クライアントシークレット",
-      "apiKey": "API キー",
-      "environment": "データリージョン",
-      "tenant": "テナント"
-    },
-    "tinfoil": {
-      "transportNote": "Tinfoil はストリーミングに Voxtral Mini 4B を、バッチ処理に Voxtral Small 24B を使用します。",
-      "docsLink": "ドキュメントを見る"
+      "apiKey": "API キー"
     }
   },
   "hooks": {
@@ -744,10 +725,6 @@
         "screenContextSkipped": "画面コンテキストをスキップしました",
         "dailyLimitReached": "1 日の上限に達しました",
         "providerRateLimited": "プロバイダーのレート制限"
-      },
-      "fallback": {
-        "title": "フォールバックモード",
-        "description": "ローカル Whisper が失敗しました。代わりに OpenAI API を使用しました。"
       },
       "errorActions": {
         "viewTranscript": "文字起こしを表示"
@@ -770,20 +747,14 @@
         "description": "録音の一部を文字起こしできませんでした。"
       },
       "errorDescriptions": {
-        "sessionExpired": "OpenWhispr Cloud のセッションが利用できません。「設定」から再度サインインしてください。",
-        "offline": "オフラインです。クラウド文字起こしにはインターネット接続が必要です。",
         "dailyLimitReached": "本日の文字起こし上限に達しました。明日もう一度お試しいただくか、プランをアップグレードしてください。",
         "providerRateLimited": "文字起こしプロバイダーがリクエストを制限しました。しばらく待ってからもう一度お試しください。",
-        "chunkLoss": "ネットワークの問題で録音の大部分が失われました。履歴から再文字起こししてください。",
         "agentReasoningFailed": "音声アシスタントがコマンドを処理できなかったため、未処理の文字起こしを挿入しました。",
         "screenContextSkipped": "スクリーンショットを送信できなかったため、画面コンテキストなしでコマンドを実行しました。",
-        "customEndpointInvalid": "カスタム文字起こしエンドポイントが未設定か、URLが無効です。設定 → 音声テキスト変換 から更新してください。",
-        "managedTranscriptionUnavailable": "マネージド文字起こしは現在利用できません。しばらくしてからもう一度お試しください。",
-        "streamingOnlyProvider": "このプロバイダーはライブ文字起こしのみに対応しています。ファイルのアップロードや再実行には別のプロバイダーを選択してください。",
-        "providerKeyMissing": "文字起こしプロバイダーのAPIキーが設定されていません。設定 → 音声テキスト変換 から追加してください。",
         "cleanupTruncated": "AI モデルの出力が上限に達し、ディクテーションのクリーンアップが完了しませんでした。",
         "cleanupDuplicated": "AI クリーンアップが文字起こしを繰り返しました。元のテキストを保持しました。",
-        "cleanupEmptyReply": "AI モデルが空の応答を返したため、クリーンアップされたテキストがありません。"
+        "cleanupEmptyReply": "AI モデルが空の応答を返したため、クリーンアップされたテキストがありません。",
+        "selfHostedNotConfigured": "セルフホストの文字起こしサーバーが未設定か、URLが無効です。設定 → 音声テキスト変換 から更新してください。"
       },
       "translationFallback": {
         "unreachableTitle": "翻訳を利用できません",
@@ -1613,10 +1584,8 @@
       "customSetupDescription": "独自のプロバイダーと API キーを使用。",
       "description": "OpenWhispr の音声文字起こし方法を選択",
       "modes": {
-        "providers": "クラウドプロバイダー",
         "local": "ローカル",
         "selfHosted": "セルフホスト",
-        "providersDesc": "自分のAPIキーを使用。",
         "localDesc": "端末上のモデル。完全プライベート。",
         "selfHostedDesc": "自前サーバーをネットワーク上に。"
       },
@@ -1624,18 +1593,6 @@
       "openwhisprCloudDescription": "信頼できる精度。設定不要。",
       "title": "音声テキスト変換",
       "toasts": {
-        "switchedCloud": {
-          "description": "文字起こしに OpenWhispr のクラウドサービスを使用します。",
-          "title": "OpenWhispr Cloud に切り替えました"
-        },
-        "switchedCustom": {
-          "description": "独自のプロバイダーと API キーを設定してください。",
-          "title": "カスタム設定に切り替えました"
-        },
-        "switchedProviders": {
-          "title": "クラウドプロバイダー",
-          "description": "独自の API キーを使用します。"
-        },
         "switchedLocal": {
           "title": "デバイス上",
           "description": "文字起こしはお使いのマシン上でローカルに実行されます。"
@@ -1643,10 +1600,6 @@
         "switchedSelfHosted": {
           "title": "セルフホスト",
           "description": "独自のサーバーを使用します。"
-        },
-        "switchedEnterprise": {
-          "title": "エンタープライズクラウドを選択しました",
-          "description": "音声入力は組織が管理する文字起こしを使用します。"
         }
       },
       "gpuDevice": {
@@ -1739,24 +1692,6 @@
         "medium": "高品質",
         "large": "最高品質、最も低速",
         "turbo": "高速で高品質"
-      },
-      "transcription": {
-        "openai_gpt_transcribe": "最新かつ最も正確な文字起こし",
-        "openai_gpt_4o_mini_transcribe": "高速で正確な文字起こし",
-        "openai_gpt_4o_transcribe": "最も正確な文字起こし",
-        "openai_whisper_1": "オリジナル Whisper モデル",
-        "groq_whisper_large_v3_turbo": "リアルタイムの 216 倍速",
-        "groq_whisper_large_v3": "Large v3 モデル、高速かつ高精度",
-        "mistral_voxtral_mini_latest": "高速多言語文字起こし",
-        "gemini_3_5_transcribe": "GoogleのGemini音声文字起こし",
-        "gemini_3_5_transcribe_live": "リアルタイムストリーミング文字起こし",
-        "corti_transcribe": "臨床グレードの医療文字起こし",
-        "xai_grok_stt": "xAIによる高精度音声認識",
-        "tinfoil_voxtral": "検証可能なプライベート文字起こし",
-        "deepgram_nova_3": "Deepgram で最も高精度なリアルタイムモデル",
-        "assemblyai_universal_streaming_english": "変化しないリアルタイム文字起こし（英語）",
-        "assemblyai_universal_streaming_multilingual": "変化しないリアルタイム文字起こし（多言語）",
-        "assemblyai_universal_3_5_pro": "最高精度のリアルタイム、18言語"
       },
       "cloud": {
         "openai_gpt_5_2": "強力な推論モデル",
@@ -2127,9 +2062,7 @@
       "title": "議事録",
       "description": "文字起こしと構造化されたサマリー",
       "back": "戻る",
-      "unsupportedSelfHosted": "ノート録音はまだセルフホストのエンドポイントを利用できません。設定を開き、ローカルまたはストリーミング対応プロバイダーを選択してください。",
-      "unsupportedProvider": "ノート録音ではライブ文字起こしに {{provider}} を利用できません。設定を開き、ローカルまたはストリーミング対応プロバイダーを選択してください。",
-      "noProviderSelected": "ノート録音のプロバイダーが選択されていません。設定を開き、ローカルまたはストリーミング対応プロバイダーを選択してください。",
+      "unsupportedSelfHosted": "ノート録音はまだセルフホストのエンドポイントを利用できません。設定を開き、ローカルを選択してください。",
       "systemAudioSilent": {
         "title": "会議の音声がまだ検出されていません",
         "description": "これまでのところ、音声を拾っているのはマイクのみです。ビデオ会議中の場合は、会議の音声がこのコンピューターで再生されており、ミュートになっていないことを確認してください。対面で録音している場合は、この通知は無視してかまいません。マイクが室内の音を拾います。"
@@ -2511,8 +2444,7 @@
       "transcribing": "文字起こし中...",
       "thinking": "考え中...",
       "typeMessage": "メッセージを入力...",
-      "send": "送信",
-      "voiceDraftStreamingOnly": "現在の文字起こしプロバイダーはライブ音声入力のみに対応しているため、音声入力は利用できません。設定 → 音声テキスト変換 で別のプロバイダーを選択してください。"
+      "send": "送信"
     },
     "tools": {
       "search_notesName": "ノートを検索",
@@ -2735,8 +2667,7 @@
     "speaker": {
       "you": "あなた",
       "others": "他の人"
-    },
-    "missingAudio": "[音声欠落 {{from}}-{{to}}]"
+    }
   },
   "dictationTranslation": {
     "title": "音声入力翻訳",

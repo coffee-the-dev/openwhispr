@@ -6,8 +6,6 @@ const LOCAL_WHISPER_SETTINGS = {
   useLocalWhisper: true,
   localTranscriptionProvider: "whisper",
   whisperModel: "base",
-  cloudTranscriptionMode: "byok",
-  isSignedIn: false,
 };
 
 async function loadManagerClass(t, settings = LOCAL_WHISPER_SETTINGS) {
@@ -31,7 +29,7 @@ function createManager(AudioManager, failure) {
     processWithLocalWhisper: async () => {
       throw failure;
     },
-    processWithOpenWhisprCloud: async () => {
+    processWithSelfHosted: async () => {
       throw failure;
     },
     onStateChange: (state) => order.push(state.isProcessing ? "processing" : "idle"),

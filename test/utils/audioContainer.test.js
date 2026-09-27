@@ -8,36 +8,31 @@ const load = () => import("../../src/utils/audioContainer.ts");
 const readAscii = (view, offset, length) =>
   Array.from({ length }, (_, i) => String.fromCharCode(view.getUint8(offset + i))).join("");
 
-test("only the custom provider re-encodes, and only for containers a WAV/MP3/FLAC backend refuses", async () => {
+test("only containers a WAV/MP3/FLAC backend refuses are re-encoded", async () => {
   const { needsWavConversion } = await load();
 
-  assert.equal(needsWavConversion("custom", "audio/webm;codecs=opus"), true);
-  assert.equal(needsWavConversion("custom", "audio/ogg"), true);
+  assert.equal(needsWavConversion("audio/webm;codecs=opus"), true);
+  assert.equal(needsWavConversion("audio/ogg"), true);
 
   // Allowlisted rather than blocklisted: MediaRecorder emits MP4/AAC on some
   // platforms, and AAC is no more acceptable to these backends than Opus.
-  assert.equal(needsWavConversion("custom", "audio/mp4"), true);
-  assert.equal(needsWavConversion("custom", "video/webm"), true);
+  assert.equal(needsWavConversion("audio/mp4"), true);
+  assert.equal(needsWavConversion("video/webm"), true);
 
   // Already acceptable — re-encoding would only cost bytes.
-  assert.equal(needsWavConversion("custom", "audio/wav"), false);
-  assert.equal(needsWavConversion("custom", "audio/x-wav"), false);
-  assert.equal(needsWavConversion("custom", "audio/mpeg"), false);
-  assert.equal(needsWavConversion("custom", "audio/flac"), false);
-
-  // Built-in providers accept Opus today; leaving them alone keeps uploads small.
-  for (const provider of ["openai", "groq", "mistral", "xai", "gemini", "corti", "tinfoil"]) {
-    assert.equal(needsWavConversion(provider, "audio/webm"), false);
-  }
+  assert.equal(needsWavConversion("audio/wav"), false);
+  assert.equal(needsWavConversion("audio/x-wav"), false);
+  assert.equal(needsWavConversion("audio/mpeg"), false);
+  assert.equal(needsWavConversion("audio/flac"), false);
 
   // Missing type must not trigger a pointless decode.
-  assert.equal(needsWavConversion("custom", undefined), false);
-  assert.equal(needsWavConversion("custom", ""), false);
+  assert.equal(needsWavConversion(undefined), false);
+  assert.equal(needsWavConversion(""), false);
 
   // An empty recording has nothing to decode; attempting it would only log a
   // misleading "re-encode failed" warning.
-  assert.equal(needsWavConversion("custom", "audio/webm", 0), false);
-  assert.equal(needsWavConversion("custom", "audio/webm", 1024), true);
+  assert.equal(needsWavConversion("audio/webm", 0), false);
+  assert.equal(needsWavConversion("audio/webm", 1024), true);
 });
 
 test("downmixToMono averages channels and passes mono through untouched", async () => {

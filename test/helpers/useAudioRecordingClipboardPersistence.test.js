@@ -27,9 +27,6 @@ export default class FakeAudioManager {
   saveTranscription(...args) {
     return globalThis.__saveClipboardPersistenceTranscription(...args);
   }
-  shouldUseStreaming() {
-    return false;
-  }
   cleanup() {}
 }
 `;

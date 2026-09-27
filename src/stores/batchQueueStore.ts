@@ -29,9 +29,6 @@ export interface QueueItem {
 export interface TranscribeOptions {
   transcription: FileTranscriptionConfig;
   folderId: number | null;
-  // Returns an i18n key under notes.upload.* when the file exceeds the
-  // mode-aware size limit, null when acceptable.
-  validateSize?: (sizeBytes: number) => string | null;
   generateTitle?: (text: string) => Promise<string | null>;
 }
 
@@ -45,11 +42,10 @@ export const useBatchQueueStore = create<BatchQueueStoreState>()(() => ({
   isProcessing: false,
 }));
 
-// Bumping the run id soft-cancels the drain loop; cloud and local uploads
-// additionally get a true backend abort via cancel-upload-transcription
-// (BYOK providers' in-flight IPC still can't be aborted). Either way the
-// orphaned run's late results are discarded on arrival while the UI unlocks
-// immediately.
+// Bumping the run id soft-cancels the drain loop; the in-flight upload
+// additionally gets a true backend abort via cancel-upload-transcription. Either
+// way the orphaned run's late results are discarded on arrival while the UI
+// unlocks immediately.
 let runId = 0;
 let activeUploadRequestId: string | null = null;
 
@@ -124,11 +120,7 @@ export function processBatchQueue(
   const run = ++runId;
   useBatchQueueStore.setState({ isProcessing: true });
 
-  const snapshotApiKey = transcribeOpts.transcription.getApiKey();
-  const transcription: FileTranscriptionConfig = {
-    ...transcribeOpts.transcription,
-    getApiKey: () => snapshotApiKey,
-  };
+  const transcription: FileTranscriptionConfig = { ...transcribeOpts.transcription };
 
   // Run-scoped writer: a cancelled run's late IPC results must not touch items.
   const updateItem = (id: string, updates: Partial<QueueItem>) => {
@@ -184,12 +176,6 @@ export function processBatchQueue(
 
       if (run !== runId) return;
 
-      const sizeError = transcribeOpts.validateSize?.(sizeBytes) ?? null;
-      if (sizeError) {
-        updateItem(item.id, { status: "error", error: sizeError });
-        return;
-      }
-
       updateItem(item.id, { status: "transcribing", progress: 0 });
 
       const requestId = crypto.randomUUID();
@@ -199,7 +185,7 @@ export function processBatchQueue(
         transcription,
         diarization,
         durationSeconds,
-        { requestId, timestamps: true }
+        { requestId }
       ).finally(() => {
         if (activeUploadRequestId === requestId) activeUploadRequestId = null;
       });

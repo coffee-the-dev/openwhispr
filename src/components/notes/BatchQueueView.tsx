@@ -7,7 +7,6 @@ import type { QueueItem } from "../../stores/batchQueueStore";
 
 interface BatchQueueViewProps {
   queue: QueueItem[];
-  byokMaxFileSizeMb: number;
   completedCount: number;
   failedCount: number;
   totalCount: number;
@@ -57,7 +56,6 @@ export function BatchWarningIndicator({
 
 export default function BatchQueueView({
   queue,
-  byokMaxFileSizeMb,
   completedCount,
   failedCount,
   totalCount,
@@ -156,15 +154,9 @@ export default function BatchQueueView({
             {item.status === "error" && item.error && (
               <span
                 className="text-[10px] text-destructive/50 truncate max-w-20"
-                title={t(`notes.upload.${item.error}`, {
-                  defaultValue: item.error,
-                  size: byokMaxFileSizeMb,
-                })}
+                title={t(`notes.upload.${item.error}`, { defaultValue: item.error })}
               >
-                {t(`notes.upload.${item.error}`, {
-                  defaultValue: item.error,
-                  size: byokMaxFileSizeMb,
-                })}
+                {t(`notes.upload.${item.error}`, { defaultValue: item.error })}
               </span>
             )}
 

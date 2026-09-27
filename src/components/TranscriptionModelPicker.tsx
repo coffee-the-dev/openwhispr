@@ -1,21 +1,14 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 import { useTranslation } from "react-i18next";
 import { Button } from "./ui/button";
-import { Input } from "./ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "./ui/select";
-import { Download, Trash2, Cloud, Lock, X, Zap, Check, CircleAlert } from "./icons";
+import { Download, Trash2, X, Zap, Check, CircleAlert } from "./icons";
 import { ProviderIcon } from "./ui/ProviderIcon";
 import { ProviderTabs } from "./ui/ProviderTabs";
-import ModelCardList from "./ui/ModelCardList";
 import { DownloadProgressBar } from "./ui/DownloadProgressBar";
-import ApiKeyInput from "./ui/ApiKeyInput";
 import { ConfirmDialog } from "./ui/dialog";
 import { useDialogs } from "../hooks/useDialogs";
 import { useModelDownload, type DownloadProgress } from "../hooks/useModelDownload";
 import {
-  getTranscriptionProviders,
-  getMeetingStreamingTranscriptionProviders,
-  TranscriptionProviderData,
   WHISPER_MODEL_INFO,
   PARAKEET_MODEL_INFO,
   isSherpaLocalProvider,
@@ -25,18 +18,13 @@ import {
   type ColorScheme,
   type ModelPickerStyles,
 } from "../utils/modelPickerStyles";
-import { useSettingsStore, type TranscriptionContext } from "../stores/settingsStore";
 import {
   LOCAL_ASR_ORGANIZATIONS,
   getASRModelOrganization,
   getSelectedASROrganization,
   usesParakeetManager,
 } from "../helpers/localASROrganization";
-import { STREAMING_ONLY_PROVIDERS } from "../helpers/transcriptionRoute";
-import { getRemoteProviderIcon } from "../utils/providerIcons";
 import { createExternalLinkHandler } from "../utils/externalLinks";
-import { API_ENDPOINTS, normalizeBaseUrl } from "../config/constants";
-import { GetApiKeyLink } from "./ui/GetApiKeyLink";
 import { getCachedPlatform } from "../utils/platform";
 import logger from "../utils/logger";
 import type { ParakeetCheckResult } from "../types/electron";
@@ -207,259 +195,30 @@ function LocalModelCard({
   );
 }
 
-interface CloudProviderOption {
-  id: string;
-  models?: ReadonlyArray<{ id: string }>;
-}
-
-// Returns null when the selection is one this scope offers; otherwise the
-// provider/model pair the picker should fall back to.
-function reconcileCloudProviderSelection({
-  selectedProvider,
-  selectedModel,
-  offeredProviders,
-  customOffered,
-  hasCustomUrl,
-}: {
-  selectedProvider: string;
-  selectedModel: string;
-  offeredProviders: readonly CloudProviderOption[];
-  customOffered: boolean;
-  hasCustomUrl: boolean;
-}): { provider: string; model: string } | null {
-  if (selectedProvider === "custom" && customOffered) return null;
-  const selected = offeredProviders.find((provider) => provider.id === selectedProvider);
-  if (selected) {
-    if (!selected.models?.length || selected.models.some((model) => model.id === selectedModel)) {
-      return null;
-    }
-    return { provider: selected.id, model: selected.models[0].id };
-  }
-  if (hasCustomUrl && customOffered) {
-    return { provider: "custom", model: selectedModel || "whisper-1" };
-  }
-  const first = offeredProviders[0];
-  if (!first) {
-    return customOffered ? { provider: "custom", model: selectedModel || "whisper-1" } : null;
-  }
-  return { provider: first.id, model: first.models?.[0]?.id ?? "" };
-}
-
 interface TranscriptionModelPickerProps {
-  /** Settings scope whose provider/model keys this picker edits. */
-  transcriptionContext?: TranscriptionContext;
-  selectedCloudProvider: string;
-  /**
-   * Scope reconciliation only — a user-driven pick goes through
-   * switchCloudTranscriptionProvider so the outgoing model survives the swap.
-   */
-  onCloudProviderSelect: (providerId: string) => void;
-  selectedCloudModel: string;
-  onCloudModelSelect: (modelId: string) => void;
   selectedLocalModel: string;
   onLocalModelSelect: (modelId: string, providerId?: string) => void;
   selectedLocalProvider?: string;
   onLocalProviderSelect?: (providerId: string) => void;
-  useLocalWhisper: boolean;
-  onModeChange: (useLocal: boolean) => void;
-  cloudTranscriptionBaseUrl?: string;
-  setCloudTranscriptionBaseUrl?: (url: string) => void;
   className?: string;
   variant?: "onboarding" | "settings";
-  mode?: "cloud" | "local";
-  streamingOnly?: boolean;
 }
-
-const CLOUD_PROVIDER_TABS = [
-  { id: "openai", name: "OpenAI" },
-  { id: "groq", name: "Groq" },
-  { id: "xai", name: "xAI" },
-  { id: "mistral", name: "Mistral" },
-  { id: "gemini", name: "Gemini" },
-  { id: "corti", name: "Corti" },
-  { id: "tinfoil", name: "Tinfoil" },
-  { id: "deepgram", name: "Deepgram" },
-  { id: "assemblyai", name: "AssemblyAI" },
-  { id: "custom", name: "Custom" },
-];
-
-interface ProviderCredentialField {
-  key:
-    | "openaiApiKey"
-    | "groqApiKey"
-    | "xaiApiKey"
-    | "mistralApiKey"
-    | "geminiApiKey"
-    | "cortiClientId"
-    | "cortiClientSecret"
-    | "cortiEnvironment"
-    | "cortiTenant"
-    | "tinfoilApiKey"
-    | "deepgramApiKey"
-    | "assemblyaiApiKey";
-  input: "secret" | "text" | "select";
-  labelKey?: string;
-  placeholder?: string;
-  options?: Array<{ value: string; label: string }>;
-}
-
-const PROVIDER_CREDENTIALS: Record<
-  string,
-  { consoleUrl: string; fields: ProviderCredentialField[] }
-> = {
-  openai: {
-    consoleUrl: "https://platform.openai.com/api-keys",
-    fields: [{ key: "openaiApiKey", input: "secret" }],
-  },
-  groq: {
-    consoleUrl: "https://console.groq.com/keys",
-    fields: [{ key: "groqApiKey", input: "secret" }],
-  },
-  xai: {
-    consoleUrl: "https://console.x.ai",
-    fields: [{ key: "xaiApiKey", input: "secret" }],
-  },
-  mistral: {
-    consoleUrl: "https://console.mistral.ai/api-keys",
-    fields: [{ key: "mistralApiKey", input: "secret" }],
-  },
-  gemini: {
-    consoleUrl: "https://aistudio.google.com/apikey",
-    fields: [{ key: "geminiApiKey", input: "secret" }],
-  },
-  corti: {
-    consoleUrl: "https://www.corti.ai/?utm_source=referral&utm_content=&utm_campaign=openwhispr",
-    fields: [
-      { key: "cortiClientId", input: "secret", labelKey: "transcription.corti.clientId" },
-      { key: "cortiClientSecret", input: "secret", labelKey: "transcription.corti.clientSecret" },
-      {
-        key: "cortiEnvironment",
-        input: "select",
-        labelKey: "transcription.corti.environment",
-        options: [
-          { value: "us", label: "US" },
-          { value: "eu", label: "EU" },
-        ],
-      },
-      {
-        key: "cortiTenant",
-        input: "text",
-        labelKey: "transcription.corti.tenant",
-        placeholder: "base",
-      },
-    ],
-  },
-  tinfoil: {
-    consoleUrl: "https://tinfoil.sh/inference?utm_source=referral&utm_campaign=openwhispr",
-    fields: [{ key: "tinfoilApiKey", input: "secret" }],
-  },
-  deepgram: {
-    consoleUrl: "https://console.deepgram.com/",
-    fields: [{ key: "deepgramApiKey", input: "secret" }],
-  },
-  assemblyai: {
-    consoleUrl: "https://www.assemblyai.com/dashboard/api-keys",
-    fields: [{ key: "assemblyaiApiKey", input: "secret" }],
-  },
-};
-
-const TINFOIL_AUDIO_DOCS_URL = "https://docs.tinfoil.sh/models/audio";
 
 const LOCAL_PROVIDER_TABS: Array<{ id: string; name: string; disabled?: boolean }> =
   LOCAL_ASR_ORGANIZATIONS;
 
-interface ModeToggleProps {
-  useLocalWhisper: boolean;
-  onModeChange: (useLocal: boolean) => void;
-}
-
-function ModeToggle({ useLocalWhisper, onModeChange }: ModeToggleProps) {
-  const { t } = useTranslation();
-  return (
-    <div className="relative flex p-0.5 rounded-lg bg-surface-1/80 backdrop-blur-xl dark:bg-surface-1 border border-border/70 dark:border-white/10 shadow-(--shadow-metallic-light) dark:shadow-(--shadow-metallic-dark)">
-      <div
-        className={`absolute top-0.5 bottom-0.5 w-[calc(50%-2px)] rounded-md bg-card border border-border/70 dark:border-border-subtle shadow-(--shadow-metallic-light) dark:shadow-(--shadow-metallic-dark) transition-transform duration-200 ease-out ${
-          useLocalWhisper
-            ? "translate-x-[calc(100%)] rtl:-translate-x-[calc(100%)]"
-            : "translate-x-0"
-        }`}
-      />
-      <button
-        onClick={() => onModeChange(false)}
-        className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md transition-colors duration-150 ${
-          !useLocalWhisper ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Cloud className="w-3.5 h-3.5" />
-        <span className="text-xs font-medium">{t("common.cloud")}</span>
-      </button>
-      <button
-        onClick={() => onModeChange(true)}
-        className={`relative z-10 flex-1 flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-md transition-colors duration-150 ${
-          useLocalWhisper ? "text-foreground" : "text-muted-foreground hover:text-foreground"
-        }`}
-      >
-        <Lock className="w-3.5 h-3.5" />
-        <span className="text-xs font-medium">{t("common.local")}</span>
-      </button>
-    </div>
-  );
-}
-
 export default function TranscriptionModelPicker({
-  transcriptionContext = "dictation",
-  selectedCloudProvider,
-  onCloudProviderSelect,
-  selectedCloudModel,
-  onCloudModelSelect,
   selectedLocalModel,
   onLocalModelSelect,
   selectedLocalProvider = "whisper",
   onLocalProviderSelect,
-  useLocalWhisper,
-  onModeChange,
-  cloudTranscriptionBaseUrl = "",
-  setCloudTranscriptionBaseUrl,
   className = "",
   variant = "settings",
-  mode,
-  streamingOnly = false,
 }: TranscriptionModelPickerProps) {
   const { t } = useTranslation();
-  const switchCloudTranscriptionProvider = useSettingsStore(
-    (s) => s.switchCloudTranscriptionProvider
-  );
-  const openaiApiKey = useSettingsStore((s) => s.openaiApiKey);
-  const setOpenaiApiKey = useSettingsStore((s) => s.setOpenaiApiKey);
-  const groqApiKey = useSettingsStore((s) => s.groqApiKey);
-  const setGroqApiKey = useSettingsStore((s) => s.setGroqApiKey);
-  const xaiApiKey = useSettingsStore((s) => s.xaiApiKey);
-  const setXaiApiKey = useSettingsStore((s) => s.setXaiApiKey);
-  const mistralApiKey = useSettingsStore((s) => s.mistralApiKey);
-  const setMistralApiKey = useSettingsStore((s) => s.setMistralApiKey);
-  const geminiApiKey = useSettingsStore((s) => s.geminiApiKey);
-  const setGeminiApiKey = useSettingsStore((s) => s.setGeminiApiKey);
-  const cortiClientId = useSettingsStore((s) => s.cortiClientId);
-  const setCortiClientId = useSettingsStore((s) => s.setCortiClientId);
-  const cortiClientSecret = useSettingsStore((s) => s.cortiClientSecret);
-  const setCortiClientSecret = useSettingsStore((s) => s.setCortiClientSecret);
-  const cortiEnvironment = useSettingsStore((s) => s.cortiEnvironment);
-  const setCortiEnvironment = useSettingsStore((s) => s.setCortiEnvironment);
-  const cortiTenant = useSettingsStore((s) => s.cortiTenant);
-  const setCortiTenant = useSettingsStore((s) => s.setCortiTenant);
-  const tinfoilApiKey = useSettingsStore((s) => s.tinfoilApiKey);
-  const setTinfoilApiKey = useSettingsStore((s) => s.setTinfoilApiKey);
-  const deepgramApiKey = useSettingsStore((s) => s.deepgramApiKey);
-  const setDeepgramApiKey = useSettingsStore((s) => s.setDeepgramApiKey);
-  const assemblyaiApiKey = useSettingsStore((s) => s.assemblyaiApiKey);
-  const setAssemblyaiApiKey = useSettingsStore((s) => s.setAssemblyaiApiKey);
-  const customTranscriptionApiKey = useSettingsStore((s) => s.customTranscriptionApiKey);
-  const setCustomTranscriptionApiKey = useSettingsStore((s) => s.setCustomTranscriptionApiKey);
-  const effectiveLocal = mode === "local" ? true : mode === "cloud" ? false : useLocalWhisper;
   const [localModels, setLocalModels] = useState<LocalModel[]>([]);
   const [parakeetModels, setParakeetModels] = useState<LocalModel[]>([]);
   const [parakeetCapability, setParakeetCapability] = useState<ParakeetCheckResult | null>(null);
-  const [browsedCloudProvider, setBrowsedCloudProvider] = useState<string | null>(null);
   const [internalLocalProvider, setInternalLocalProvider] = useState(
     getSelectedASROrganization(selectedLocalProvider, selectedLocalModel)
   );
@@ -527,28 +286,6 @@ export default function TranscriptionModelPicker({
   const { confirmDialog, showConfirmDialog, hideConfirmDialog } = useDialogs();
   const colorScheme: ColorScheme = variant === "settings" ? "purple" : "blue";
   const styles = useMemo(() => MODEL_PICKER_COLORS[colorScheme], [colorScheme]);
-  // streamingOnly is Note Recording's picker, so it offers the streaming
-  // providers note recording can actually run — not every streaming provider.
-  // Upload is always http-batch, and the realtime-only providers have no batch
-  // route at all (transcriptionRoute fails them closed), so they are hidden there.
-  const availableCloudProviders = useMemo(() => {
-    if (streamingOnly) return getMeetingStreamingTranscriptionProviders();
-    const providers = getTranscriptionProviders();
-    if (transcriptionContext !== "upload") return providers;
-    return providers.filter((provider) => !STREAMING_ONLY_PROVIDERS.has(provider.id));
-  }, [streamingOnly, transcriptionContext]);
-  const cloudProviders = availableCloudProviders;
-  const cloudProviderTabs = useMemo(() => {
-    const availableIds = new Set(availableCloudProviders.map((p) => p.id));
-    if (!streamingOnly) availableIds.add("custom");
-    const tabs = CLOUD_PROVIDER_TABS.filter((provider) => availableIds.has(provider.id)).map(
-      (provider) =>
-        provider.id === "custom"
-          ? { ...provider, name: t("transcription.customProvider") }
-          : provider
-    );
-    return tabs;
-  }, [availableCloudProviders, streamingOnly, t]);
   const localProviderTabs = useMemo(
     () =>
       LOCAL_PROVIDER_TABS.map((provider) =>
@@ -625,71 +362,6 @@ export default function TranscriptionModelPicker({
     return queuedLoad;
   }, []);
 
-  const effectiveCloudSelection = useMemo(() => {
-    // Every provider's URL counts as known, including the ones this scope does
-    // not offer: otherwise such a provider's stored URL reads as a custom
-    // endpoint and reconciliation would keep pointing "custom" at what this
-    // scope just denied.
-    const knownProviderUrls = new Set(
-      getTranscriptionProviders().map((provider) => normalizeBaseUrl(provider.baseUrl))
-    );
-    const normalizedBaseUrl = normalizeBaseUrl(cloudTranscriptionBaseUrl);
-    const hasCustomUrl = Boolean(
-      normalizedBaseUrl &&
-      normalizedBaseUrl !== normalizeBaseUrl(API_ENDPOINTS.TRANSCRIPTION_BASE) &&
-      !knownProviderUrls.has(normalizedBaseUrl)
-    );
-    // Reconcile null means the input needs no correction — echo the browsed
-    // input, not the committed pair, or browsing to the Custom tab (always
-    // reconciled as valid) would never display it.
-    return (
-      reconcileCloudProviderSelection({
-        selectedProvider: browsedCloudProvider ?? selectedCloudProvider,
-        selectedModel: selectedCloudModel,
-        offeredProviders: cloudProviders,
-        customOffered: !streamingOnly,
-        hasCustomUrl,
-      }) ?? {
-        provider: browsedCloudProvider ?? selectedCloudProvider,
-        model: selectedCloudModel,
-      }
-    );
-  }, [
-    cloudProviders,
-    cloudTranscriptionBaseUrl,
-    browsedCloudProvider,
-    selectedCloudProvider,
-    selectedCloudModel,
-    streamingOnly,
-  ]);
-  const displayedCloudProvider = effectiveCloudSelection.provider;
-  const displayedCloudModel = effectiveCloudSelection.model;
-
-  useEffect(() => {
-    if (
-      effectiveLocal ||
-      browsedCloudProvider ||
-      (effectiveCloudSelection.provider === selectedCloudProvider &&
-        effectiveCloudSelection.model === selectedCloudModel)
-    ) {
-      return;
-    }
-    if (effectiveCloudSelection.provider !== selectedCloudProvider) {
-      onCloudProviderSelect(effectiveCloudSelection.provider);
-    }
-    if (effectiveCloudSelection.model !== selectedCloudModel) {
-      onCloudModelSelect(effectiveCloudSelection.model);
-    }
-  }, [
-    effectiveCloudSelection,
-    effectiveLocal,
-    browsedCloudProvider,
-    onCloudModelSelect,
-    onCloudProviderSelect,
-    selectedCloudModel,
-    selectedCloudProvider,
-  ]);
-
   useEffect(() => {
     loadLocalModelsRef.current = loadLocalModels;
   }, [loadLocalModels]);
@@ -697,8 +369,6 @@ export default function TranscriptionModelPicker({
     loadParakeetModelsRef.current = loadParakeetModels;
   }, [loadParakeetModels]);
   useEffect(() => {
-    if (!effectiveLocal) return;
-
     if (internalLocalProvider === "whisper" && !hasLoadedRef.current) {
       hasLoadedRef.current = true;
       loadLocalModelsRef.current?.();
@@ -706,14 +376,7 @@ export default function TranscriptionModelPicker({
       hasLoadedParakeetRef.current = true;
       loadParakeetModelsRef.current?.();
     }
-  }, [effectiveLocal, internalLocalProvider]);
-
-  useEffect(() => {
-    if (effectiveLocal) return;
-
-    hasLoadedRef.current = false;
-    hasLoadedParakeetRef.current = false;
-  }, [effectiveLocal]);
+  }, [internalLocalProvider]);
 
   useEffect(() => {
     const handleModelsCleared = () => {
@@ -725,7 +388,7 @@ export default function TranscriptionModelPicker({
   }, [loadLocalModels, loadParakeetModels]);
 
   useEffect(() => {
-    if (!effectiveLocal || internalLocalProvider !== "whisper") return;
+    if (internalLocalProvider !== "whisper") return;
     if (getCachedPlatform() === "darwin") return;
     const detect = async () => {
       try {
@@ -751,7 +414,7 @@ export default function TranscriptionModelPicker({
       } catch {}
     };
     detect();
-  }, [effectiveLocal, internalLocalProvider]);
+  }, [internalLocalProvider]);
 
   useEffect(() => {
     if (!gpuDownloading || !gpuBackend) return;
@@ -766,7 +429,7 @@ export default function TranscriptionModelPicker({
   // actually running on, not just that a pack is on disk (a crashed GPU server
   // silently falls back to CPU). Faster poll while an activation is in flight.
   useEffect(() => {
-    if (!effectiveLocal || internalLocalProvider !== "whisper" || !gpuDownloaded) return;
+    if (internalLocalProvider !== "whisper" || !gpuDownloaded) return;
     const poll = () => {
       window.electronAPI
         ?.whisperServerStatus?.()
@@ -779,7 +442,7 @@ export default function TranscriptionModelPicker({
     poll();
     const id = setInterval(poll, gpuActivating ? 1000 : 5000);
     return () => clearInterval(id);
-  }, [effectiveLocal, internalLocalProvider, gpuDownloaded, gpuActivating]);
+  }, [internalLocalProvider, gpuDownloaded, gpuActivating]);
 
   // Safety valve: a Vulkan cold start can take up to ~2 minutes (see #698);
   // past that the live status or a fallback notification settles the state.
@@ -872,17 +535,6 @@ export default function TranscriptionModelPicker({
     onDownloadComplete: loadParakeetModels,
   });
 
-  const handleModeChange = useCallback(
-    (isLocal: boolean) => {
-      onModeChange(isLocal);
-    },
-    [onModeChange]
-  );
-
-  const handleCloudProviderChange = useCallback((providerId: string) => {
-    setBrowsedCloudProvider(providerId);
-  }, []);
-
   const handleLocalProviderChange = useCallback(
     (providerId: string) => {
       const tab = localProviderTabs.find((candidate) => candidate.id === providerId);
@@ -890,23 +542,6 @@ export default function TranscriptionModelPicker({
       setInternalLocalProvider(providerId);
     },
     [localProviderTabs]
-  );
-
-  const handleCloudModelSelect = useCallback(
-    (modelId: string) => {
-      if (displayedCloudProvider !== selectedCloudProvider) {
-        switchCloudTranscriptionProvider(transcriptionContext, displayedCloudProvider);
-      }
-      onCloudModelSelect(modelId);
-      setBrowsedCloudProvider(null);
-    },
-    [
-      displayedCloudProvider,
-      onCloudModelSelect,
-      selectedCloudProvider,
-      switchCloudTranscriptionProvider,
-      transcriptionContext,
-    ]
   );
 
   const handleWhisperModelSelect = useCallback(
@@ -929,35 +564,6 @@ export default function TranscriptionModelPicker({
     [onLocalModelSelect, onLocalProviderSelect]
   );
 
-  const handleBaseUrlBlur = useCallback(() => {
-    if (!setCloudTranscriptionBaseUrl || selectedCloudProvider !== "custom") return;
-
-    const trimmed = (cloudTranscriptionBaseUrl || "").trim();
-    if (!trimmed) return;
-
-    const normalized = normalizeBaseUrl(trimmed);
-
-    if (normalized && normalized !== cloudTranscriptionBaseUrl) {
-      setCloudTranscriptionBaseUrl(normalized);
-    }
-    if (normalized) {
-      for (const provider of cloudProviders) {
-        const providerNormalized = normalizeBaseUrl(provider.baseUrl);
-        if (normalized === providerNormalized) {
-          switchCloudTranscriptionProvider(transcriptionContext, provider.id);
-          break;
-        }
-      }
-    }
-  }, [
-    cloudTranscriptionBaseUrl,
-    selectedCloudProvider,
-    setCloudTranscriptionBaseUrl,
-    switchCloudTranscriptionProvider,
-    transcriptionContext,
-    cloudProviders,
-  ]);
-
   const handleDelete = useCallback(
     (modelId: string) => {
       showConfirmDialog({
@@ -978,59 +584,7 @@ export default function TranscriptionModelPicker({
     [showConfirmDialog, deleteModel, validateAndSelectModel, t]
   );
 
-  const currentCloudProvider = useMemo<TranscriptionProviderData | undefined>(
-    () => cloudProviders.find((p) => p.id === displayedCloudProvider),
-    [cloudProviders, displayedCloudProvider]
-  );
-
-  const providerCredentials =
-    PROVIDER_CREDENTIALS[displayedCloudProvider] ?? PROVIDER_CREDENTIALS.openai;
-  const credentialValues: Record<ProviderCredentialField["key"], string> = {
-    openaiApiKey,
-    groqApiKey,
-    xaiApiKey,
-    mistralApiKey,
-    geminiApiKey,
-    cortiClientId,
-    cortiClientSecret,
-    cortiEnvironment,
-    cortiTenant,
-    tinfoilApiKey,
-    deepgramApiKey,
-    assemblyaiApiKey,
-  };
-  const credentialSetters: Record<ProviderCredentialField["key"], (value: string) => void> = {
-    openaiApiKey: setOpenaiApiKey,
-    groqApiKey: setGroqApiKey,
-    xaiApiKey: setXaiApiKey,
-    mistralApiKey: setMistralApiKey,
-    geminiApiKey: setGeminiApiKey,
-    cortiClientId: setCortiClientId,
-    cortiClientSecret: setCortiClientSecret,
-    cortiEnvironment: setCortiEnvironment,
-    cortiTenant: setCortiTenant,
-    tinfoilApiKey: setTinfoilApiKey,
-    deepgramApiKey: setDeepgramApiKey,
-    assemblyaiApiKey: setAssemblyaiApiKey,
-  };
-
-  const cloudModelOptions = useMemo(() => {
-    if (!currentCloudProvider) return [];
-    const { icon, invertInDark } = getRemoteProviderIcon(displayedCloudProvider);
-    return currentCloudProvider.models.map((m) => ({
-      value: m.id,
-      label: m.name,
-      description: m.descriptionKey
-        ? t(m.descriptionKey, { defaultValue: m.description })
-        : m.description,
-      icon,
-      invertInDark,
-    }));
-  }, [currentCloudProvider, displayedCloudProvider, t]);
-
   const progressDisplay = useMemo(() => {
-    if (!effectiveLocal) return null;
-
     const activeDownloads = [
       ...Object.values(whisperDownloads),
       ...Object.values(parakeetDownloads),
@@ -1059,7 +613,7 @@ export default function TranscriptionModelPicker({
         })}
       </div>
     );
-  }, [effectiveLocal, whisperDownloads, parakeetDownloads]);
+  }, [whisperDownloads, parakeetDownloads]);
 
   const renderLocalModels = () => {
     const modelsToRender =
@@ -1197,278 +751,128 @@ export default function TranscriptionModelPicker({
 
   return (
     <div className={`space-y-2 ${className}`}>
-      {!mode && <ModeToggle useLocalWhisper={effectiveLocal} onModeChange={handleModeChange} />}
+      <ProviderTabs
+        providers={localProviderTabs}
+        selectedId={internalLocalProvider}
+        onSelect={handleLocalProviderChange}
+        colorScheme="purple"
+      />
 
-      {!effectiveLocal ? (
-        <>
-          {cloudProviderTabs.length > 0 && (
-            <ProviderTabs
-              providers={cloudProviderTabs}
-              selectedId={displayedCloudProvider}
-              onSelect={handleCloudProviderChange}
-              colorScheme="purple"
-              wrap
-            />
-          )}
+      {progressDisplay}
 
-          <div>
-            {displayedCloudProvider === "custom" ? (
-              <div className="space-y-2">
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-foreground">
-                    {t("transcription.endpointUrl")}
-                  </label>
-                  <Input
-                    dir="ltr"
-                    value={cloudTranscriptionBaseUrl}
-                    onChange={(e) => setCloudTranscriptionBaseUrl?.(e.target.value)}
-                    onBlur={handleBaseUrlBlur}
-                    placeholder="https://your-api.example.com/v1"
-                    className="h-8 text-sm"
-                  />
+      {gpuDownloading && internalLocalProvider === "whisper" && (
+        <div>
+          <DownloadProgressBar modelName="GPU acceleration" progress={gpuProgress} />
+          <div className="px-2.5 pb-1 flex justify-end">
+            <button
+              onClick={handleGpuCancel}
+              className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+            >
+              {t("gpu.cancel")}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {internalLocalProvider === "whisper" && !gpuDismissed && !gpuDownloading && gpuBackend && (
+        <div
+          className={`rounded-md border p-2.5 ${
+            gpuDownloaded && gpuFailed
+              ? "border-warning/40 bg-warning/5"
+              : "border-border bg-surface-1"
+          }`}
+        >
+          {gpuDownloaded ? (
+            gpuFailed ? (
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex min-w-0 items-start gap-2">
+                  <CircleAlert size={15} className="mt-0.5 shrink-0 text-warning" />
+                  <div className="min-w-0">
+                    <p className="text-xs font-medium text-foreground">
+                      {t("gpu.activationFailed")}
+                    </p>
+                    <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
+                      {t("gpu.activationFailedDescription")}
+                    </p>
+                    <Button onClick={handleGpuRetry} size="sm" className="mt-2 h-7 px-3 text-xs">
+                      {t("gpu.retryActivation")}
+                    </Button>
+                  </div>
                 </div>
-
-                <ApiKeyInput
-                  apiKey={customTranscriptionApiKey}
-                  setApiKey={setCustomTranscriptionApiKey}
-                  label={t("transcription.apiKeyOptional")}
-                  helpText=""
-                />
-
-                <div className="space-y-1.5">
-                  <label className="block text-xs font-medium text-foreground">
-                    {t("common.model")}
-                  </label>
-                  <Input
-                    dir="ltr"
-                    value={
-                      selectedCloudProvider === displayedCloudProvider ? displayedCloudModel : ""
-                    }
-                    onChange={(e) => handleCloudModelSelect(e.target.value)}
-                    placeholder="whisper-1"
-                    className="h-8 text-sm"
-                  />
-                </div>
-
-                {/azure\.com/i.test(cloudTranscriptionBaseUrl || "") && (
-                  <p className="text-xs text-muted-foreground">{t("transcription.azureHint")}</p>
-                )}
+                <Button
+                  onClick={handleGpuDelete}
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 shrink-0 px-2 text-xs text-muted-foreground hover:text-destructive"
+                >
+                  {t("gpu.remove")}
+                </Button>
               </div>
             ) : (
-              <div className="space-y-2">
-                {providerCredentials.fields.map((field, index) => (
-                  <div key={field.key} className="space-y-1.5">
-                    <div className="flex items-center justify-between">
-                      <label className="text-xs font-medium text-foreground">
-                        {field.labelKey ? t(field.labelKey) : t("common.apiKey")}
-                      </label>
-                      {index === 0 && (
-                        <GetApiKeyLink
-                          url={providerCredentials.consoleUrl}
-                          labelKey="transcription.getKey"
-                          className="text-xs text-primary/70 hover:text-primary transition-colors cursor-pointer"
-                        />
-                      )}
-                    </div>
-                    {field.input === "secret" ? (
-                      <ApiKeyInput
-                        apiKey={credentialValues[field.key]}
-                        setApiKey={credentialSetters[field.key]}
-                        label=""
-                        helpText=""
-                      />
-                    ) : field.input === "select" ? (
-                      <Select
-                        value={credentialValues[field.key]}
-                        onValueChange={credentialSetters[field.key]}
-                      >
-                        <SelectTrigger className="h-8 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {field.options?.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    ) : (
-                      <Input
-                        dir="ltr"
-                        value={credentialValues[field.key]}
-                        onChange={(e) => credentialSetters[field.key](e.target.value)}
-                        placeholder={field.placeholder}
-                        className="h-8 text-sm"
-                      />
-                    )}
-                  </div>
-                ))}
-
-                <div className="space-y-1.5">
-                  <label className="text-xs font-medium text-foreground">{t("common.model")}</label>
-                  <ModelCardList
-                    models={cloudModelOptions}
-                    selectedModel={
-                      selectedCloudProvider === displayedCloudProvider ? displayedCloudModel : ""
-                    }
-                    onModelSelect={handleCloudModelSelect}
-                    colorScheme="purple"
-                  />
-                  {displayedCloudProvider === "tinfoil" && (
-                    <p className="text-xs text-muted-foreground/70">
-                      {t("transcription.tinfoil.transportNote")}{" "}
-                      <a
-                        href={TINFOIL_AUDIO_DOCS_URL}
-                        onClick={createExternalLinkHandler(TINFOIL_AUDIO_DOCS_URL)}
-                        className="text-primary/70 hover:text-primary transition-colors"
-                      >
-                        {t("transcription.tinfoil.docsLink")}
-                      </a>
-                    </p>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-1.5">
+                  {gpuActivating ? (
+                    <>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0 bg-primary animate-pulse" />
+                      <span className="text-xs font-medium text-foreground">
+                        {t("gpu.activating")}
+                      </span>
+                    </>
+                  ) : gpuActive ? (
+                    <>
+                      <Check size={13} className="text-success" />
+                      <span className="text-xs font-medium text-foreground">{t("gpu.active")}</span>
+                    </>
+                  ) : (
+                    <>
+                      <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0 bg-primary" />
+                      <span className="text-xs font-medium text-foreground">{t("gpu.ready")}</span>
+                    </>
                   )}
                 </div>
-              </div>
-            )}
-          </div>
-        </>
-      ) : (
-        <>
-          <ProviderTabs
-            providers={localProviderTabs}
-            selectedId={internalLocalProvider}
-            onSelect={handleLocalProviderChange}
-            colorScheme="purple"
-          />
-
-          {progressDisplay}
-
-          {gpuDownloading && internalLocalProvider === "whisper" && (
-            <div>
-              <DownloadProgressBar modelName="GPU acceleration" progress={gpuProgress} />
-              <div className="px-2.5 pb-1 flex justify-end">
-                <button
-                  onClick={handleGpuCancel}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                <Button
+                  onClick={handleGpuDelete}
+                  size="sm"
+                  variant="ghost"
+                  className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
                 >
-                  {t("gpu.cancel")}
-                </button>
+                  {t("gpu.remove")}
+                </Button>
+              </div>
+            )
+          ) : (
+            <div className="flex items-start gap-2.5">
+              <Zap size={13} className="text-primary shrink-0 mt-0.5" />
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-medium text-foreground">
+                  {t("gpu.transcriptionBanner")}
+                </p>
+                <div className="flex items-center gap-2 mt-1.5">
+                  <Button
+                    onClick={handleGpuDownload}
+                    size="sm"
+                    variant="default"
+                    className="h-6 px-2.5 text-xs"
+                  >
+                    {t("gpu.enableButton")}
+                  </Button>
+                  <button
+                    onClick={() => setGpuDismissed(true)}
+                    className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                  >
+                    {t("gpu.dismiss")}
+                  </button>
+                </div>
               </div>
             </div>
           )}
-
-          {internalLocalProvider === "whisper" &&
-            !gpuDismissed &&
-            !gpuDownloading &&
-            gpuBackend && (
-              <div
-                className={`rounded-md border p-2.5 ${
-                  gpuDownloaded && gpuFailed
-                    ? "border-warning/40 bg-warning/5"
-                    : "border-border bg-surface-1"
-                }`}
-              >
-                {gpuDownloaded ? (
-                  gpuFailed ? (
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="flex min-w-0 items-start gap-2">
-                        <CircleAlert size={15} className="mt-0.5 shrink-0 text-warning" />
-                        <div className="min-w-0">
-                          <p className="text-xs font-medium text-foreground">
-                            {t("gpu.activationFailed")}
-                          </p>
-                          <p className="mt-0.5 text-xs leading-snug text-muted-foreground">
-                            {t("gpu.activationFailedDescription")}
-                          </p>
-                          <Button
-                            onClick={handleGpuRetry}
-                            size="sm"
-                            className="mt-2 h-7 px-3 text-xs"
-                          >
-                            {t("gpu.retryActivation")}
-                          </Button>
-                        </div>
-                      </div>
-                      <Button
-                        onClick={handleGpuDelete}
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 shrink-0 px-2 text-xs text-muted-foreground hover:text-destructive"
-                      >
-                        {t("gpu.remove")}
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-1.5">
-                        {gpuActivating ? (
-                          <>
-                            <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0 bg-primary animate-pulse" />
-                            <span className="text-xs font-medium text-foreground">
-                              {t("gpu.activating")}
-                            </span>
-                          </>
-                        ) : gpuActive ? (
-                          <>
-                            <Check size={13} className="text-success" />
-                            <span className="text-xs font-medium text-foreground">
-                              {t("gpu.active")}
-                            </span>
-                          </>
-                        ) : (
-                          <>
-                            <span className="inline-block w-1.5 h-1.5 rounded-full shrink-0 bg-primary" />
-                            <span className="text-xs font-medium text-foreground">
-                              {t("gpu.ready")}
-                            </span>
-                          </>
-                        )}
-                      </div>
-                      <Button
-                        onClick={handleGpuDelete}
-                        size="sm"
-                        variant="ghost"
-                        className="h-6 px-2 text-xs text-muted-foreground hover:text-destructive"
-                      >
-                        {t("gpu.remove")}
-                      </Button>
-                    </div>
-                  )
-                ) : (
-                  <div className="flex items-start gap-2.5">
-                    <Zap size={13} className="text-primary shrink-0 mt-0.5" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-foreground">
-                        {t("gpu.transcriptionBanner")}
-                      </p>
-                      <div className="flex items-center gap-2 mt-1.5">
-                        <Button
-                          onClick={handleGpuDownload}
-                          size="sm"
-                          variant="default"
-                          className="h-6 px-2.5 text-xs"
-                        >
-                          {t("gpu.enableButton")}
-                        </Button>
-                        <button
-                          onClick={() => setGpuDismissed(true)}
-                          className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                        >
-                          {t("gpu.dismiss")}
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-          <div>
-            {internalLocalProvider === "whisper" && renderLocalModels()}
-            {usesParakeetManager(internalLocalProvider) && renderParakeetModels()}
-          </div>
-        </>
+        </div>
       )}
+
+      <div>
+        {internalLocalProvider === "whisper" && renderLocalModels()}
+        {usesParakeetManager(internalLocalProvider) && renderParakeetModels()}
+      </div>
 
       <ConfirmDialog
         open={confirmDialog.open}

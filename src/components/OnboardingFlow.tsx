@@ -512,14 +512,11 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         }
       }
     } else if (currentStepId === "byok-dictation") {
-      settingsStore.setCloudTranscriptionForAllScopes({
-        useLocalWhisper: false,
-        cloudTranscriptionMode: "byok",
-      });
+      settingsStore.setTranscriptionModeForAllScopes("self-hosted");
     } else if (currentStepId === "byok-assistant") {
       applyReasoningSelectionToAllScopes("byok");
     } else if (currentStepId === "local-dictation") {
-      settingsStore.setCloudTranscriptionForAllScopes({ useLocalWhisper: true });
+      settingsStore.setTranscriptionModeForAllScopes("local");
     } else if (currentStepId === "local-assistant") {
       applyReasoningSelectionToAllScopes("local");
     }

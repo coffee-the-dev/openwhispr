@@ -60,12 +60,10 @@ export const DOWNLOAD_ERROR_KEYS: Record<string, string> = {
 // back to the raw main-process message.
 const TRANSCRIPTION_ERROR_KEYS: Record<string, string> = {
   NO_SPEECH_DETECTED: "noSpeechDetected",
-  CHUNK_LOSS_EXCEEDED: "chunkLossExceeded",
   CUSTOM_ENDPOINT_INVALID: "customEndpointInvalid",
-  STREAMING_ONLY_PROVIDER: "streamingOnlyProvider",
 };
 
-// A coded failure arrives either as a returned result (BYOK, local) or as a
+// A coded failure arrives either as a returned result (self-hosted, local) or as a
 // thrown error, so every call site resolves the key from whichever shape it is
 // holding.
 export function transcriptionErrorKey(failure: unknown): string | undefined {

@@ -19,7 +19,6 @@ export default class FakeAudioManager {
   }
   setCallbacks(callbacks) { this.callbacks = callbacks; }
   getState() { return {}; }
-  shouldUseStreaming() { return false; }
   async safePaste() {
     this.pasteCalls += 1;
     return globalThis.__cleanupFallbackPasteOutcome?.pasted === true;

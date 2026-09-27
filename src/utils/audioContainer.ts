@@ -1,10 +1,8 @@
 // Chromium's MediaRecorder only offers WebM/Opus (and MP4/AAC) on the desktop
 // platforms we ship, so every dictation reaches the upload path as WebM. Most
 // OpenAI-compatible transcription backends accept that, but some decode the
-// bytes themselves and reject anything outside WAV/MP3/FLAC — Azure's
-// MAI-Transcribe, reached through OpenRouter, is one. Those endpoints are only
-// selectable via the Custom provider, so the conversion is scoped there and
-// every built-in provider keeps sending Opus untouched.
+// bytes themselves and reject anything outside WAV/MP3/FLAC. A self-hosted
+// server may be either kind, so its uploads are re-encoded.
 //
 // The rejection is by content, not by labelling: renaming the part or rewriting
 // its Content-Type does not help, so the audio has to actually be re-encoded.
@@ -24,12 +22,7 @@ const TARGET_SAMPLE_RATE = 16000;
 // uploaded and rejected.
 const ACCEPTED_CONTAINERS = ["wav", "x-wav", "wave", "mpeg", "mp3", "flac"];
 
-export function needsWavConversion(
-  provider: string | undefined,
-  mimeType: string | undefined,
-  size?: number
-): boolean {
-  if (provider !== "custom") return false;
+export function needsWavConversion(mimeType: string | undefined, size?: number): boolean {
   // An empty recording has nothing to decode; converting it would only turn a
   // silent no-op into a spurious "re-encode failed" warning.
   if (size === 0) return false;

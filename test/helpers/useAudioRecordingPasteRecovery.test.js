@@ -65,11 +65,9 @@ async function mount(t) {
       "/utils/logger": "export default { debug() {}, info() {}, warn() {}, error() {} };",
       "/utils/visualFrame": "export async function waitForVisualFrames() {}",
       "/helpers/audioManager": `export default class FakeAudioManager {
-      constructor() { this.voiceAgentRequested=false; this.sttConfig={success:true}; this.streamingFinalText="raw words"; this.starts=0; this.saves=0; globalThis.__pasteRecoveryManager=this; }
+      constructor() { this.voiceAgentRequested=false; this.starts=0; this.saves=0; globalThis.__pasteRecoveryManager=this; }
       setCallbacks(callbacks) { this.callbacks=callbacks; }
       getState() { return { isRecording:false, isProcessing:false }; }
-      shouldUseStreaming() { return false; }
-      isSttConfigStale() { return false; }
       setVoiceAgentRequested(value) { this.voiceAgentRequested=value; }
       setAssistantSelectionContext() {}
       setTranslationRequested() {}
@@ -314,7 +312,12 @@ for (const transition of ["close", "newer error", "start", "complete", "unmount"
 test("generic errors retain Retry, transcript and the platform's paste guidance", async (t) => {
   const h = await mount(t);
   const guidance = "Please install xdotool or paste manually with Ctrl+V.";
-  await h.error({ title: "Paste Error", code: "PASTE_FAILED", description: guidance });
+  await h.error({
+    title: "Paste Error",
+    code: "PASTE_FAILED",
+    description: guidance,
+    transcript: "raw words",
+  });
   const card = h.toasts.at(-1);
   assert.equal(card.title, "Couldn't paste automatically");
   assert.equal(card.actions[0].icon, "retry");
@@ -328,10 +331,10 @@ test("generic errors retain Retry, transcript and the platform's paste guidance"
   assert.equal(h.hidden.length, 1);
 });
 
-test("completed batch and streaming dictations are saved when automatic paste is denied", async (t) => {
+test("completed local and self-hosted dictations are saved when automatic paste is denied", async (t) => {
   const h = await mount(t);
   h.settings.setState({ autoPasteEnabled: true });
-  for (const source of ["local", "streaming"]) {
+  for (const source of ["local", "self-hosted"]) {
     await React.act(async () =>
       h.manager.callbacks.onTranscriptionComplete({
         success: true,

@@ -69,7 +69,6 @@ test("persisted cloud and provider modes move to local or self-hosted once", asy
     });
     assert.equal(state.transcriptionMode, "local");
     assert.equal(state.useLocalWhisper, true);
-    assert.equal(state.cloudTranscriptionMode, "byok");
     assert.equal(state.uploadTranscriptionMode, "local");
     assert.equal(state.uploadUseLocalWhisper, true);
     assert.equal(state.meetingTranscriptionMode, "local");
@@ -189,7 +188,8 @@ test("persisted cloud and provider modes move to local or self-hosted once", asy
       transcriptionMode: "providers",
       useLocalWhisper: "false",
     });
-    assert.equal(state.transcriptionMode, "providers");
-    assert.equal(state.useLocalWhisper, false);
+    assert.equal(localStorage.getItem("transcriptionMode"), "providers", "not rewritten");
+    // The store reads any mode but self-hosted as local.
+    assert.equal(state.transcriptionMode, "local");
   });
 });

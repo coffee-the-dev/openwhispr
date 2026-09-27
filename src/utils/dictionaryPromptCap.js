@@ -1,17 +1,13 @@
-import { usesTranscriptionKeywords } from "./dictionaryKeywords.js";
+// Budget for the custom-dictionary STT prompt on the self-hosted HTTP path,
+// plus the decoder window the dictionary UI warns against. One place, so the
+// request bound and the warning cannot drift apart.
 
-// Per-provider budgets for the custom-dictionary STT prompt on the direct-API
-// path, plus the decoder window the dictionary UI warns against. One place, so
-// the request bound and the warning cannot drift apart.
-
-// Groq rejects prompts > 896 chars (incl. when reached via a custom endpoint);
-// 890 leaves margin for UTF-16 vs codepoint counting drift.
-export const GROQ_PROMPT_CHARS = 890;
-
-// Whisper-family decoders (whisper-1, Groq's whisper-large-v3, whisper.cpp) read
-// at most 223 prompt tokens and keep the TAIL of anything longer, silently. 900
+// Whisper-family decoders (whisper-1, whisper-large-v3, whisper.cpp) read at
+// most 223 prompt tokens and keep the TAIL of anything longer, silently. 900
 // chars is the historical client-side cut for them: it is well above what the
 // decoder reads, so it only bounds the request, never which words survive.
+// Self-hosted servers take whatever model name the user typed, and most of them
+// are Whisper-family under a name that never says "whisper".
 export const WHISPER_PROMPT_CHARS = 900;
 
 // What the decoder's 223-token window is actually worth in characters. A
@@ -21,30 +17,6 @@ export const WHISPER_PROMPT_CHARS = 900;
 // rare proper nouns fragment. Used to warn in the UI, not to trim: the true
 // budget is tokens, and no character count is right for every language.
 export const WHISPER_DECODER_PROMPT_CHARS = 550;
-
-// gpt-transcribe's prompt carries only the dictionary terms past its keyword cap
-// (see dictionaryKeywords). OpenAI accepts exactly 65,536 characters there
-// (65,537 is a 400), and neither channel adds measurable latency.
-export const TRANSCRIPTION_OVERFLOW_PROMPT_CHARS = 65536;
-
-// gpt-4o-transcribe / gpt-4o-mini-transcribe are LLMs, not Whisper decoders: no
-// 223-token prompt window, and verified live to 40k chars. The only hard limit
-// is the 16k-token context shared with the audio, so this is a guard against an
-// absurd list crowding out a long dictation, not a limit anyone should hit.
-export const TRANSCRIBE_PROMPT_CHARS = 8000;
-
-// Only the 4o transcribe family is known to read past a Whisper decoder's
-// prompt window, so it earns the generous budget, as does gpt-transcribe's
-// keyword overflow. Everything else falls back to the Whisper budget on
-// purpose: custom and self-hosted endpoints take whatever model name the user
-// typed, and most of those servers are Whisper-family under a name that never
-// says "whisper".
-export function dictionaryPromptLimit({ provider = "", endpoint = "", model = "" } = {}) {
-  if (provider === "groq" || endpoint.includes("api.groq.com")) return GROQ_PROMPT_CHARS;
-  if (model.toLowerCase().startsWith("gpt-4o")) return TRANSCRIBE_PROMPT_CHARS;
-  if (usesTranscriptionKeywords(model)) return TRANSCRIPTION_OVERFLOW_PROMPT_CHARS;
-  return WHISPER_PROMPT_CHARS;
-}
 
 // Cuts at the last comma inside the budget so no entry is sent half-spelled.
 // Returns the (possibly shorter) prompt plus what changed, for logging.

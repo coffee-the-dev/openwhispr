@@ -32,12 +32,6 @@ export default class FakeAudioManager {
   setTranslationRequested(value) {
     this.translationRequested = value;
   }
-  shouldUseStreaming() {
-    return false;
-  }
-  isSttConfigStale() {
-    return false;
-  }
   prepareMicCapture() {}
   cancelPreparedMicCapture() {}
   cleanup() {}

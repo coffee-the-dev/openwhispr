@@ -10,7 +10,6 @@ test("safePaste preserves exact final text only for confirmed permission recover
   const errors = [];
   const manager = createManager({
     onError: (error) => errors.push(error),
-    streamingFinalText: "raw text",
   });
   const text = "  Final translated text\nwith spacing  ";
   const options = { restoreClipboard: false };

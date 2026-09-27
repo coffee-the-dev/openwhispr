@@ -35,7 +35,7 @@ test("startup repairs transcription routing that disagrees with the selected mod
     return useSettingsStore.getState();
   };
 
-  await t.test("a Local selection whose flag says cloud routes locally again", async () => {
+  await t.test("a Local selection whose flag says remote routes locally again", async () => {
     const state = await load({
       ...MIGRATED,
       ...COPIES_DONE,
@@ -47,51 +47,8 @@ test("startup repairs transcription routing that disagrees with the selected mod
     assert.equal(storage.getItem("useLocalWhisper"), "true");
   });
 
-  for (const mode of ["providers", "self-hosted"]) {
-    await t.test(
-      `a stale "${mode}" mode over managed-cloud routing goes back to BYOK`,
-      async () => {
-        const state = await load({
-          ...MIGRATED,
-          ...COPIES_DONE,
-          transcriptionMode: mode,
-          useLocalWhisper: "false",
-          cloudTranscriptionMode: "openwhispr",
-        });
-        assert.equal(state.cloudTranscriptionMode, "byok");
-        assert.equal(storage.getItem("cloudTranscriptionMode"), "byok");
-        assert.equal(state.transcriptionMode, mode);
-        assert.equal(state.useLocalWhisper, false, "still cloud, just the user's own");
-      }
-    );
-  }
-
-  await t.test("the upload scope's cloud mode is repaired too", async () => {
-    const state = await load({
-      ...MIGRATED,
-      ...COPIES_DONE,
-      uploadTranscriptionMode: "providers",
-      uploadUseLocalWhisper: "false",
-      uploadCloudTranscriptionMode: "openwhispr",
-    });
-    assert.equal(state.uploadCloudTranscriptionMode, "byok");
-    assert.equal(storage.getItem("uploadCloudTranscriptionMode"), "byok");
-  });
-
-  await t.test("an OpenWhispr Cloud mode never claims a BYOK credential", async () => {
-    const state = await load({
-      ...MIGRATED,
-      ...COPIES_DONE,
-      transcriptionMode: "openwhispr",
-      useLocalWhisper: "false",
-      cloudTranscriptionMode: "byok",
-    });
-    assert.equal(state.cloudTranscriptionMode, "byok");
-    assert.equal(storage.getItem("cloudTranscriptionMode"), "byok");
-  });
-
   for (const mode of ["openwhispr", "providers", "self-hosted", "enterprise", "nonsense"]) {
-    await t.test(`a stale "${mode}" mode never flips a local user to the cloud`, async () => {
+    await t.test(`a stale "${mode}" mode never flips a local user off the device`, async () => {
       const state = await load({
         ...MIGRATED,
         ...COPIES_DONE,
@@ -144,45 +101,6 @@ test("startup repairs transcription routing that disagrees with the selected mod
     assert.equal(storage.getItem("uploadUseLocalWhisper"), "true");
   });
 
-  await t.test("the local rule leaves the cloud mode alone", async () => {
-    await load({
-      ...MIGRATED,
-      ...COPIES_DONE,
-      transcriptionMode: "local",
-      useLocalWhisper: "false",
-      cloudTranscriptionMode: "openwhispr",
-    });
-    assert.equal(storage.getItem("useLocalWhisper"), "true", "repaired");
-    assert.equal(storage.getItem("cloudTranscriptionMode"), "openwhispr", "untouched");
-  });
-
-  for (const mode of ["openwhispr", "enterprise", "nonsense"]) {
-    await t.test(`a "${mode}" mode never triggers the cloud rule`, async () => {
-      await load({
-        ...MIGRATED,
-        ...COPIES_DONE,
-        transcriptionMode: mode,
-        useLocalWhisper: "false",
-        cloudTranscriptionMode: "openwhispr",
-      });
-      assert.equal(storage.getItem("cloudTranscriptionMode"), "openwhispr");
-    });
-  }
-
-  await t.test("both rules can fire on one launch", async () => {
-    const state = await load({
-      ...MIGRATED,
-      ...COPIES_DONE,
-      transcriptionMode: "local",
-      useLocalWhisper: "false",
-      uploadTranscriptionMode: "providers",
-      uploadUseLocalWhisper: "false",
-      uploadCloudTranscriptionMode: "openwhispr",
-    });
-    assert.equal(state.useLocalWhisper, true, "dictation repaired toward local");
-    assert.equal(state.uploadCloudTranscriptionMode, "byok", "upload repaired toward BYOK");
-  });
-
   // The only case that lets migrateMeetingFollowFlags run; every other seeds it done.
   await t.test("the meeting one-shot copy still runs, and is still not repaired", async () => {
     await load({
@@ -202,13 +120,10 @@ test("startup repairs transcription routing that disagrees with the selected mod
       ...COPIES_DONE,
       transcriptionMode: "local",
       useLocalWhisper: "true",
-      cloudTranscriptionMode: "byok",
     });
     assert.equal(state.useLocalWhisper, true);
     assert.deepEqual(
-      writes.filter((key) =>
-        /UseLocalWhisper$|^useLocalWhisper$|CloudTranscriptionMode$/.test(key)
-      ),
+      writes.filter((key) => /UseLocalWhisper$|^useLocalWhisper$/.test(key)),
       [],
       "no routing key should be written when the profile already agrees"
     );

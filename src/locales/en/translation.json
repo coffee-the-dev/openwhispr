@@ -356,9 +356,6 @@
         "modelIdPlaceholder": "Write your model ID",
         "testConnection": "Test Connection",
         "proceed": "Proceed",
-        "clinical": "FOR CLINICAL TRANSCRIPTION",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
         "runTest": "Run Test",
         "testing": "Testing…",
         "connected": "Connected",
@@ -522,13 +519,10 @@
   "streaming": {
     "errors": {
       "cloudUnreachable": {
-        "title": "Can't reach OpenWhispr Cloud",
-        "generic": "Network request failed. Check your connection.",
         "dnsBlocked": "DNS isn't resolving openwhispr.com — an ad blocker or filter may be blocking it.",
         "refused": "Connection was refused — likely a firewall or VPN.",
         "timeout": "Network timed out — VPN, captive portal, or unstable connection.",
-        "tls": "TLS handshake failed — check your system clock or for a corporate proxy.",
-        "fallback": "Cloud unreachable — using local engine for this recording."
+        "tls": "TLS handshake failed — check your system clock or for a corporate proxy."
       }
     }
   },
@@ -713,26 +707,13 @@
       "requiresMacOS": "macOS {{version}}+",
       "unavailable": "Unavailable"
     },
-    "apiKeyOptional": "API Key (Optional)",
-    "getKey": "Get key ->",
-    "endpointUrl": "Endpoint URL",
-    "azureHint": "Azure AI Foundry: enter your resource endpoint (e.g. https://your-resource.cognitiveservices.azure.com) and set Model to your exact deployment name.",
-    "customProvider": "Custom",
     "fallback": {
       "whisperModelDescription": "Model",
       "parakeetModelDescription": "NVIDIA Parakeet Model"
     },
     "whisperModels": "Whisper Models",
     "corti": {
-      "clientId": "Client ID",
-      "clientSecret": "Client Secret",
-      "apiKey": "API Key",
-      "environment": "Data Region",
-      "tenant": "Tenant"
-    },
-    "tinfoil": {
-      "transportNote": "Tinfoil streams using Voxtral Mini 4B, and batches with Voxtral Small 24B.",
-      "docsLink": "Read the docs"
+      "apiKey": "API Key"
     }
   },
   "hooks": {
@@ -744,10 +725,6 @@
         "screenContextSkipped": "Screen Context Skipped",
         "dailyLimitReached": "Daily Limit Reached",
         "providerRateLimited": "Provider Rate Limited"
-      },
-      "fallback": {
-        "title": "Fallback Mode",
-        "description": "Local Whisper failed. Used OpenAI API instead."
       },
       "errorActions": {
         "viewTranscript": "View Transcript"
@@ -770,20 +747,14 @@
         "description": "Part of the recording couldn't be transcribed."
       },
       "errorDescriptions": {
-        "sessionExpired": "Your OpenWhispr Cloud session is unavailable. Please sign in again from Settings.",
-        "offline": "You're offline. Cloud transcription requires an internet connection.",
         "dailyLimitReached": "You've reached today's transcription limit. Try again tomorrow or upgrade your plan.",
         "providerRateLimited": "Your transcription provider rate-limited the request. Wait a moment and try again.",
-        "chunkLoss": "A network problem lost too much of the recording. Re-transcribe it from History.",
         "agentReasoningFailed": "Your voice assistant couldn't process the command — the raw transcript was inserted instead.",
         "screenContextSkipped": "The screenshot couldn't be sent, so your command ran without screen context.",
-        "customEndpointInvalid": "Your custom transcription endpoint is not configured or its URL is invalid. Update it in Settings → Speech to Text.",
-        "managedTranscriptionUnavailable": "Managed transcription is not available right now. Try again in a moment.",
-        "streamingOnlyProvider": "This provider only supports live transcription. Choose another provider for file uploads and retries.",
-        "providerKeyMissing": "No API key is set for your transcription provider. Add it in Settings → Speech to Text.",
         "cleanupTruncated": "The AI model ran out of room before it finished cleaning up your dictation.",
         "cleanupDuplicated": "AI cleanup repeated the transcript. The original text was kept.",
-        "cleanupEmptyReply": "The AI model returned an empty reply instead of the cleaned-up dictation."
+        "cleanupEmptyReply": "The AI model returned an empty reply instead of the cleaned-up dictation.",
+        "selfHostedNotConfigured": "Your self-hosted transcription server is not configured or its URL is invalid. Update it in Settings → Speech to Text."
       },
       "translationFallback": {
         "unreachableTitle": "Translation unavailable",
@@ -1653,10 +1624,8 @@
       "customSetupDescription": "Use your own provider and API key.",
       "description": "Choose how OpenWhispr transcribes your voice",
       "modes": {
-        "providers": "Cloud Providers",
         "local": "Local",
         "selfHosted": "Self-Hosted",
-        "providersDesc": "Bring your own API key.",
         "localDesc": "On-device models. Fully private.",
         "selfHostedDesc": "Your own server on your network."
       },
@@ -1664,18 +1633,6 @@
       "openwhisprCloudDescription": "Reliable accuracy. No setup needed.",
       "title": "Speech to Text",
       "toasts": {
-        "switchedCloud": {
-          "description": "Transcription will use OpenWhispr's cloud service.",
-          "title": "Switched to OpenWhispr Cloud"
-        },
-        "switchedCustom": {
-          "description": "Configure your own provider and API key.",
-          "title": "Switched to Custom Setup"
-        },
-        "switchedProviders": {
-          "title": "Cloud Providers",
-          "description": "Using your own API keys."
-        },
         "switchedLocal": {
           "title": "On Device",
           "description": "Transcription runs locally on your machine."
@@ -1683,10 +1640,6 @@
         "switchedSelfHosted": {
           "title": "Self-Hosted",
           "description": "Using your own server."
-        },
-        "switchedEnterprise": {
-          "title": "Enterprise cloud selected",
-          "description": "Dictation now uses the transcription deployment your organization manages."
         }
       },
       "gpuDevice": {
@@ -1783,24 +1736,6 @@
         "medium": "High quality",
         "large": "Best quality, slowest",
         "turbo": "Fast with good quality"
-      },
-      "transcription": {
-        "openai_gpt_transcribe": "Newest, most accurate transcription",
-        "openai_gpt_4o_mini_transcribe": "Fast and accurate transcription",
-        "openai_gpt_4o_transcribe": "Most accurate transcription",
-        "openai_whisper_1": "Original Whisper model",
-        "groq_whisper_large_v3": "High accuracy speech recognition",
-        "groq_whisper_large_v3_turbo": "216x real-time speed",
-        "mistral_voxtral_mini_latest": "Fast multilingual transcription",
-        "gemini_3_5_transcribe": "Google's Gemini speech-to-text",
-        "gemini_3_5_transcribe_live": "Realtime streaming speech-to-text",
-        "corti_transcribe": "Clinical-grade medical transcription",
-        "xai_grok_stt": "High-accuracy speech recognition by xAI",
-        "tinfoil_voxtral": "Verifiably private transcription",
-        "deepgram_nova_3": "Deepgram's most accurate realtime model",
-        "assemblyai_universal_streaming_english": "Immutable realtime transcripts, English",
-        "assemblyai_universal_streaming_multilingual": "Immutable realtime transcripts, multilingual",
-        "assemblyai_universal_3_5_pro": "Highest accuracy realtime, 18 languages"
       },
       "cloud": {
         "openai_gpt_5_2": "Strong reasoning model",
@@ -2163,9 +2098,7 @@
       "title": "Meeting Notes",
       "description": "Transcriptions & structured summaries",
       "back": "Back",
-      "unsupportedSelfHosted": "Note Recording can't use a self-hosted endpoint yet. Open Settings and choose Local or a streaming provider.",
-      "unsupportedProvider": "Note Recording can't use {{provider}} for live transcription. Open Settings and choose Local or a streaming provider.",
-      "noProviderSelected": "No provider is selected for Note Recording. Open Settings and choose Local or a streaming provider.",
+      "unsupportedSelfHosted": "Note Recording can't use a self-hosted endpoint yet. Open Settings and choose Local.",
       "systemAudioSilent": {
         "title": "No meeting audio detected yet",
         "description": "Only your microphone has picked up sound so far. On a video call? Check that the meeting audio is playing on this computer and isn't muted. Recording in person? You can ignore this — your microphone captures the room."
@@ -2551,8 +2484,7 @@
       "transcribing": "Transcribing...",
       "thinking": "Thinking...",
       "typeMessage": "Type a message...",
-      "send": "Send",
-      "voiceDraftStreamingOnly": "Voice input isn't available with your transcription provider: it only supports live dictation. Choose another provider in Settings → Speech to Text."
+      "send": "Send"
     },
     "tools": {
       "search_notesName": "Search notes",
@@ -2735,8 +2667,7 @@
     "speaker": {
       "you": "You",
       "others": "Others"
-    },
-    "missingAudio": "[missing audio {{from}}-{{to}}]"
+    }
   },
   "dictationTranslation": {
     "title": "Dictation Translation",

@@ -65,7 +65,7 @@ test("every remote dictionary-echo discard is tagged", async () => {
   // attempt recovery first; its failure behavior is covered end-to-end by the
   // AudioManager dictionary-prompt recovery suite.
   const guards = source.match(/isDictionaryEcho\([\s\S]{0,400}?throw [^;]+;/g) ?? [];
-  assert.ok(guards.length >= 3, `expected the known remote echo guards, found ${guards.length}`);
+  assert.ok(guards.length >= 1, `expected the self-hosted echo guard, found ${guards.length}`);
   for (const guard of guards) {
     assert.match(guard, /throw dictionaryEchoError\(\);/);
   }

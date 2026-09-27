@@ -13,7 +13,6 @@ import {
   Sun,
   Moon,
   Monitor,
-  Key,
   Cpu,
   Network,
   Sparkles,
@@ -88,6 +87,7 @@ import type {
   GpuDevice,
   LocalTranscriptionProvider,
   InferenceMode,
+  TranscriptionMode,
 } from "../types/electron";
 import logger from "../utils/logger";
 import { SettingsRow, InferenceModeSelector } from "./ui/SettingsSection";
@@ -98,7 +98,6 @@ import { loadFolders, initializeNotesTree } from "../stores/noteStore.js";
 import { formatBytes } from "../utils/formatBytes";
 import { clearMissingLocalModelSelections, useSettingsStore } from "../stores/settingsStore";
 import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
-import { getTranscriptionProvider } from "../models/ModelRegistry";
 import { supportsLiveTranscriptionPreview } from "../utils/transcriptionPreview";
 
 export type SettingsSectionType =
@@ -128,8 +127,6 @@ const RETENTION_DAY_OPTIONS = [1, 7, 14, 30, 60, 90];
 
 const RETENTION_SELECT_CLASS =
   "h-7 rounded border border-border/70 bg-surface-1/80 px-2.5 text-xs font-medium text-foreground shadow-sm backdrop-blur-sm hover:border-border-hover hover:bg-surface-2/70 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-200";
-
-const noop = () => {};
 
 function SettingsPanel({
   children,
@@ -417,15 +414,8 @@ function GranolaImportSection({
 }
 
 interface TranscriptionSectionProps {
-  cloudTranscriptionMode: string;
-  setCloudTranscriptionMode: (mode: string) => void;
-  useLocalWhisper: boolean;
   setUseLocalWhisper: (value: boolean) => void;
   updateTranscriptionSettings: (settings: { useLocalWhisper: boolean }) => void;
-  cloudTranscriptionProvider: string;
-  setCloudTranscriptionProvider: (provider: string) => void;
-  cloudTranscriptionModel: string;
-  setCloudTranscriptionModel: (model: string) => void;
   localTranscriptionProvider: string;
   setLocalTranscriptionProvider: (provider: LocalTranscriptionProvider) => void;
   whisperModel: string;
@@ -434,10 +424,8 @@ interface TranscriptionSectionProps {
   setParakeetModel: (model: string) => void;
   cohereModel: string;
   setCohereModel: (model: string) => void;
-  cloudTranscriptionBaseUrl?: string;
-  setCloudTranscriptionBaseUrl: (url: string) => void;
-  transcriptionMode: InferenceMode;
-  setTranscriptionMode: (mode: InferenceMode) => void;
+  transcriptionMode: TranscriptionMode;
+  setTranscriptionMode: (mode: TranscriptionMode) => void;
   remoteTranscriptionUrl: string;
   setRemoteTranscriptionUrl: (url: string) => void;
   remoteTranscriptionModel: string;
@@ -453,15 +441,8 @@ interface TranscriptionSectionProps {
 }
 
 function TranscriptionSection({
-  cloudTranscriptionMode,
-  setCloudTranscriptionMode,
-  useLocalWhisper,
   setUseLocalWhisper,
   updateTranscriptionSettings,
-  cloudTranscriptionProvider,
-  setCloudTranscriptionProvider,
-  cloudTranscriptionModel,
-  setCloudTranscriptionModel,
   localTranscriptionProvider,
   setLocalTranscriptionProvider,
   whisperModel,
@@ -470,8 +451,6 @@ function TranscriptionSection({
   setParakeetModel,
   cohereModel,
   setCohereModel,
-  cloudTranscriptionBaseUrl,
-  setCloudTranscriptionBaseUrl,
   transcriptionMode,
   setTranscriptionMode,
   remoteTranscriptionUrl,
@@ -483,13 +462,7 @@ function TranscriptionSection({
   toast,
 }: TranscriptionSectionProps) {
   const { t } = useTranslation();
-  const transcriptionModes: InferenceModeOption[] = [
-    {
-      id: "providers",
-      label: t("settingsPage.transcription.modes.providers"),
-      description: t("settingsPage.transcription.modes.providersDesc"),
-      icon: <Key className="w-4 h-4" />,
-    },
+  const transcriptionModes: InferenceModeOption<TranscriptionMode>[] = [
     {
       id: "local",
       label: t("settingsPage.transcription.modes.local"),
@@ -504,23 +477,20 @@ function TranscriptionSection({
     },
   ];
   const effectiveTranscriptionMode = transcriptionMode;
-  const handleTranscriptionModeSelect = (mode: InferenceMode) => {
+  const handleTranscriptionModeSelect = (mode: TranscriptionMode) => {
     if (mode === effectiveTranscriptionMode) return;
     setTranscriptionMode(mode);
     setUseLocalWhisper(mode === "local");
     updateTranscriptionSettings({ useLocalWhisper: mode === "local" });
-    setCloudTranscriptionMode(mode === "openwhispr" ? "openwhispr" : "byok");
 
-    const toastKey = {
-      openwhispr: "switchedCloud",
-      providers: "switchedProviders",
-      local: "switchedLocal",
-      "self-hosted": "switchedSelfHosted",
-      enterprise: "switchedEnterprise",
-    }[mode];
+    const local = mode === "local";
     toast({
-      title: t(`settingsPage.transcription.toasts.${toastKey}.title`),
-      description: t(`settingsPage.transcription.toasts.${toastKey}.description`),
+      title: local
+        ? t("settingsPage.transcription.toasts.switchedLocal.title")
+        : t("settingsPage.transcription.toasts.switchedSelfHosted.title"),
+      description: local
+        ? t("settingsPage.transcription.toasts.switchedLocal.description")
+        : t("settingsPage.transcription.toasts.switchedSelfHosted.description"),
       variant: "success",
       duration: 3000,
     });
@@ -540,15 +510,7 @@ function TranscriptionSection({
     [localTranscriptionProvider, setParakeetModel, setCohereModel, setWhisperModel]
   );
 
-  const selectedCloudModelStreams = Boolean(
-    getTranscriptionProvider(cloudTranscriptionProvider)?.models.some(
-      (model) => model.id === cloudTranscriptionModel && model.streaming
-    )
-  );
-  const previewAvailable = supportsLiveTranscriptionPreview(
-    effectiveTranscriptionMode,
-    selectedCloudModelStreams
-  );
+  const previewAvailable = supportsLiveTranscriptionPreview(effectiveTranscriptionMode);
 
   const renderPreviewToggle = () => (
     <SettingsPanel>
@@ -563,12 +525,8 @@ function TranscriptionSection({
     </SettingsPanel>
   );
 
-  const renderTranscriptionPicker = (mode?: "cloud" | "local") => (
+  const renderTranscriptionPicker = () => (
     <TranscriptionModelPicker
-      selectedCloudProvider={cloudTranscriptionProvider}
-      onCloudProviderSelect={setCloudTranscriptionProvider}
-      selectedCloudModel={cloudTranscriptionModel}
-      onCloudModelSelect={setCloudTranscriptionModel}
       selectedLocalModel={
         localTranscriptionProvider === "nvidia"
           ? parakeetModel
@@ -579,19 +537,6 @@ function TranscriptionSection({
       onLocalModelSelect={handleLocalModelSelect}
       selectedLocalProvider={localTranscriptionProvider}
       onLocalProviderSelect={setLocalTranscriptionProvider}
-      useLocalWhisper={mode === "local" || (!mode && useLocalWhisper)}
-      onModeChange={
-        mode
-          ? noop
-          : (isLocal) => {
-              setUseLocalWhisper(isLocal);
-              updateTranscriptionSettings({ useLocalWhisper: isLocal });
-              if (isLocal) setCloudTranscriptionMode("byok");
-            }
-      }
-      mode={mode}
-      cloudTranscriptionBaseUrl={cloudTranscriptionBaseUrl}
-      setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
       variant="settings"
     />
   );
@@ -604,8 +549,7 @@ function TranscriptionSection({
         onSelect={handleTranscriptionModeSelect}
       />
 
-      {effectiveTranscriptionMode === "providers" && renderTranscriptionPicker("cloud")}
-      {effectiveTranscriptionMode === "local" && renderTranscriptionPicker("local")}
+      {effectiveTranscriptionMode === "local" && renderTranscriptionPicker()}
       {previewAvailable && renderPreviewToggle()}
 
       {effectiveTranscriptionMode === "self-hosted" && (
@@ -932,7 +876,6 @@ export default function SettingsPage({
   } = useDialogs();
 
   const {
-    useLocalWhisper,
     whisperModel,
     localTranscriptionProvider,
     parakeetModel,
@@ -940,9 +883,6 @@ export default function SettingsPage({
     uiLanguage,
     preferredLanguage,
     chineseScriptPreference,
-    cloudTranscriptionProvider,
-    cloudTranscriptionModel,
-    cloudTranscriptionBaseUrl,
     useCleanupModel,
     dictationKey,
     activationMode,
@@ -960,9 +900,6 @@ export default function SettingsPage({
     setLocalTranscriptionProvider,
     setParakeetModel,
     setCohereModel,
-    setCloudTranscriptionProvider,
-    setCloudTranscriptionModel,
-    setCloudTranscriptionBaseUrl,
     setUseCleanupModel,
     setDictationKey,
     meetingKey,
@@ -973,8 +910,6 @@ export default function SettingsPage({
     setAutoLearnCorrections,
     updateTranscriptionSettings,
     updateCleanupSettings,
-    cloudTranscriptionMode,
-    setCloudTranscriptionMode,
     transcriptionMode,
     setTranscriptionMode,
     remoteTranscriptionUrl,
@@ -3071,15 +3006,8 @@ EOF`,
             renderDictation={() => (
               <div className="space-y-6">
                 <TranscriptionSection
-                  cloudTranscriptionMode={cloudTranscriptionMode}
-                  setCloudTranscriptionMode={setCloudTranscriptionMode}
-                  useLocalWhisper={useLocalWhisper}
                   setUseLocalWhisper={setUseLocalWhisper}
                   updateTranscriptionSettings={updateTranscriptionSettings}
-                  cloudTranscriptionProvider={cloudTranscriptionProvider}
-                  setCloudTranscriptionProvider={setCloudTranscriptionProvider}
-                  cloudTranscriptionModel={cloudTranscriptionModel}
-                  setCloudTranscriptionModel={setCloudTranscriptionModel}
                   localTranscriptionProvider={localTranscriptionProvider}
                   setLocalTranscriptionProvider={setLocalTranscriptionProvider}
                   whisperModel={whisperModel}
@@ -3088,8 +3016,6 @@ EOF`,
                   setParakeetModel={setParakeetModel}
                   cohereModel={cohereModel}
                   setCohereModel={setCohereModel}
-                  cloudTranscriptionBaseUrl={cloudTranscriptionBaseUrl}
-                  setCloudTranscriptionBaseUrl={setCloudTranscriptionBaseUrl}
                   transcriptionMode={transcriptionMode}
                   setTranscriptionMode={setTranscriptionMode}
                   remoteTranscriptionUrl={remoteTranscriptionUrl}

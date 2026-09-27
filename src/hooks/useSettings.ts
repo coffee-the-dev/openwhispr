@@ -12,6 +12,7 @@ import type {
   LocalTranscriptionProvider,
   InferenceMode,
   SelfHostedType,
+  TranscriptionMode,
 } from "../types/electron";
 import type { Snippet } from "../utils/snippets";
 
@@ -22,23 +23,17 @@ export interface TranscriptionSettings {
   localTranscriptionProvider: LocalTranscriptionProvider;
   parakeetModel: string;
   cohereModel: string;
-  allowOpenAIFallback: boolean;
   allowLocalFallback: boolean;
   fallbackWhisperModel: string;
   preferredLanguage: string;
   /** When transcription language is Auto, force Chinese output script. See #975. */
   chineseScriptPreference: ChineseScriptPreference;
-  cloudTranscriptionProvider: string;
-  cloudTranscriptionModel: string;
-  cloudTranscriptionBaseUrl?: string;
-  cloudTranscriptionMode: string;
-  transcriptionMode: InferenceMode;
+  transcriptionMode: TranscriptionMode;
   remoteTranscriptionType: SelfHostedType;
   remoteTranscriptionUrl: string;
   remoteTranscriptionModel: string;
   customDictionary: string[];
   snippets: Snippet[];
-  assemblyAiStreaming: boolean;
   showTranscriptionPreview: boolean;
 }
 
@@ -84,15 +79,9 @@ export interface ApiKeySettings {
   anthropicApiKey: string;
   geminiApiKey: string;
   groqApiKey: string;
-  xaiApiKey: string;
-  mistralApiKey: string;
   openrouterApiKey: string;
-  cortiClientId: string;
-  cortiClientSecret: string;
   cortiApiKey: string;
   tinfoilApiKey: string;
-  deepgramApiKey: string;
-  assemblyaiApiKey: string;
   customTranscriptionApiKey: string;
   cleanupCustomApiKey: string;
 }
@@ -251,16 +240,11 @@ function useSettingsInternal() {
     localTranscriptionProvider: store.localTranscriptionProvider,
     parakeetModel: store.parakeetModel,
     cohereModel: store.cohereModel,
-    allowOpenAIFallback: store.allowOpenAIFallback,
     allowLocalFallback: store.allowLocalFallback,
     fallbackWhisperModel: store.fallbackWhisperModel,
     preferredLanguage: store.preferredLanguage,
     chineseScriptPreference: store.chineseScriptPreference,
-    cloudTranscriptionProvider: store.cloudTranscriptionProvider,
-    cloudTranscriptionModel: store.cloudTranscriptionModel,
-    cloudTranscriptionBaseUrl: store.cloudTranscriptionBaseUrl,
     cleanupCloudBaseUrl: store.cleanupCloudBaseUrl,
-    cloudTranscriptionMode: store.cloudTranscriptionMode,
     cleanupCloudMode: store.cleanupCloudMode,
     transcriptionMode: store.transcriptionMode,
     remoteTranscriptionType: store.remoteTranscriptionType,
@@ -271,8 +255,6 @@ function useSettingsInternal() {
     customDictionary: store.customDictionary,
     snippets: store.snippets,
     setSnippets: store.setSnippets,
-    assemblyAiStreaming: store.assemblyAiStreaming,
-    setAssemblyAiStreaming: store.setAssemblyAiStreaming,
     autoGenerateNoteTitle: store.autoGenerateNoteTitle,
     setAutoGenerateNoteTitle: store.setAutoGenerateNoteTitle,
     useCleanupModel: store.useCleanupModel,
@@ -283,12 +265,8 @@ function useSettingsInternal() {
     anthropicApiKey: store.anthropicApiKey,
     geminiApiKey: store.geminiApiKey,
     groqApiKey: store.groqApiKey,
-    xaiApiKey: store.xaiApiKey,
-    mistralApiKey: store.mistralApiKey,
     openrouterApiKey: store.openrouterApiKey,
     tinfoilApiKey: store.tinfoilApiKey,
-    deepgramApiKey: store.deepgramApiKey,
-    assemblyaiApiKey: store.assemblyaiApiKey,
     dictationKey: store.dictationKey,
     meetingKey: store.meetingKey,
     voiceAgentKey: store.voiceAgentKey,
@@ -301,15 +279,10 @@ function useSettingsInternal() {
     setLocalTranscriptionProvider: store.setLocalTranscriptionProvider,
     setParakeetModel: store.setParakeetModel,
     setCohereModel: store.setCohereModel,
-    setAllowOpenAIFallback: store.setAllowOpenAIFallback,
     setAllowLocalFallback: store.setAllowLocalFallback,
     setFallbackWhisperModel: store.setFallbackWhisperModel,
     setPreferredLanguage: store.setPreferredLanguage,
     setChineseScriptPreference: store.setChineseScriptPreference,
-    setCloudTranscriptionProvider: store.setCloudTranscriptionProvider,
-    setCloudTranscriptionModel: store.setCloudTranscriptionModel,
-    setCloudTranscriptionBaseUrl: store.setCloudTranscriptionBaseUrl,
-    setCloudTranscriptionMode: store.setCloudTranscriptionMode,
     setCleanupCloudBaseUrl: store.setCleanupCloudBaseUrl,
     setCleanupCloudMode: store.setCleanupCloudMode,
     setTranscriptionMode: store.setTranscriptionMode,
@@ -328,7 +301,6 @@ function useSettingsInternal() {
     setAnthropicApiKey: store.setAnthropicApiKey,
     setGeminiApiKey: store.setGeminiApiKey,
     setGroqApiKey: store.setGroqApiKey,
-    setMistralApiKey: store.setMistralApiKey,
     customTranscriptionApiKey: store.customTranscriptionApiKey,
     setCustomTranscriptionApiKey: store.setCustomTranscriptionApiKey,
     cleanupCustomApiKey: store.cleanupCustomApiKey,

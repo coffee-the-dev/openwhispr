@@ -356,9 +356,6 @@
         "modelIdPlaceholder": "填寫你的模型 ID",
         "testConnection": "測試連線",
         "proceed": "繼續",
-        "clinical": "用於臨床逐字稿",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
         "runTest": "執行測試",
         "testing": "測試中…",
         "connected": "已連接",
@@ -522,13 +519,10 @@
   "streaming": {
     "errors": {
       "cloudUnreachable": {
-        "title": "無法連線到 OpenWhispr Cloud",
-        "generic": "網路請求失敗，請檢查你的連線。",
         "dnsBlocked": "DNS 無法解析 openwhispr.com — 廣告封鎖器或過濾器可能阻擋了它。",
         "refused": "連線被拒絕 — 可能是防火牆或 VPN。",
         "timeout": "網路逾時 — VPN、強制入口頁或連線不穩定。",
-        "tls": "TLS 交握失敗 — 請檢查系統時鐘或企業 Proxy。",
-        "fallback": "Cloud 無法連線 — 本次錄音將使用本機引擎。"
+        "tls": "TLS 交握失敗 — 請檢查系統時鐘或企業 Proxy。"
       }
     }
   },
@@ -713,26 +707,13 @@
       "requiresMacOS": "macOS {{version}}+",
       "unavailable": "無法使用"
     },
-    "apiKeyOptional": "API Key（選填）",
-    "getKey": "取得金鑰 ->",
-    "endpointUrl": "端點 URL",
-    "azureHint": "Azure AI Foundry：輸入你的資源端點（例如 https://your-resource.cognitiveservices.azure.com），並將「模型」設定為你的確切部署名稱。",
-    "customProvider": "自訂",
     "fallback": {
       "whisperModelDescription": "模型",
       "parakeetModelDescription": "NVIDIA Parakeet 模型"
     },
     "whisperModels": "Whisper 模型",
     "corti": {
-      "clientId": "用戶端 ID",
-      "clientSecret": "用戶端密鑰",
-      "apiKey": "API Key",
-      "environment": "資料區域",
-      "tenant": "租戶"
-    },
-    "tinfoil": {
-      "transportNote": "Tinfoil 串流轉錄使用 Voxtral Mini 4B，批次轉錄使用 Voxtral Small 24B。",
-      "docsLink": "查看文件"
+      "apiKey": "API Key"
     }
   },
   "hooks": {
@@ -744,10 +725,6 @@
         "screenContextSkipped": "已略過螢幕內容",
         "dailyLimitReached": "已達每日上限",
         "providerRateLimited": "服務商速率限制"
-      },
-      "fallback": {
-        "title": "備援模式",
-        "description": "本機 Whisper 失敗，已改用 OpenAI API。"
       },
       "errorActions": {
         "viewTranscript": "查看轉錄"
@@ -770,20 +747,14 @@
         "description": "部分錄音內容無法轉錄。"
       },
       "errorDescriptions": {
-        "sessionExpired": "OpenWhispr Cloud 工作階段無法使用。請至「設定」重新登入。",
-        "offline": "你目前離線。雲端轉錄需要網際網路連線。",
         "dailyLimitReached": "已達今日的轉錄上限。請明天再試或升級你的方案。",
         "providerRateLimited": "你的轉錄服務商限制了請求頻率。請稍候再試。",
-        "chunkLoss": "網路問題導致錄音大部分遺失。請從歷史記錄中重新轉錄。",
         "agentReasoningFailed": "語音助理無法處理該指令，已改為插入原始逐字稿。",
         "screenContextSkipped": "截圖無法傳送，因此已在沒有螢幕內容的情況下執行你的指令。",
-        "customEndpointInvalid": "自訂轉錄端點未設定或其 URL 無效。請在「設定 → 語音轉文字」中更新。",
-        "managedTranscriptionUnavailable": "託管轉錄目前無法使用。請稍候再試。",
-        "streamingOnlyProvider": "此服務商僅支援即時轉錄。請為檔案上傳與重試選擇其他服務商。",
-        "providerKeyMissing": "尚未為您的轉錄服務商設定 API 金鑰。請在「設定 → 語音轉文字」中新增。",
         "cleanupTruncated": "AI 模型的輸出長度達到上限，未能完成聽寫清理。",
         "cleanupDuplicated": "AI 清理重複了轉錄內容。已保留原始文字。",
-        "cleanupEmptyReply": "AI 模型傳回空白回應，沒有產生清理後的文字。"
+        "cleanupEmptyReply": "AI 模型傳回空白回應，沒有產生清理後的文字。",
+        "selfHostedNotConfigured": "自架轉錄伺服器未設定或其 URL 無效。請在「設定 → 語音轉文字」中更新。"
       },
       "translationFallback": {
         "unreachableTitle": "翻譯無法使用",
@@ -1613,10 +1584,8 @@
       "customSetupDescription": "使用你自己的供應商和 API Key。",
       "description": "選擇 OpenWhispr 轉錄語音的方式",
       "modes": {
-        "providers": "雲端供應商",
         "local": "本機",
         "selfHosted": "自架主機",
-        "providersDesc": "使用你自己的 API Key。",
         "localDesc": "裝置端模型，完全私密。",
         "selfHostedDesc": "你的伺服器，在你的網路上。"
       },
@@ -1624,18 +1593,6 @@
       "openwhisprCloudDescription": "準確可靠，無需設定。",
       "title": "語音轉文字",
       "toasts": {
-        "switchedCloud": {
-          "description": "轉錄將使用 OpenWhispr 雲端服務。",
-          "title": "已切換至 OpenWhispr Cloud"
-        },
-        "switchedCustom": {
-          "description": "設定你自己的供應商和 API Key。",
-          "title": "已切換至自訂設定"
-        },
-        "switchedProviders": {
-          "title": "雲端供應商",
-          "description": "使用你自己的 API Key。"
-        },
         "switchedLocal": {
           "title": "本機執行",
           "description": "轉錄在你的裝置上本機執行。"
@@ -1643,10 +1600,6 @@
         "switchedSelfHosted": {
           "title": "自架主機",
           "description": "使用你自己的伺服器。"
-        },
-        "switchedEnterprise": {
-          "title": "已選擇企業雲端",
-          "description": "聽寫現在使用貴組織管理的轉錄部署。"
         }
       },
       "gpuDevice": {
@@ -1739,24 +1692,6 @@
         "medium": "高品質",
         "large": "最佳品質，速度最慢",
         "turbo": "速度快且品質佳"
-      },
-      "transcription": {
-        "openai_gpt_transcribe": "最新、最準確的轉錄",
-        "openai_gpt_4o_mini_transcribe": "快速且準確的轉錄",
-        "openai_gpt_4o_transcribe": "最高準確度的轉錄",
-        "openai_whisper_1": "原始 Whisper 模型",
-        "groq_whisper_large_v3_turbo": "216 倍即時速度",
-        "groq_whisper_large_v3": "Large v3 模型，快速且精準",
-        "mistral_voxtral_mini_latest": "快速多語言轉錄",
-        "gemini_3_5_transcribe": "Google Gemini 語音轉文字",
-        "gemini_3_5_transcribe_live": "即時串流語音轉文字",
-        "corti_transcribe": "臨床級醫療轉錄",
-        "xai_grok_stt": "xAI 高精度語音辨識",
-        "tinfoil_voxtral": "可驗證的私密轉錄",
-        "deepgram_nova_3": "Deepgram 最精準的即時模型",
-        "assemblyai_universal_streaming_english": "不會變動的即時轉錄（英文）",
-        "assemblyai_universal_streaming_multilingual": "不會變動的即時轉錄（多語言）",
-        "assemblyai_universal_3_5_pro": "最高精度即時轉錄，支援 18 種語言"
       },
       "cloud": {
         "openai_gpt_5_2": "強大的推理模型",
@@ -2060,9 +1995,7 @@
       "title": "會議筆記",
       "description": "轉錄與結構化摘要",
       "back": "返回",
-      "unsupportedSelfHosted": "筆記錄音尚不支援自架端點。請開啟設定，選擇本機或支援串流的服務商。",
-      "unsupportedProvider": "筆記錄音無法使用 {{provider}} 進行即時轉錄。請開啟設定，選擇本機或支援串流的服務商。",
-      "noProviderSelected": "尚未為筆記錄音選擇服務商。請開啟設定，選擇本機或支援串流的服務商。",
+      "unsupportedSelfHosted": "筆記錄音尚不支援自架端點。請開啟設定，選擇本機。",
       "systemAudioSilent": {
         "title": "尚未偵測到會議音訊",
         "description": "到目前為止，只有您的麥克風收到聲音。正在進行視訊通話？請檢查會議音訊是否正在此電腦上播放且未被靜音。正在進行現場錄音？您可以忽略此提示——您的麥克風會收錄房間內的聲音。"
@@ -2511,8 +2444,7 @@
       "transcribing": "正在轉錄...",
       "thinking": "正在思考...",
       "typeMessage": "輸入訊息...",
-      "send": "傳送",
-      "voiceDraftStreamingOnly": "目前的轉錄服務商僅支援即時聽寫，因此無法使用語音輸入。請在「設定 → 語音轉文字」中選擇其他服務商。"
+      "send": "傳送"
     },
     "tools": {
       "search_notesName": "搜尋筆記",
@@ -2735,8 +2667,7 @@
     "speaker": {
       "you": "你",
       "others": "其他人"
-    },
-    "missingAudio": "[音訊缺失 {{from}}-{{to}}]"
+    }
   },
   "dictationTranslation": {
     "title": "聽寫翻譯",

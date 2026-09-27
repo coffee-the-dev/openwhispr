@@ -9,8 +9,6 @@ const { BYOK_API_KEYS } = require("../config/secretKeys");
 
 const SECRET_KEYS = [
   ...BYOK_API_KEYS.map((k) => k.env),
-  "CORTI_CLIENT_ID",
-  "CORTI_CLIENT_SECRET",
   "CUSTOM_TRANSCRIPTION_API_KEY",
   "CUSTOM_CLEANUP_API_KEY",
   "BEDROCK_ACCESS_KEY_ID",
@@ -21,6 +19,17 @@ const SECRET_KEYS = [
 ];
 
 const SECRET_KEY_SET = new Set(SECRET_KEYS);
+
+// Secrets for providers this build no longer has. Their encrypted files are
+// deleted at startup rather than left behind in userData.
+const RETIRED_SECRET_KEYS = [
+  "XAI_API_KEY",
+  "MISTRAL_API_KEY",
+  "DEEPGRAM_API_KEY",
+  "ASSEMBLYAI_API_KEY",
+  "CORTI_CLIENT_ID",
+  "CORTI_CLIENT_SECRET",
+];
 
 const PERSISTED_KEYS = [
   ...SECRET_KEYS,
@@ -103,6 +112,7 @@ class EnvironmentManager {
       await this._migrateToSecureStorage();
     }
     await this._loadAllSecrets();
+    await Promise.all(RETIRED_SECRET_KEYS.map((name) => this._deleteSecretKey(name)));
   }
 
   _getMigrationSentinelPath() {
@@ -261,22 +271,6 @@ class EnvironmentManager {
       delete process.env[envVarName];
     }
     return { success: true };
-  }
-
-  getCortiClientId() {
-    return this._getKey("CORTI_CLIENT_ID");
-  }
-
-  saveCortiClientId(key) {
-    return this._saveKey("CORTI_CLIENT_ID", key);
-  }
-
-  getCortiClientSecret() {
-    return this._getKey("CORTI_CLIENT_SECRET");
-  }
-
-  saveCortiClientSecret(key) {
-    return this._saveKey("CORTI_CLIENT_SECRET", key);
   }
 
   getCustomTranscriptionKey() {

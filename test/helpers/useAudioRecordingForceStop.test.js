@@ -38,12 +38,6 @@ export default class FakeAudioManager {
   saveTranscription() {
     return Promise.resolve(true);
   }
-  shouldUseStreaming() {
-    return false;
-  }
-  isSttConfigStale() {
-    return false;
-  }
   cleanup() {}
 }
 `;

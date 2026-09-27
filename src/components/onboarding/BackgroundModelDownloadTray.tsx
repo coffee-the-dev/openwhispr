@@ -80,7 +80,7 @@ function activatePendingLocalModel(kind: PendingLocalModelKind, modelId: string)
       store.setLocalTranscriptionProvider("whisper");
       store.setWhisperModel(selection.modelId);
     }
-    store.setCloudTranscriptionForAllScopes({ useLocalWhisper: true });
+    store.setTranscriptionModeForAllScopes("local");
     return;
   }
 

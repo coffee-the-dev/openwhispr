@@ -9,10 +9,6 @@
         "dailyLimitReached": "تم الوصول إلى الحد اليومي",
         "providerRateLimited": "تم تقييد المعدل من قبل المزود"
       },
-      "fallback": {
-        "title": "الوضع الاحتياطي",
-        "description": "فشل Whisper المحلي. تم استخدام OpenAI API بدلًا من ذلك."
-      },
       "errorActions": {
         "viewTranscript": "عرض النص المفرَّغ"
       },
@@ -34,20 +30,14 @@
         "description": "تعذر تفريغ جزء من التسجيل."
       },
       "errorDescriptions": {
-        "sessionExpired": "جلسة OpenWhispr Cloud الخاصة بك غير متاحة. يرجى تسجيل الدخول مرة أخرى من الإعدادات.",
-        "offline": "أنت غير متصل بالإنترنت. يتطلب التفريغ السحابي اتصالًا بالإنترنت.",
         "dailyLimitReached": "لقد وصلت إلى حد التفريغ اليومي. حاول مرة أخرى غدًا أو قم بترقية خطتك.",
         "providerRateLimited": "قام مزود التفريغ بتقييد معدل الطلب. انتظر لحظة وحاول مرة أخرى.",
-        "chunkLoss": "أدت مشكلة في الشبكة إلى فقدان جزء كبير من التسجيل. أعد تفريغه من السجل.",
         "agentReasoningFailed": "لم يتمكن المساعد الصوتي من معالجة الأمر — تم إدراج النص المفرَّغ الخام بدلًا من ذلك.",
         "screenContextSkipped": "تعذر إرسال لقطة الشاشة، لذا تم تشغيل أمرك بدون سياق الشاشة.",
-        "customEndpointInvalid": "نقطة نهاية التفريغ المخصصة غير مهيأة أو عنوان URL الخاص بها غير صالح. حدّثها في الإعدادات ← تحويل الكلام إلى نص (Speech to Text).",
-        "managedTranscriptionUnavailable": "التفريغ المُدار غير متاح حاليًا. أعد المحاولة بعد لحظات.",
-        "streamingOnlyProvider": "هذا المزود يدعم التفريغ المباشر فقط. اختر مزودًا آخر لرفع الملفات وإعادة المحاولة.",
-        "providerKeyMissing": "لم يتم تعيين مفتاح API لمزود التفريغ الخاص بك. أضفه في الإعدادات ← تحويل الكلام إلى نص (Speech to Text).",
         "cleanupTruncated": "نفدت مساحة الإخراج لدى نموذج الذكاء الاصطناعي قبل أن يُكمل تنقيح إملائك.",
         "cleanupDuplicated": "كرر تنقيح الذكاء الاصطناعي النص. تم الاحتفاظ بالنص الأصلي.",
-        "cleanupEmptyReply": "أرجع نموذج الذكاء الاصطناعي ردًا فارغًا بدلًا من الإملاء المنقَّح."
+        "cleanupEmptyReply": "أرجع نموذج الذكاء الاصطناعي ردًا فارغًا بدلًا من الإملاء المنقَّح.",
+        "selfHostedNotConfigured": "خادم التفريغ المستضاف ذاتيًا غير مهيأ أو عنوان URL الخاص به غير صالح. حدّثه في الإعدادات ← تحويل الكلام إلى نص (Speech to Text)."
       },
       "translationFallback": {
         "unreachableTitle": "الترجمة غير متاحة",
@@ -232,24 +222,6 @@
         "medium": "جودة عالية",
         "large": "أفضل جودة، الأبطأ",
         "turbo": "سريع بجودة جيدة"
-      },
-      "transcription": {
-        "openai_gpt_transcribe": "الأحدث والأكثر دقة في التفريغ",
-        "openai_gpt_4o_mini_transcribe": "تفريغ سريع ودقيق",
-        "openai_gpt_4o_transcribe": "التفريغ الأكثر دقة",
-        "openai_whisper_1": "نموذج Whisper الأصلي",
-        "groq_whisper_large_v3": "تعرف على الكلام بدقة عالية",
-        "groq_whisper_large_v3_turbo": "أسرع من الوقت الفعلي بـ216 ضعفًا",
-        "mistral_voxtral_mini_latest": "تفريغ سريع متعدد اللغات",
-        "gemini_3_5_transcribe": "تحويل الكلام إلى نص من Google Gemini",
-        "gemini_3_5_transcribe_live": "تحويل الكلام إلى نص بالبث في الوقت الفعلي",
-        "corti_transcribe": "تفريغ طبي بدرجة سريرية",
-        "xai_grok_stt": "تعرف على الكلام بدقة عالية من xAI",
-        "tinfoil_voxtral": "تفريغ خاص يمكن التحقق منه",
-        "deepgram_nova_3": "نموذج Deepgram الأكثر دقة في الوقت الفعلي",
-        "assemblyai_universal_streaming_english": "نصوص مفرَّغة ثابتة في الوقت الفعلي، الإنجليزية",
-        "assemblyai_universal_streaming_multilingual": "نصوص مفرَّغة ثابتة في الوقت الفعلي، متعددة اللغات",
-        "assemblyai_universal_3_5_pro": "أعلى دقة في الوقت الفعلي، 18 لغة"
       },
       "cloud": {
         "openai_gpt_5_2": "نموذج استنتاج قوي",
@@ -815,8 +787,7 @@
       "transcribing": "جاري التفريغ الصوتي...",
       "thinking": "جاري التفكير...",
       "typeMessage": "اكتب رسالة...",
-      "send": "إرسال",
-      "voiceDraftStreamingOnly": "الإدخال الصوتي غير متاح مع مزود التفريغ الخاص بك: فهو يدعم الإملاء المباشر فقط. اختر مزودًا آخر في الإعدادات ← تحويل الكلام إلى نص (Speech to Text)."
+      "send": "إرسال"
     },
     "tools": {
       "search_notesName": "البحث في الملاحظات",
@@ -1154,9 +1125,7 @@
         "title": "لم يتم اكتشاف صوت الاجتماع بعد",
         "description": "لم يلتقط الصوت حتى الآن سوى ميكروفونك. هل أنت في مكالمة فيديو؟ تحقق من أن صوت الاجتماع يُشغَّل على هذا الكمبيوتر وأنه غير مكتوم. هل تسجّل اجتماعًا حضوريًا؟ يمكنك تجاهل هذا — فالميكروفون يلتقط صوت الغرفة."
       },
-      "unsupportedSelfHosted": "لا يمكن لتسجيل الملاحظات استخدام نقطة نهاية مستضافة ذاتيًا بعد. افتح الإعدادات واختر «محلي» أو مزودًا يدعم البث.",
-      "unsupportedProvider": "لا يمكن لتسجيل الملاحظات استخدام {{provider}} للتفريغ المباشر. افتح الإعدادات واختر «محلي» أو مزودًا يدعم البث.",
-      "noProviderSelected": "لم يتم اختيار أي مزود لتسجيل الملاحظات. افتح الإعدادات واختر «محلي» أو مزودًا يدعم البث.",
+      "unsupportedSelfHosted": "لا يمكن لتسجيل الملاحظات استخدام نقطة نهاية مستضافة ذاتيًا بعد. افتح الإعدادات واختر «محلي».",
       "systemAudioInterrupted": {
         "title": "انقطع صوت الاجتماع",
         "description": "توقف التقاط صوت النظام وتجري إعادة تشغيله. قد تفقد بضع ثوانٍ من المكالمة في النص المفرَّغ."
@@ -1530,9 +1499,6 @@
         "modelIdPlaceholder": "اكتب معرف النموذج الخاص بك",
         "testConnection": "اختبار الاتصال",
         "proceed": "متابعة",
-        "clinical": "للتفريغ السريري",
-        "clientId": "معرف العميل (Client ID)",
-        "clientSecret": "سر العميل (Client Secret)",
         "runTest": "إجراء الاختبار",
         "testing": "جاري الاختبار...",
         "connected": "متصل",
@@ -2071,10 +2037,8 @@
       "customSetupDescription": "استخدم المزود ومفتاح API الخاص بك.",
       "description": "اختر كيف يفرّغ OpenWhispr صوتك",
       "modes": {
-        "providers": "مزودو الخدمات السحابية",
         "local": "محلي",
         "selfHosted": "مستضاف ذاتيًا",
-        "providersDesc": "أحضر مفتاح API الخاص بك.",
         "localDesc": "نماذج على الجهاز. خاصة بالكامل.",
         "selfHostedDesc": "خادمك الخاص على شبكتك."
       },
@@ -2082,18 +2046,6 @@
       "openwhisprCloudDescription": "دقة موثوقة. لا حاجة للإعداد.",
       "title": "تحويل الكلام إلى نص",
       "toasts": {
-        "switchedCloud": {
-          "description": "سيستخدم التفريغ الخدمة السحابية لـ OpenWhispr.",
-          "title": "تم التبديل إلى OpenWhispr Cloud"
-        },
-        "switchedCustom": {
-          "description": "قم بتكوين المزود ومفتاح API الخاصين بك.",
-          "title": "تم التبديل إلى الإعداد المخصص"
-        },
-        "switchedProviders": {
-          "title": "مزودو الخدمات السحابية",
-          "description": "استخدام مفاتيح API الخاصة بك."
-        },
         "switchedLocal": {
           "title": "على الجهاز",
           "description": "يعمل التفريغ محليًا على جهازك."
@@ -2101,10 +2053,6 @@
         "switchedSelfHosted": {
           "title": "مستضاف ذاتيًا",
           "description": "استخدام خادمك الخاص."
-        },
-        "switchedEnterprise": {
-          "title": "تم اختيار السحابة المؤسسية",
-          "description": "يستخدم الإملاء الآن نشر التفريغ الذي تديره مؤسستك."
         }
       },
       "gpuDevice": {
@@ -2360,13 +2308,10 @@
   "streaming": {
     "errors": {
       "cloudUnreachable": {
-        "title": "لا يمكن الوصول إلى OpenWhispr Cloud",
-        "generic": "فشل طلب الشبكة. تحقق من اتصالك.",
         "dnsBlocked": "لا يستطيع DNS تحليل openwhispr.com — قد يقوم مانع الإعلانات أو مرشح بحظره.",
         "refused": "تم رفض الاتصال — على الأرجح بسبب جدار حماية أو VPN.",
         "timeout": "انتهت مهلة الشبكة — بسبب VPN أو صفحة تسجيل دخول للشبكة (captive portal) أو اتصال غير مستقر.",
-        "tls": "فشلت مصافحة TLS — تحقق من ساعة نظامك أو وجود وكيل شبكة خاص بالشركة.",
-        "fallback": "لا يمكن الوصول إلى السحابة — يتم استخدام المحرك المحلي لهذا التسجيل."
+        "tls": "فشلت مصافحة TLS — تحقق من ساعة نظامك أو وجود وكيل شبكة خاص بالشركة."
       }
     }
   },
@@ -2382,26 +2327,13 @@
       "requiresMacOS": "macOS {{version}}+",
       "unavailable": "غير متوفر"
     },
-    "apiKeyOptional": "API Key (اختياري)",
-    "getKey": "الحصول على مفتاح ←",
-    "endpointUrl": "عنوان URL لنقطة النهاية",
-    "azureHint": "Azure AI Foundry: أدخل نقطة نهاية موردك (مثال: https://your-resource.cognitiveservices.azure.com) وقم بتعيين النموذج إلى اسم النشر الدقيق الخاص بك.",
-    "customProvider": "مخصص",
     "fallback": {
       "whisperModelDescription": "النموذج",
       "parakeetModelDescription": "نموذج NVIDIA Parakeet"
     },
     "whisperModels": "نماذج Whisper",
     "corti": {
-      "clientId": "معرف العميل (Client ID)",
-      "clientSecret": "سر العميل (Client Secret)",
-      "apiKey": "مفتاح API",
-      "environment": "منطقة البيانات",
-      "tenant": "المستأجر"
-    },
-    "tinfoil": {
-      "transportNote": "يستخدم Tinfoil نموذج Voxtral Mini 4B للتفريغ المباشر (البث)، ونموذج Voxtral Small 24B للمعالجة الدفعية.",
-      "docsLink": "قراءة الوثائق"
+      "apiKey": "مفتاح API"
     }
   },
   "cleanupPrompt": "التنظيف",
@@ -2775,8 +2707,7 @@
     "speaker": {
       "you": "أنت",
       "others": "آخرون"
-    },
-    "missingAudio": "[صوت مفقود {{from}}-{{to}}]"
+    }
   },
   "dictationTranslation": {
     "title": "ترجمة الإملاء",

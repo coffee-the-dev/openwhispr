@@ -129,7 +129,9 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
     assert.equal(countWrites("meetingTranscriptionMode"), 1, "written by the copy only");
   });
 
-  await t.test("a ≤1.6.7 BYOK streaming profile copies its own provider", async () => {
+  // The store reads every mode but self-hosted as local, so the copied mode is
+  // pinned in storage, where the later local-only migration picks it up.
+  await t.test("a ≤1.6.7 BYOK streaming profile copies its own mode", async () => {
     const { state } = await load({
       useLocalWhisper: "false",
       cloudTranscriptionMode: "byok",
@@ -137,8 +139,8 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
       cloudReasoningMode: "byok",
       reasoningProvider: "anthropic",
     });
-    assert.equal(state.meetingTranscriptionMode, "providers");
-    assert.equal(state.meetingCloudTranscriptionProvider, "openai");
+    assert.equal(storage.getItem("meetingTranscriptionMode"), "providers");
+    assert.equal(state.meetingTranscriptionMode, "local");
     assert.equal(state.noteFormattingMode, "providers");
   });
 
@@ -166,7 +168,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
       cloudReasoningMode: "openwhispr",
       isSignedIn: "true",
     });
-    assert.equal(state.meetingTranscriptionMode, "openwhispr");
+    assert.equal(storage.getItem("meetingTranscriptionMode"), "openwhispr");
     assert.equal(state.noteFormattingMode, "openwhispr");
   });
 
@@ -196,7 +198,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
       assert.equal(storage.getItem("meetingCloudTranscriptionMode"), null);
       assert.equal(storage.getItem("noteFormattingCloudMode"), null);
       assert.equal(storage.getItem("meetingFollowsTranscription"), "false", "latched empty");
-      assert.equal(state.meetingTranscriptionMode, "openwhispr");
+      assert.equal(state.meetingTranscriptionMode, "local");
       assert.equal(countWrites("meetingTranscriptionMode"), 1, "the copy, nothing after it");
       assert.equal(countWrites("noteFormattingMode"), 1);
     }
@@ -248,8 +250,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
       meetingCloudTranscriptionMode: "openwhispr",
       noteFormattingCloudMode: "openwhispr",
     });
-    assert.equal(storage.getItem("meetingTranscriptionMode"), "openwhispr", "persisted");
-    assert.equal(state.meetingTranscriptionMode, "openwhispr", "reconstructed, not localized");
+    assert.equal(storage.getItem("meetingTranscriptionMode"), "openwhispr", "reconstructed");
     // A cloud reasoning snapshot is left absent, so note formatting keeps
     // following dictation cleanup. Same effective value here, no pin.
     assert.equal(storage.getItem("noteFormattingMode"), null);
@@ -259,7 +260,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
   // groq has no streaming model, so Note Recording will refuse it — parity with
   // the 1.6.8 cohort, and away from our servers. Assert the mode, not the throw.
   await t.test("a latched BYOK profile is re-derived to its own provider", async () => {
-    const { mod, state } = await load({
+    await load({
       ...LATCHED_LOCAL,
       transcriptionMode: "providers",
       useLocalWhisper: "false",
@@ -268,9 +269,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
       meetingCloudTranscriptionProvider: "groq",
       noteFormattingProvider: "anthropic",
     });
-    const resolved = mod.selectResolvedMeetingTranscription(state);
-    assert.equal(resolved.transcriptionMode, "providers");
-    assert.equal(resolved.cloudTranscriptionProvider, "groq");
+    assert.equal(storage.getItem("meetingTranscriptionMode"), "providers");
     // The transcription side reconstructs every mode, because an absent
     // `meetingTranscriptionMode` routes to OpenWhispr Cloud. The reasoning side
     // does not: an absent `noteFormattingMode` follows dictation cleanup, so
@@ -330,7 +329,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
         cloudTranscriptionMode: "openwhispr",
       });
       assert.equal(state.meetingTranscriptionMode, "local");
-      assert.equal(state.transcriptionMode, "openwhispr", "dictation untouched");
+      assert.equal(storage.getItem("transcriptionMode"), "openwhispr", "dictation untouched");
     }
   );
 
@@ -343,7 +342,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
         meetingCloudTranscriptionMode: mode === "openwhispr" ? "openwhispr" : "byok",
         noteFormattingMode: mode,
       });
-      assert.equal(state.meetingTranscriptionMode, mode);
+      assert.equal(storage.getItem("meetingTranscriptionMode"), mode);
       assert.equal(state.noteFormattingMode, mode);
       assert.equal(writes.includes("meetingTranscriptionMode"), false, `${mode}: untouched`);
       assert.equal(writes.includes("noteFormattingMode"), false, `${mode}: untouched`);

@@ -3,7 +3,7 @@ const assert = require("node:assert/strict");
 const { loadAudioManager: loadSharedAudioManager } = require("./harness/audioManager");
 
 // Every case drives a prototype-only manager through the shared renderer
-// harness; only the model, endpoint and dictionary prompt differ per case.
+// harness; only the transcription mode and dictionary prompt differ per case.
 async function loadAudioManager(t, opts) {
   const loaded = await loadSharedAudioManager(t, opts);
   return {
@@ -11,11 +11,8 @@ async function loadAudioManager(t, opts) {
     createManager: (overrides = {}) =>
       loaded.createManager({
         getEffectiveSttLanguage: () => "auto",
-        getTranscriptionModel: () => "whisper-1",
-        getAPIKey: async () => "test-key",
+        getSelfHostedApiKey: async () => "test-key",
         getWhisperPrompt: () => null,
-        getKeyterms: () => [],
-        shouldStreamTranscription: () => false,
         isDictionaryEcho: () => false,
         processTranscription: async (text) => text,
         isReasoningAvailable: async () => false,
@@ -53,133 +50,34 @@ function buildLongDictionaryPrompt(count = 100) {
   return words.join(", ");
 }
 
-test("custom dictionary prompt caps follow the provider's real limit", async (t) => {
+// Self-hosted servers take whatever model name the user typed, and most are
+// Whisper-family under a name that never says so: the decoder reads ~223 prompt
+// tokens, so the request is bounded at 900 characters on a whole entry.
+test("a self-hosted server gets the Whisper-sized dictionary prompt", async (t) => {
   const { setSettings, createManager } = await loadAudioManager(t, {
     cachePrefix: "openwhispr-dictionary-prompt-cap-test-",
     settingsKey: "__dictionaryPromptCapSettings",
   });
+  setSettings({
+    useLocalWhisper: false,
+    allowLocalFallback: false,
+    transcriptionMode: "self-hosted",
+    remoteTranscriptionUrl: "https://stt.internal.example/v1",
+    remoteTranscriptionModel: "Systran/faster-distil-large-v3",
+  });
 
-  const audioBlob = new Blob([new ArrayBuffer(8)], { type: "audio/webm" });
+  const audioBlob = new Blob([new ArrayBuffer(8)], { type: "audio/wav" });
   const longPrompt = buildLongDictionaryPrompt();
-  assert.ok(longPrompt.length > 1600, "fixture must exceed the historical 900-char cap");
+  assert.ok(longPrompt.length > 1600, "fixture must exceed the 900-char cap");
+  const prompts = capturePrompts(t);
+  const manager = createManager({ getWhisperPrompt: () => longPrompt });
 
-  await t.test("gpt-4o-mini-transcribe sends the dictionary whole", async () => {
-    setSettings({
-      useLocalWhisper: false,
-      allowLocalFallback: false,
-      cloudTranscriptionProvider: "openai",
-    });
-    const prompts = capturePrompts(t);
-    const manager = createManager({
-      getTranscriptionModel: () => "gpt-4o-mini-transcribe",
-      getTranscriptionEndpoint: () => "https://api.openai.com/v1/audio/transcriptions",
-      getWhisperPrompt: () => longPrompt,
-    });
-
-    const result = await manager.processWithOpenAIAPI(audioBlob, {});
-    assert.equal(result.success, true);
-    assert.equal(prompts.length, 1);
-    assert.equal(
-      prompts[0],
-      longPrompt,
-      "16k-context transcribe models must not lose dictionary words to the Groq-era cap"
-    );
-  });
-
-  await t.test("groq stays under its documented 896-char limit", async () => {
-    setSettings({
-      useLocalWhisper: false,
-      allowLocalFallback: false,
-      cloudTranscriptionProvider: "groq",
-    });
-    const prompts = capturePrompts(t);
-    const manager = createManager({
-      getTranscriptionModel: () => "whisper-large-v3-turbo",
-      getTranscriptionEndpoint: () => "https://api.groq.com/openai/v1/audio/transcriptions",
-      getWhisperPrompt: () => longPrompt,
-    });
-
-    await manager.processWithOpenAIAPI(audioBlob, {});
-    assert.equal(prompts.length, 1);
-    assert.ok(prompts[0].length <= 890, `groq prompt must stay capped, got ${prompts[0].length}`);
-    assert.ok(longPrompt.startsWith(prompts[0]), "truncation must keep the head of the list");
-    assert.equal(
-      longPrompt[prompts[0].length],
-      ",",
-      "truncation must end on a whole dictionary entry"
-    );
-  });
-
-  await t.test("whisper-1 keeps the ~224-token (900-char) cap", async () => {
-    setSettings({
-      useLocalWhisper: false,
-      allowLocalFallback: false,
-      cloudTranscriptionProvider: "openai",
-    });
-    const prompts = capturePrompts(t);
-    const manager = createManager({
-      getTranscriptionModel: () => "whisper-1",
-      getTranscriptionEndpoint: () => "https://api.openai.com/v1/audio/transcriptions",
-      getWhisperPrompt: () => longPrompt,
-    });
-
-    await manager.processWithOpenAIAPI(audioBlob, {});
-    assert.equal(prompts.length, 1);
-    assert.ok(
-      prompts[0].length <= 900,
-      `whisper-1 prompt must stay capped, got ${prompts[0].length}`
-    );
-    assert.ok(longPrompt.startsWith(prompts[0]), "truncation must keep the head of the list");
-  });
-
-  await t.test(
-    "a self-hosted server with a free-text model name is treated as Whisper",
-    async () => {
-      setSettings({
-        useLocalWhisper: false,
-        allowLocalFallback: false,
-        cloudTranscriptionProvider: "custom",
-        cloudTranscriptionBaseUrl: "https://stt.internal.example/v1",
-      });
-      const prompts = capturePrompts(t);
-      // Self-hosted and custom endpoints take whatever model name the user typed;
-      // most such servers are Whisper-family under a name that never says so.
-      const manager = createManager({
-        getTranscriptionModel: () => "Systran/faster-distil-large-v3",
-        getTranscriptionEndpoint: () => "https://stt.internal.example/v1/audio/transcriptions",
-        getWhisperPrompt: () => longPrompt,
-      });
-
-      await manager.processWithOpenAIAPI(audioBlob, {});
-      assert.equal(prompts.length, 1);
-      assert.ok(
-        prompts[0].length <= 900,
-        `an unrecognized model must not get the 4o budget, got ${prompts[0].length}`
-      );
-    }
-  );
-
-  await t.test("4o transcribe still gets a context guard on absurd lists", async () => {
-    setSettings({
-      useLocalWhisper: false,
-      allowLocalFallback: false,
-      cloudTranscriptionProvider: "openai",
-    });
-    const hugePrompt = buildLongDictionaryPrompt(700); // ~13k chars
-    assert.ok(hugePrompt.length > 12000);
-    const prompts = capturePrompts(t);
-    const manager = createManager({
-      getTranscriptionModel: () => "gpt-4o-transcribe",
-      getTranscriptionEndpoint: () => "https://api.openai.com/v1/audio/transcriptions",
-      getWhisperPrompt: () => hugePrompt,
-    });
-
-    await manager.processWithOpenAIAPI(audioBlob, {});
-    assert.equal(prompts.length, 1);
-    assert.ok(prompts[0].length <= 8000, `4o guard must hold, got ${prompts[0].length}`);
-    assert.ok(prompts[0].length > 7000, "guard must be generous, not the Groq-era 900");
-    assert.ok(hugePrompt.startsWith(prompts[0]), "truncation must keep the head of the list");
-  });
+  const result = await manager.processWithSelfHosted(audioBlob, {});
+  assert.equal(result.success, true);
+  assert.equal(prompts.length, 1);
+  assert.ok(prompts[0].length <= 900, `prompt must stay capped, got ${prompts[0].length}`);
+  assert.ok(longPrompt.startsWith(prompts[0]), "truncation must keep the head of the list");
+  assert.equal(longPrompt[prompts[0].length], ",", "truncation must end on a whole entry");
 });
 
 test("local whisper receives the dictionary whole, and echo checks see what it sent", async (t) => {

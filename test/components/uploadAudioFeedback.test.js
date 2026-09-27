@@ -109,7 +109,6 @@ test("the completed upload stays quiet when nothing went wrong", async (t) => {
 
   const markup = renderToStaticMarkup(
     createElement(UploadCompleteWarnings, {
-      partialWarning: null,
       diarizationWarning: false,
       t: (key) => key,
     })
@@ -123,7 +122,6 @@ test("the completed upload shows the diarization warning only when it is flagged
 
   const warned = renderToStaticMarkup(
     createElement(UploadCompleteWarnings, {
-      partialWarning: null,
       diarizationWarning: true,
       t: (key) => key,
     })
@@ -134,25 +132,9 @@ test("the completed upload shows the diarization warning only when it is flagged
 
   const quiet = renderToStaticMarkup(
     createElement(UploadCompleteWarnings, {
-      partialWarning: null,
       diarizationWarning: false,
       t: (key) => key,
     })
   );
   assert.doesNotMatch(quiet, /notes\.upload\.diarizationWarning/);
-});
-
-test("a chunk loss and a diarization failure are reported together", async (t) => {
-  const { UploadCompleteWarnings } = await loadFeedback(t);
-
-  const markup = renderToStaticMarkup(
-    createElement(UploadCompleteWarnings, {
-      partialWarning: { failed: 2, total: 9 },
-      diarizationWarning: true,
-      t: (key) => key,
-    })
-  );
-
-  assert.match(markup, /notes\.upload\.partialWarningCount/);
-  assert.match(markup, /notes\.upload\.diarizationWarning/);
 });

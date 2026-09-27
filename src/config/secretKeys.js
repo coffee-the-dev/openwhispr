@@ -35,14 +35,6 @@ const BYOK_API_KEYS = [
     save: "saveGroqKey",
     storeKey: "groqApiKey",
   },
-  { base: "xai", env: "XAI_API_KEY", get: "getXaiKey", save: "saveXaiKey", storeKey: "xaiApiKey" },
-  {
-    base: "mistral",
-    env: "MISTRAL_API_KEY",
-    get: "getMistralKey",
-    save: "saveMistralKey",
-    storeKey: "mistralApiKey",
-  },
   {
     base: "openrouter",
     env: "OPENROUTER_API_KEY",
@@ -63,22 +55,6 @@ const BYOK_API_KEYS = [
     get: "getCortiKey",
     save: "saveCortiKey",
     storeKey: "cortiApiKey",
-  },
-  // `get`/`save` are taken verbatim, never derived from `base`, so these keep
-  // the capitalisation realtimeTokenProviders.js already calls them by.
-  {
-    base: "deepgram",
-    env: "DEEPGRAM_API_KEY",
-    get: "getDeepgramKey",
-    save: "saveDeepgramKey",
-    storeKey: "deepgramApiKey",
-  },
-  {
-    base: "assemblyai",
-    env: "ASSEMBLYAI_API_KEY",
-    get: "getAssemblyAIKey",
-    save: "saveAssemblyAIKey",
-    storeKey: "assemblyaiApiKey",
   },
   // Per-scope Custom-endpoint keys. Dictation cleanup's counterpart predates
   // this manifest and keeps its bespoke accessors (CUSTOM_CLEANUP_API_KEY).

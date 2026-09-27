@@ -49,24 +49,19 @@ test("onboarding restores an Oruk draft without mixing NVIDIA models", async (t)
   assert.doesNotMatch(markup, />Parakeet TDT/);
 });
 
-test("all three model pickers restore the Oruk tab from the persisted Orukeet choice", async (t) => {
+test("the model picker restores the Oruk tab from the persisted Orukeet choice", async (t) => {
   const vite = await renderer(t);
   const { default: Picker } = await vite.ssrLoadModule("/components/TranscriptionModelPicker.tsx");
-  for (const transcriptionContext of ["dictation", "upload", "meeting"]) {
-    const markup = await render(
-      vite,
-      React.createElement(Picker, {
-        transcriptionContext,
-        selectedLocalProvider: "nvidia",
-        selectedLocalModel: "orukeet-v0.1.0",
-        useLocalWhisper: true,
-        onLocalModelSelect: noop,
-        onModeChange: noop,
-      })
-    );
-    assert.match(markup, />Orukeet</, transcriptionContext);
-    assert.doesNotMatch(markup, />Parakeet TDT/, transcriptionContext);
-  }
+  const markup = await render(
+    vite,
+    React.createElement(Picker, {
+      selectedLocalProvider: "nvidia",
+      selectedLocalModel: "orukeet-v0.1.0",
+      onLocalModelSelect: noop,
+    })
+  );
+  assert.match(markup, />Orukeet</);
+  assert.doesNotMatch(markup, />Parakeet TDT/);
 });
 
 test("a saved stock Parakeet choice opens NVIDIA while retaining Oruk as a selectable organization", async (t) => {
@@ -77,9 +72,7 @@ test("a saved stock Parakeet choice opens NVIDIA while retaining Oruk as a selec
     React.createElement(Picker, {
       selectedLocalProvider: "nvidia",
       selectedLocalModel: "parakeet-tdt-0.6b-v3",
-      useLocalWhisper: true,
       onLocalModelSelect: noop,
-      onModeChange: noop,
     })
   );
   assert.match(markup, />Oruk</);
@@ -118,10 +111,8 @@ test("Oruk's model-picker tab follows the same unsupported-macOS fallback as Par
     tree = Picker({
       selectedLocalProvider: "nvidia",
       selectedLocalModel: "orukeet-v0.1.0",
-      useLocalWhisper: true,
       onLocalModelSelect: noop,
       onLocalProviderSelect: (provider) => selectedProviders.push(provider),
-      onModeChange: noop,
     });
     return null;
   }

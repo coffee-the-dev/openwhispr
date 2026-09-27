@@ -12,12 +12,10 @@ import { useSettingsStore } from "../../stores/settingsStore";
 import { normalizeBaseUrl } from "../../config/constants";
 import { withHttpsScheme } from "../../utils/urlUtils";
 import {
-  getTranscriptionProviders,
   getParakeetModels,
   getWhisperModels,
   modelRegistry,
   type CloudProviderData,
-  type TranscriptionProviderData,
 } from "../../models/ModelRegistry";
 import {
   LOCAL_ASR_ORGANIZATIONS,
@@ -204,20 +202,12 @@ function providerCredential(provider: string, store: ReturnType<typeof useSettin
       return { value: store.geminiApiKey, set: store.setGeminiApiKey };
     case "groq":
       return { value: store.groqApiKey, set: store.setGroqApiKey };
-    case "xai":
-      return { value: store.xaiApiKey, set: store.setXaiApiKey };
-    case "mistral":
-      return { value: store.mistralApiKey, set: store.setMistralApiKey };
     case "openrouter":
       return { value: store.openrouterApiKey, set: store.setOpenrouterApiKey };
     case "tinfoil":
       return { value: store.tinfoilApiKey, set: store.setTinfoilApiKey };
     case "corti":
       return { value: store.cortiApiKey, set: store.setCortiApiKey };
-    case "deepgram":
-      return { value: store.deepgramApiKey, set: store.setDeepgramApiKey };
-    case "assemblyai":
-      return { value: store.assemblyaiApiKey, set: store.setAssemblyaiApiKey };
     default:
       return { value: "", set: (_value: string) => undefined };
   }
@@ -293,8 +283,6 @@ function resolveInitialLocalSelection(
   };
 }
 
-type HostedProvider = CloudProviderData | TranscriptionProviderData;
-
 function FieldLabel({ children }: { children: ReactNode }) {
   return (
     <span className="mb-1.5 block text-xs text-[var(--onboarding-text-tertiary)]">{children}</span>
@@ -311,7 +299,10 @@ export function ByokProviderStep({
   onResumeStateChange,
 }: {
   stepId: "byok-dictation" | "byok-assistant";
-  /** Set when the user picked "Self-hosted" on setup-choice rather than BYOK. */
+  /**
+   * Set when the user picked "Self-hosted" on setup-choice rather than BYOK. Dictation
+   * has no hosted providers, so its step is always the self-hosted card.
+   */
   selfHostedRequested?: boolean;
   onSelfHostedChange: (requested: boolean) => void;
   onConnectionChange: (connected: boolean) => void;
@@ -322,8 +313,8 @@ export function ByokProviderStep({
   const { t } = useTranslation();
   const store = useSettingsStore();
   const assistant = stepId === "byok-assistant";
-  const providers = useMemo<HostedProvider[]>(
-    () => (assistant ? modelRegistry.getCloudProviders() : getTranscriptionProviders()),
+  const providers = useMemo<CloudProviderData[]>(
+    () => (assistant ? modelRegistry.getCloudProviders() : []),
     [assistant]
   );
   // The session's draft wins; without one (onboarding was restarted, or an older build
@@ -341,7 +332,7 @@ export function ByokProviderStep({
     // card the session recorded for it.
     const selfHostedWanted =
       hasDraft || !saved ? selfHostedRequested : Boolean(saved.draft.baseUrl);
-    const selfHosted = selfHostedWanted;
+    const selfHosted = !assistant || selfHostedWanted;
     return {
       provider: providerData?.id ?? "",
       model: providerData?.models?.some((model) => model.id === draft?.selectedModel)
@@ -372,12 +363,6 @@ export function ByokProviderStep({
   );
   const [draftBaseUrl, setDraftBaseUrl] = useState(seed.baseUrl);
   const [draftCustomModel, setDraftCustomModel] = useState(seed.customModel);
-  const [draftCortiClientId, setDraftCortiClientId] = useState(
-    seed.provider === "corti" ? store.cortiClientId : ""
-  );
-  const [draftCortiClientSecret, setDraftCortiClientSecret] = useState(
-    seed.provider === "corti" ? store.cortiClientSecret : ""
-  );
   const [connected, setConnected] = useState(false);
 
   useEffect(() => {
@@ -424,16 +409,10 @@ export function ByokProviderStep({
         ? store.chatAgentCustomApiKey
         : store.customTranscriptionApiKey
       : "";
-  const savedCortiClientId = selectedProvider === "corti" ? store.cortiClientId : "";
-  const savedCortiClientSecret = selectedProvider === "corti" ? store.cortiClientSecret : "";
   useEffect(() => {
     if (savedKey) setDraftApiKey((current) => current || savedKey);
     else if (strandedKey) setDraftApiKey((current) => (current === strandedKey ? "" : current));
-    if (savedCortiClientId) setDraftCortiClientId((current) => current || savedCortiClientId);
-    if (savedCortiClientSecret) {
-      setDraftCortiClientSecret((current) => current || savedCortiClientSecret);
-    }
-  }, [savedCortiClientId, savedCortiClientSecret, savedKey, strandedKey]);
+  }, [savedKey, strandedKey]);
 
   const currentProvider = providers.find((provider) => provider.id === selectedProvider);
   const models = currentProvider?.models ?? [];
@@ -454,8 +433,6 @@ export function ByokProviderStep({
     setSelectedProvider(providerId);
     setSelectedModel(fallbackModel);
     setDraftApiKey(providerCredential(providerId, store).value);
-    setDraftCortiClientId(providerId === "corti" ? store.cortiClientId : "");
-    setDraftCortiClientSecret(providerId === "corti" ? store.cortiClientSecret : "");
     setConnected(false);
     onConnectionChange(false);
   };
@@ -477,17 +454,9 @@ export function ByokProviderStep({
   const testingProvider = selfHosted ? "custom" : selectedProvider;
   const testingKey = draftApiKey;
   const testingBaseUrl = selfHosted ? draftBaseUrl : undefined;
-  const isCortiTranscription = !assistant && !selfHosted && selectedProvider === "corti";
   const fieldsReady = selfHosted
     ? Boolean(draftBaseUrl.trim() && draftCustomModel.trim())
-    : isCortiTranscription
-      ? Boolean(
-          currentProvider &&
-          draftCortiClientId.trim() &&
-          draftCortiClientSecret.trim() &&
-          selectedModel
-        )
-      : Boolean(currentProvider && selectedModel && testingKey.trim());
+    : Boolean(currentProvider && selectedModel && testingKey.trim());
 
   const commitAndProceed = () => {
     if (selfHosted) {
@@ -498,40 +467,17 @@ export function ByokProviderStep({
         store.setChatAgentModel(draftCustomModel);
         store.setChatAgentMode("self-hosted");
         store.setChatAgentProvider("custom");
-      } else if (draftApiKey.trim()) {
-        store.setCloudTranscriptionBaseUrl(committedBaseUrl);
-        store.setCustomTranscriptionApiKey(draftApiKey);
-        // Switch before setting the model: a switch files the current model under the
-        // outgoing provider and loads the incoming one's, replacing what was typed here.
-        store.switchCloudTranscriptionProvider("dictation", "custom");
-        store.setCloudTranscriptionModel(draftCustomModel);
-        // A Settings server routes ahead of the keyed Custom endpoint, and sends no key.
-        store.setRemoteTranscriptionUrl("");
-        store.setCloudTranscriptionMode("byok");
       } else {
-        // Key-less, so it is the Settings self-hosted server; the Custom endpoint and its
-        // key stay as they were. byok + custom is what derives the self-hosted mode.
-        store.switchCloudTranscriptionProvider("dictation", "custom");
         store.setRemoteTranscriptionUrl(committedBaseUrl);
         store.setRemoteTranscriptionModel(draftCustomModel);
         store.setRemoteTranscriptionType("openai-compatible");
-        store.setCloudTranscriptionMode("byok");
+        store.setCustomTranscriptionApiKey(draftApiKey);
       }
-    } else if (assistant) {
+    } else {
       knownCredential.set(draftApiKey);
       store.setChatAgentMode("providers");
       store.switchReasoningProvider("chatIntelligence", selectedProvider, selectedModel);
       store.setChatAgentModel(selectedModel);
-    } else {
-      if (isCortiTranscription) {
-        store.setCortiClientId(draftCortiClientId);
-        store.setCortiClientSecret(draftCortiClientSecret);
-      } else {
-        knownCredential.set(draftApiKey);
-      }
-      store.setCloudTranscriptionMode("byok");
-      store.switchCloudTranscriptionProvider("dictation", selectedProvider);
-      store.setCloudTranscriptionModel(selectedModel);
     }
     onProceed();
   };
@@ -544,29 +490,31 @@ export function ByokProviderStep({
       <SetupStageStepper stepId={stepId} />
 
       <div className="mt-3 space-y-3">
-        <button
-          type="button"
-          role="checkbox"
-          aria-checked={selfHosted}
-          onClick={toggleSelfHosted}
-          className="flex items-center gap-2 text-xs text-[var(--onboarding-text-primary)]"
-        >
-          {/* Matches the checkbox in LanguageSelectionStep, which was built from
+        {assistant && (
+          <button
+            type="button"
+            role="checkbox"
+            aria-checked={selfHosted}
+            onClick={toggleSelfHosted}
+            className="flex items-center gap-2 text-xs text-[var(--onboarding-text-primary)]"
+          >
+            {/* Matches the checkbox in LanguageSelectionStep, which was built from
                 the spec: the light stroke stays on in both states, the fill is the
                 accent token rather than blue-500, and the tick is hairline. Kept at
                 size-5 because this card is the denser text-xs layout. */}
-          <span
-            className={`flex size-5 shrink-0 items-center justify-center rounded-[5.5px] border border-[var(--onboarding-control-border)] ${
-              selfHosted
-                ? "bg-[var(--onboarding-accent)] text-[var(--onboarding-accent-foreground)]"
-                : "bg-[var(--onboarding-surface)]"
-            }`}
-            aria-hidden="true"
-          >
-            {selfHosted && <Check className="size-3.5" strokeWidth={1.17} />}
-          </span>
-          {t("onboarding.rehaul.provider.selfHosted")}
-        </button>
+            <span
+              className={`flex size-5 shrink-0 items-center justify-center rounded-[5.5px] border border-[var(--onboarding-control-border)] ${
+                selfHosted
+                  ? "bg-[var(--onboarding-accent)] text-[var(--onboarding-accent-foreground)]"
+                  : "bg-[var(--onboarding-surface)]"
+              }`}
+              aria-hidden="true"
+            >
+              {selfHosted && <Check className="size-3.5" strokeWidth={1.17} />}
+            </span>
+            {t("onboarding.rehaul.provider.selfHosted")}
+          </button>
+        )}
 
         {selfHosted ? (
           <>
@@ -629,11 +577,6 @@ export function ByokProviderStep({
                       <span className="flex items-center gap-2.5">
                         <ProviderIcon provider={provider.id} className="size-5" />
                         <span>{provider.name}</span>
-                        {provider.id === "corti" && (
-                          <span className="ms-auto rounded bg-[color-mix(in_srgb,var(--onboarding-accent)_12%,transparent)] px-2 py-1 text-[0.625rem] text-[var(--onboarding-accent)]">
-                            {t("onboarding.rehaul.provider.clinical")}
-                          </span>
-                        )}
                       </span>
                     </SelectItem>
                   ))}
@@ -671,46 +614,20 @@ export function ByokProviderStep({
               </Select>
             </label>
 
-            {isCortiTranscription ? (
-              <div className="grid grid-cols-2 gap-2">
-                <label className="block">
-                  <FieldLabel>{t("onboarding.rehaul.provider.clientId")}</FieldLabel>
-                  <Input
-                    dir="ltr"
-                    value={draftCortiClientId}
-                    onChange={(event) => setDraftCortiClientId(event.target.value)}
-                    className={inputClass}
-                    autoComplete="off"
-                  />
-                </label>
-                <label className="block">
-                  <FieldLabel>{t("onboarding.rehaul.provider.clientSecret")}</FieldLabel>
-                  <Input
-                    dir="ltr"
-                    type="password"
-                    value={draftCortiClientSecret}
-                    onChange={(event) => setDraftCortiClientSecret(event.target.value)}
-                    className={inputClass}
-                    autoComplete="off"
-                  />
-                </label>
-              </div>
-            ) : (
-              <label className="block">
-                <FieldLabel>{t("onboarding.rehaul.provider.apiKey")}</FieldLabel>
-                <Input
-                  dir="ltr"
-                  type="password"
-                  value={draftApiKey}
-                  onChange={(event) => setDraftApiKey(event.target.value)}
-                  placeholder={t("onboarding.rehaul.provider.apiKeyPlaceholder")}
-                  disabled={!selectedProvider}
-                  autoComplete="off"
-                  spellCheck={false}
-                  className={inputClass}
-                />
-              </label>
-            )}
+            <label className="block">
+              <FieldLabel>{t("onboarding.rehaul.provider.apiKey")}</FieldLabel>
+              <Input
+                dir="ltr"
+                type="password"
+                value={draftApiKey}
+                onChange={(event) => setDraftApiKey(event.target.value)}
+                placeholder={t("onboarding.rehaul.provider.apiKeyPlaceholder")}
+                disabled={!selectedProvider}
+                autoComplete="off"
+                spellCheck={false}
+                className={inputClass}
+              />
+            </label>
           </>
         )}
 
@@ -725,10 +642,6 @@ export function ByokProviderStep({
             apiKey: testingKey,
             baseUrl: testingBaseUrl,
             model: selfHosted ? draftCustomModel : selectedModel,
-            clientId: isCortiTranscription ? draftCortiClientId : undefined,
-            clientSecret: isCortiTranscription ? draftCortiClientSecret : undefined,
-            environment: store.cortiEnvironment,
-            tenant: store.cortiTenant,
           }}
           onSuccessChange={handleConnected}
           variant="inline"

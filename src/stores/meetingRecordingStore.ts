@@ -1,7 +1,5 @@
 import { create } from "zustand";
 import { getSettings, selectResolvedMeetingTranscription } from "./settingsStore";
-import { useStreamingProvidersStore } from "./streamingProvidersStore";
-import { getMeetingStreamingTranscriptionProviders } from "../models/ModelRegistry";
 import { resolveMeetingTranscriptionOptions } from "../helpers/meetingTranscriptionRouting";
 import { followsSystemDefaultMic } from "../helpers/micSelectionRecovery";
 import { resolvePreferredMicrophone } from "../helpers/microphoneSelection";
@@ -163,13 +161,6 @@ const getMeetingTranscriptionOptions = () => {
     whisperModel: resolved.whisperModel,
     parakeetModel: resolved.parakeetModel,
     cohereModel: resolved.cohereModel,
-    selectedProvider: resolved.cloudTranscriptionProvider,
-    selectedModel: resolved.cloudTranscriptionModel,
-    byokProviders: getMeetingStreamingTranscriptionProviders(),
-    managedProviders: useStreamingProvidersStore.getState().providers,
-    cortiEnvironment: state.cortiEnvironment,
-    cortiTenant: state.cortiTenant,
-    keyterms: (state.customDictionary ?? []).filter(Boolean),
   });
 };
 
@@ -417,9 +408,7 @@ let isStartingFlag = false;
 let activeRecordingSessionId: string | null = null;
 const meetingRecordingStartCoordinator = createMeetingRecordingStartCoordinator();
 const meetingRecordingStopBarrier = createMeetingRecordingStopBarrier();
-let isPrepared = false;
 let segmentsRefValue: TranscriptSegment[] = [];
-let preparePromise: Promise<void> | null = null;
 let ipcCleanups: Array<() => void> = [];
 let speakerIdentifications: SpeakerIdentification[] = [];
 let nextPlaceholderSpeakerIndex = 0;
@@ -709,47 +698,9 @@ async function cleanup(): Promise<void> {
     clearTimeout(pushConfigTimeout);
     pushConfigTimeout = null;
   }
-  isPrepared = false;
   isRecordingFlag = false;
   isStartingFlag = false;
   sessionSystemAudioActive = false;
-}
-
-export async function prepareTranscription(): Promise<void> {
-  if (isPrepared || isRecordingFlag || isStartingFlag) return;
-  if (preparePromise) return preparePromise;
-
-  logger.info("Meeting transcription preparing (pre-warming WebSockets)...", {}, "meeting");
-
-  const promise = (async () => {
-    try {
-      const result = await window.electronAPI?.meetingTranscriptionPrepare?.(
-        getMeetingTranscriptionOptions()
-      );
-
-      if (result?.success) {
-        isPrepared = true;
-        logger.info(
-          "Meeting transcription prepared",
-          { alreadyPrepared: result.alreadyPrepared },
-          "meeting"
-        );
-      } else {
-        logger.error("Meeting transcription prepare failed", { error: result?.error }, "meeting");
-      }
-    } catch (err) {
-      logger.error(
-        "Meeting transcription prepare error",
-        { error: (err as Error).message },
-        "meeting"
-      );
-    } finally {
-      preparePromise = null;
-    }
-  })();
-
-  preparePromise = promise;
-  await promise;
 }
 
 export interface StartRecordingArgs {
@@ -900,15 +851,6 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
         interruptedCleanup?.();
         resumedCleanup?.();
       });
-
-      if (preparePromise) {
-        logger.debug("Waiting for in-flight prepare to finish...", {}, "meeting");
-        await preparePromise;
-        if (!isCurrentStart()) {
-          await teardownStart();
-          return;
-        }
-      }
 
       const startTime = performance.now();
       const initialSystemAudioAccess =
@@ -1206,18 +1148,6 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
       });
       if (errorCleanup) ipcCleanups.push(errorCleanup);
 
-      const fatalErrorCleanup = window.electronAPI?.onMeetingTranscriptionFatalError?.((err) => {
-        if (activeRecordingSessionId !== sessionId) return;
-        reportMeetingError(err);
-        logger.error(
-          "Meeting transcription stopped after connection loss",
-          { error: err },
-          "meeting"
-        );
-        if (isRecordingFlag) void stopRecording(sessionId);
-      });
-      if (fatalErrorCleanup) ipcCleanups.push(fatalErrorCleanup);
-
       // One-shot from main (~45s in) when the system tap has streamed only
       // silence; main never emits it for mic-only sessions, but gate on this
       // session's own system-audio state anyway.
@@ -1512,7 +1442,6 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
           bufferedSystemChunks: pendingSystemChunks.length,
           streamsMs: Math.round(streamsMs),
           totalMs: Math.round(totalMs),
-          wasPrepared: isPrepared,
         },
         "meeting"
       );
@@ -1707,10 +1636,6 @@ export function lockSpeaker(speakerId: string, displayName: string): void {
   if (systemPartialSpeakerIdValue === speakerId) {
     setSystemPartialSpeakerIdentity(speakerId, displayName);
   }
-}
-
-export function cancelPreparedTranscription(): void {
-  window.electronAPI?.meetingTranscriptionCancel?.();
 }
 
 // Persists delayed diarization results to the note that owns the recording

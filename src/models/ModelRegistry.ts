@@ -1,7 +1,6 @@
 import modelDataRaw from "./modelRegistryData.json";
 import { isCloudCleanupMode, getSettings } from "../stores/settingsStore";
 import { readCachedTinfoilModels } from "./tinfoilModelCache";
-import { filterMeetingStreamingProviders } from "../helpers/meetingTranscriptionRouting";
 import type { InferenceMode } from "../types/electron";
 
 export interface ModelDefinition {
@@ -62,23 +61,6 @@ export interface EnterpriseProviderData extends CloudProviderData {
   allowCustomModelId: boolean;
 }
 
-export interface TranscriptionModelDefinition {
-  id: string;
-  name: string;
-  description: string;
-  descriptionKey?: string;
-  streaming?: boolean;
-}
-
-export interface TranscriptionProviderData {
-  id: string;
-  name: string;
-  baseUrl: string;
-  models: TranscriptionModelDefinition[];
-  /** Allows for a stream/batch split */
-  batchModel?: string;
-}
-
 export interface WhisperModelInfo {
   name: string;
   description: string;
@@ -125,7 +107,6 @@ export type ParakeetModelsMap = Record<string, ParakeetModelInfo>;
 interface ModelRegistryData {
   parakeetModels: ParakeetModelsMap;
   whisperModels: WhisperModelsMap;
-  transcriptionProviders: TranscriptionProviderData[];
   cloudProviders: CloudProviderData[];
   enterpriseProviders: EnterpriseProviderData[];
   localProviders: LocalProviderData[];
@@ -198,10 +179,6 @@ class ModelRegistry {
 
   getEnterpriseProviders(): EnterpriseProviderData[] {
     return modelData.enterpriseProviders;
-  }
-
-  getTranscriptionProviders(): TranscriptionProviderData[] {
-    return modelData.transcriptionProviders;
   }
 
   private registerProvidersFromData() {
@@ -426,43 +403,6 @@ export function resolveInferenceProvider(
   const provider = configuredProvider?.trim();
   if (provider && modelRegistry.getProvider(provider)) return "local";
   return provider || getModelProvider(modelId);
-}
-
-export function getTranscriptionProviders(): TranscriptionProviderData[] {
-  return modelRegistry.getTranscriptionProviders();
-}
-
-export function getStreamingTranscriptionProviders(): TranscriptionProviderData[] {
-  return modelRegistry
-    .getTranscriptionProviders()
-    .map((p) => ({ ...p, models: p.models.filter((m) => m.streaming) }))
-    .filter((p) => p.models.length > 0);
-}
-
-// Streaming providers note recording can actually run (see
-// meetingTranscriptionRouting.MEETING_STREAMING_PROVIDER_IDS).
-export function getMeetingStreamingTranscriptionProviders(): TranscriptionProviderData[] {
-  return filterMeetingStreamingProviders(getStreamingTranscriptionProviders());
-}
-
-export function getTranscriptionProvider(
-  providerId: string
-): TranscriptionProviderData | undefined {
-  return getTranscriptionProviders().find((p) => p.id === providerId);
-}
-
-export function getTranscriptionModels(providerId: string): TranscriptionModelDefinition[] {
-  const provider = getTranscriptionProvider(providerId);
-  return provider?.models || [];
-}
-
-export function getBatchTranscriptionModel(providerId: string): string | undefined {
-  return getTranscriptionProvider(providerId)?.batchModel;
-}
-
-export function getDefaultTranscriptionModel(providerId: string): string {
-  const models = getTranscriptionModels(providerId);
-  return models[0]?.id || "gpt-transcribe";
 }
 
 export function getWhisperModels(): WhisperModelsMap {

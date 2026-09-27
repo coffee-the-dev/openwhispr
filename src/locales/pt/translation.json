@@ -350,9 +350,6 @@
         "modelIdPlaceholder": "Escreva o ID do seu modelo",
         "testConnection": "Testar conexão",
         "proceed": "Prosseguir",
-        "clinical": "PARA TRANSCRIÇÃO CLÍNICA",
-        "clientId": "Client ID",
-        "clientSecret": "Client secret",
         "runTest": "Executar teste",
         "testing": "Testando…",
         "connected": "Conectado",
@@ -516,13 +513,10 @@
   "streaming": {
     "errors": {
       "cloudUnreachable": {
-        "title": "Não foi possível acessar o OpenWhispr Cloud",
-        "generic": "A solicitação de rede falhou. Verifique sua conexão.",
         "dnsBlocked": "O DNS não está resolvendo openwhispr.com — pode ser um bloqueador de anúncios ou filtro.",
         "refused": "A conexão foi recusada — provavelmente um firewall ou VPN.",
         "timeout": "Tempo limite da rede esgotado — VPN, portal cativo ou conexão instável.",
-        "tls": "Falha no handshake TLS — verifique o relógio do sistema ou um proxy corporativo.",
-        "fallback": "Cloud indisponível — usando o motor local para esta gravação."
+        "tls": "Falha no handshake TLS — verifique o relógio do sistema ou um proxy corporativo."
       }
     }
   },
@@ -707,26 +701,13 @@
       "requiresMacOS": "macOS {{version}}+",
       "unavailable": "Indisponível"
     },
-    "apiKeyOptional": "Chave API (opcional)",
-    "getKey": "Obter chave ->",
-    "endpointUrl": "URL do endpoint",
-    "azureHint": "Azure AI Foundry: insira o endpoint do seu recurso (ex.: https://your-resource.cognitiveservices.azure.com) e defina Modelo com o nome exato da sua implantação.",
-    "customProvider": "Personalizado",
     "fallback": {
       "whisperModelDescription": "Modelo",
       "parakeetModelDescription": "Modelo NVIDIA Parakeet"
     },
     "whisperModels": "Modelos Whisper",
     "corti": {
-      "clientId": "ID do cliente",
-      "clientSecret": "Segredo do cliente",
-      "apiKey": "Chave API",
-      "environment": "Região de dados",
-      "tenant": "Tenant"
-    },
-    "tinfoil": {
-      "transportNote": "O Tinfoil transmite com o Voxtral Mini 4B e processa em lote com o Voxtral Small 24B.",
-      "docsLink": "Ver a documentação"
+      "apiKey": "Chave API"
     }
   },
   "hooks": {
@@ -738,10 +719,6 @@
         "screenContextSkipped": "Contexto de tela ignorado",
         "dailyLimitReached": "Limite diário atingido",
         "providerRateLimited": "Limite de taxa do provedor"
-      },
-      "fallback": {
-        "title": "Modo de fallback",
-        "description": "O Whisper local falhou. A API da OpenAI foi usada no lugar."
       },
       "errorActions": {
         "viewTranscript": "Ver transcrição"
@@ -764,20 +741,14 @@
         "description": "Não foi possível transcrever parte da gravação."
       },
       "errorDescriptions": {
-        "sessionExpired": "Sua sessão do OpenWhispr Cloud está indisponível. Entre novamente nas Configurações.",
-        "offline": "Você está offline. A transcrição na nuvem exige conexão com a internet.",
         "dailyLimitReached": "Você atingiu o limite de transcrições de hoje. Tente novamente amanhã ou faça upgrade do seu plano.",
         "providerRateLimited": "Seu provedor de transcrição limitou a solicitação. Aguarde um momento e tente novamente.",
-        "chunkLoss": "Um problema de rede fez perder grande parte da gravação. Retranscreva-a a partir do histórico.",
         "agentReasoningFailed": "Seu assistente de voz não conseguiu processar o comando; a transcrição bruta foi inserida no lugar.",
         "screenContextSkipped": "Não foi possível enviar a captura, então seu comando foi executado sem contexto de tela.",
-        "customEndpointInvalid": "Seu endpoint de transcrição personalizado não está configurado ou a URL é inválida. Atualize-o em Configurações → Fala para texto.",
-        "managedTranscriptionUnavailable": "A transcrição gerenciada não está disponível no momento. Tente novamente em instantes.",
-        "streamingOnlyProvider": "Este provedor só suporta transcrição ao vivo. Escolha outro provedor para uploads de arquivos e novas tentativas.",
-        "providerKeyMissing": "Nenhuma chave de API definida para seu provedor de transcrição. Adicione-a em Configurações → Fala para texto.",
         "cleanupTruncated": "O modelo de IA ficou sem espaço antes de terminar a limpeza do seu ditado.",
         "cleanupDuplicated": "A limpeza por IA repetiu a transcrição. O texto original foi mantido.",
-        "cleanupEmptyReply": "O modelo de IA devolveu uma resposta vazia em vez do ditado limpo."
+        "cleanupEmptyReply": "O modelo de IA devolveu uma resposta vazia em vez do ditado limpo.",
+        "selfHostedNotConfigured": "Seu servidor de transcrição auto-hospedado não está configurado ou a URL é inválida. Atualize-o em Configurações → Fala para texto."
       },
       "translationFallback": {
         "unreachableTitle": "Tradução indisponível",
@@ -1607,10 +1578,8 @@
       "customSetupDescription": "Use seu próprio provedor e chave API.",
       "description": "Escolha como o OpenWhispr transcreve sua voz",
       "modes": {
-        "providers": "Provedores na nuvem",
         "local": "Local",
         "selfHosted": "Auto-hospedado",
-        "providersDesc": "Use sua própria chave API.",
         "localDesc": "Modelos no dispositivo. Privado.",
         "selfHostedDesc": "Seu servidor na sua rede."
       },
@@ -1618,18 +1587,6 @@
       "openwhisprCloudDescription": "Resultados confiáveis. Sem configuração.",
       "title": "Fala para texto",
       "toasts": {
-        "switchedCloud": {
-          "description": "A transcrição usará o serviço de nuvem do OpenWhispr.",
-          "title": "Mudou para OpenWhispr Cloud"
-        },
-        "switchedCustom": {
-          "description": "Configure seu próprio provedor e chave API.",
-          "title": "Mudou para configuração personalizada"
-        },
-        "switchedProviders": {
-          "title": "Provedores na nuvem",
-          "description": "Usando suas próprias chaves API."
-        },
         "switchedLocal": {
           "title": "No dispositivo",
           "description": "A transcrição é executada localmente na sua máquina."
@@ -1637,10 +1594,6 @@
         "switchedSelfHosted": {
           "title": "Auto-hospedado",
           "description": "Usando seu próprio servidor."
-        },
-        "switchedEnterprise": {
-          "title": "Nuvem corporativa selecionada",
-          "description": "A ditado agora usa a transcrição gerida pela sua organização."
         }
       },
       "gpuDevice": {
@@ -1733,24 +1686,6 @@
         "medium": "Alta qualidade",
         "large": "Melhor qualidade, o mais lento",
         "turbo": "Rápido com boa qualidade"
-      },
-      "transcription": {
-        "openai_gpt_transcribe": "Transcrição mais recente e precisa",
-        "openai_gpt_4o_mini_transcribe": "Transcrição rápida e precisa",
-        "openai_gpt_4o_transcribe": "Transcrição mais precisa",
-        "openai_whisper_1": "Modelo Whisper original",
-        "groq_whisper_large_v3_turbo": "Velocidade 216x em tempo real",
-        "groq_whisper_large_v3": "Modelo Large v3, rápido e preciso",
-        "mistral_voxtral_mini_latest": "Transcrição multilíngue rápida",
-        "gemini_3_5_transcribe": "Fala para texto Gemini do Google",
-        "gemini_3_5_transcribe_live": "Fala para texto em streaming em tempo real",
-        "corti_transcribe": "Transcrição médica de nível clínico",
-        "xai_grok_stt": "Reconhecimento de voz de alta precisão pela xAI",
-        "tinfoil_voxtral": "Transcrição verificavelmente privada",
-        "deepgram_nova_3": "O modelo em tempo real mais preciso da Deepgram",
-        "assemblyai_universal_streaming_english": "Transcrições em tempo real imutáveis, em inglês",
-        "assemblyai_universal_streaming_multilingual": "Transcrições em tempo real imutáveis, multilíngues",
-        "assemblyai_universal_3_5_pro": "Máxima precisão em tempo real, 18 idiomas"
       },
       "cloud": {
         "openai_gpt_5_2": "Modelo forte de raciocínio",
@@ -2060,9 +1995,7 @@
       "title": "Notas de reunião",
       "description": "Transcrições e resumos estruturados",
       "back": "Voltar",
-      "unsupportedSelfHosted": "A gravação de notas ainda não pode usar um endpoint auto-hospedado. Abra as Configurações e escolha Local ou um provedor de streaming.",
-      "unsupportedProvider": "A gravação de notas não pode usar {{provider}} para transcrição ao vivo. Abra as Configurações e escolha Local ou um provedor de streaming.",
-      "noProviderSelected": "Nenhum provedor está selecionado para a gravação de notas. Abra as Configurações e escolha Local ou um provedor de streaming.",
+      "unsupportedSelfHosted": "A gravação de notas ainda não pode usar um endpoint auto-hospedado. Abra as Configurações e escolha Local.",
       "systemAudioSilent": {
         "title": "Nenhum áudio da reunião detectado até agora",
         "description": "Até agora, apenas o seu microfone captou som. Está em uma videochamada? Verifique se o áudio da reunião está sendo reproduzido neste computador e não está silenciado. Está gravando presencialmente? Você pode ignorar este aviso: seu microfone capta o ambiente."
@@ -2511,8 +2444,7 @@
       "transcribing": "Transcrevendo...",
       "thinking": "Pensando...",
       "typeMessage": "Digite uma mensagem...",
-      "send": "Enviar",
-      "voiceDraftStreamingOnly": "A entrada por voz não está disponível com seu provedor de transcrição: ele só suporta ditado ao vivo. Escolha outro provedor em Configurações → Fala para texto."
+      "send": "Enviar"
     },
     "tools": {
       "search_notesName": "Pesquisar notas",
@@ -2735,8 +2667,7 @@
     "speaker": {
       "you": "Você",
       "others": "Outros"
-    },
-    "missingAudio": "[áudio ausente {{from}}-{{to}}]"
+    }
   },
   "dictationTranslation": {
     "title": "Tradução de Ditado",

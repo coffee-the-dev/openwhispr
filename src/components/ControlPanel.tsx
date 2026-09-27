@@ -44,7 +44,6 @@ import {
   useActiveNoteId,
   initializeNotes,
 } from "../stores/noteStore";
-import { fetchProviders as fetchStreamingProviders } from "../stores/streamingProvidersStore";
 import {
   executeTranslationChain,
   hasTextContent,
@@ -270,10 +269,6 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
     return () => cleanup?.();
   }, [toast, t]);
 
-  useEffect(() => {
-    fetchStreamingProviders();
-  }, []);
-
   const handleMeetingRecordingRequestHandled = useCallback(
     () => setMeetingRecordingRequest(null),
     []
@@ -394,12 +389,6 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
         const result = await window.electronAPI.retryTranscription(id, {
           useLocalWhisper: s.useLocalWhisper,
           localTranscriptionProvider: s.localTranscriptionProvider,
-          cloudTranscriptionMode: s.cloudTranscriptionMode,
-          cloudTranscriptionProvider: s.cloudTranscriptionProvider,
-          cloudTranscriptionModel: s.cloudTranscriptionModel,
-          cloudTranscriptionBaseUrl: s.cloudTranscriptionBaseUrl,
-          cortiEnvironment: s.cortiEnvironment,
-          cortiTenant: s.cortiTenant,
           parakeetModel: s.parakeetModel,
           cohereModel: s.cohereModel,
           whisperModel: s.whisperModel,

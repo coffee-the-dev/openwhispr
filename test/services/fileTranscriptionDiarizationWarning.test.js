@@ -9,13 +9,8 @@ function localConfig() {
     whisperModel: "base",
     parakeetModel: "parakeet-tdt-0.6b-v3",
     cohereModel: "command-a-transcribe",
-    isOpenWhisprCloud: false,
-    getApiKey: () => "",
-    cloudTranscriptionProvider: "openai",
-    cloudTranscriptionBaseUrl: "",
-    cloudTranscriptionModel: "whisper-1",
     language: "en",
-    transcriptionMode: "providers",
+    transcriptionMode: "local",
   };
 }
 
@@ -111,20 +106,35 @@ test("does not warn when speaker detection is off", async (t) => {
   assert.equal(result.diarizationWarning, undefined);
 });
 
-test("does not warn when the provider applied its own speaker labels", async (t) => {
+test("self-hosted transcripts get local speaker labels too", async (t) => {
   const { window, transcribeFileWithSpeakers } = await loadFileTranscription(t);
-  window.electronAPI.transcribeAudioFile = async () => ({
+  window.electronAPI.transcribeAudioFileSelfHosted = async () => ({
     success: true,
-    text: "[Speaker 1] Hola",
-    diarized: true,
+    text: "Plain transcript",
+  });
+  let diarizeCalls = 0;
+  window.electronAPI.diarizeAudioFile = async () => {
+    diarizeCalls += 1;
+    return { success: true, segments: [{ speaker: "speaker_00", start: 0, end: 2 }] };
+  };
+  window.electronAPI.mergeSpeakerText = async () => ({
+    success: true,
+    text: "[Speaker 1] Plain transcript",
   });
 
-  const result = await transcribeFileWithSpeakers("/tmp/audio.wav", localConfig(), {
-    enabled: true,
-    localModelsReady: true,
-    numSpeakers: null,
-  });
+  const result = await transcribeFileWithSpeakers(
+    "/tmp/audio.wav",
+    {
+      ...localConfig(),
+      useLocalWhisper: false,
+      transcriptionMode: "self-hosted",
+      remoteTranscriptionUrl: "http://192.168.1.20:9000/v1",
+    },
+    { enabled: true, localModelsReady: true, numSpeakers: null }
+  );
 
+  assert.equal(diarizeCalls, 1);
+  assert.equal(result.text, "[Speaker 1] Plain transcript");
   assert.equal(result.diarizationWarning, undefined);
 });
 
@@ -156,7 +166,6 @@ test("fetches the local speaker models before a run that needs them", async (t) 
     enabled: true,
     modelsReady: false,
     numSpeakers: null,
-    config: localConfig(),
     ensureModels: async () => {
       ensureCalls += 1;
       return true;
@@ -167,25 +176,6 @@ test("fetches the local speaker models before a run that needs them", async (t) 
   assert.deepEqual(settings, { enabled: true, localModelsReady: true, numSpeakers: null });
 });
 
-test("does not fetch local models when the provider diarizes server-side", async (t) => {
-  const { resolveDiarizationSettings } = await loadFileTranscription(t);
-  let ensureCalls = 0;
-
-  const settings = await resolveDiarizationSettings({
-    enabled: true,
-    modelsReady: false,
-    numSpeakers: 2,
-    config: { ...localConfig(), useLocalWhisper: false, cloudTranscriptionProvider: "openai" },
-    ensureModels: async () => {
-      ensureCalls += 1;
-      return true;
-    },
-  });
-
-  assert.equal(ensureCalls, 0);
-  assert.deepEqual(settings, { enabled: true, localModelsReady: false, numSpeakers: 2 });
-});
-
 test("does not fetch local models when speaker detection is off", async (t) => {
   const { resolveDiarizationSettings } = await loadFileTranscription(t);
   let ensureCalls = 0;
@@ -194,7 +184,6 @@ test("does not fetch local models when speaker detection is off", async (t) => {
     enabled: false,
     modelsReady: false,
     numSpeakers: null,
-    config: localConfig(),
     ensureModels: async () => {
       ensureCalls += 1;
       return true;
@@ -212,7 +201,6 @@ test("reports models unavailable when the download fails", async (t) => {
     enabled: true,
     modelsReady: false,
     numSpeakers: null,
-    config: localConfig(),
     ensureModels: async () => false,
   });
 

@@ -33,12 +33,9 @@ import {
   transcriptionErrorKey,
   MEETINGS_FOLDER_NAME,
 } from "./shared";
-import { useSettings } from "../../hooks/useSettings";
 import {
   getAllReasoningModels,
-  getBatchTranscriptionModel,
   getParakeetModelInfo,
-  getTranscriptionProviders,
   isSherpaLocalProvider,
 } from "../../models/ModelRegistry";
 import {
@@ -52,8 +49,6 @@ import type { TranscribeOptions } from "../../stores/batchQueueStore";
 import {
   transcribeFileWithSpeakers,
   resolveDiarizationSettings,
-  shouldUseByokDiarize,
-  getTranscriptionApiKey,
 } from "../../services/fileTranscription";
 import type {
   FileTranscriptionConfig,
@@ -64,7 +59,6 @@ import { MAX_SPEAKER_COUNT } from "../../constants/speakerDetection.json";
 import BatchQueueView from "./BatchQueueView";
 import { generateNoteTitle } from "../../utils/generateTitle";
 import { getBaseLanguageCode } from "../../utils/languageSupport";
-import { byokFileSizeLimit, resolveTranscriptionRoute } from "../../helpers/transcriptionRoute";
 import { saveUploadNote, uploadTitleFallback } from "../../services/uploadNotes";
 import { UploadCompleteWarnings, UploadModelSettingsButton } from "./UploadAudioFeedback";
 import { isSupportedUploadFile, uploadFileUrlPattern } from "../../utils/uploadAudioFormats";
@@ -138,9 +132,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     durationSeconds?: number | null;
   } | null>(null);
   const [result, setResult] = useState<string | null>(null);
-  const [partialWarning, setPartialWarning] = useState<{ failed: number; total: number } | null>(
-    null
-  );
   const [diarizationWarning, setDiarizationWarning] = useState(false);
   const [noteId, setNoteId] = useState<number | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -214,7 +205,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
       enabled: diarizationEnabled,
       modelsReady: !!diarizationModelsReady,
       numSpeakers: diarizationNumSpeakers ? Number(diarizationNumSpeakers) : null,
-      config: buildTranscriptionConfig(),
       ensureModels: ensureDiarizationModels,
     });
 
@@ -225,14 +215,12 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
       // Heal a persisted-on toggle whose models were removed since; roll it back
       // if the download fails so it can't sit ON while doing nothing.
       if (!ready && localStorage.getItem("uploadDiarizationEnabled") === "true") {
-        if (shouldUseByokDiarize(buildTranscriptionConfig(), true)) return;
         ensureDiarizationModels().then((ok) => {
           if (!ok) setDiarizationEnabled(false);
         });
       }
     });
     // Mount-only by design: heals persisted state against the models on disk.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const [folders, setFolders] = useState<FolderItem[]>([]);
@@ -245,37 +233,17 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
 
   const [providerReady, setProviderReady] = useState<boolean | null>(null);
 
-  const apiKeys = useSettings();
-  const {
-    openaiApiKey,
-    groqApiKey,
-    xaiApiKey,
-    mistralApiKey,
-    geminiApiKey,
-    tinfoilApiKey,
-    deepgramApiKey,
-    assemblyaiApiKey,
-    customTranscriptionApiKey,
-  } = apiKeys;
-
   const {
     useLocalWhisper,
     whisperModel,
     localTranscriptionProvider,
     parakeetModel,
     cohereModel,
-    cloudTranscriptionProvider,
-    cloudTranscriptionModel,
-    cloudTranscriptionBaseUrl,
     transcriptionMode,
     remoteTranscriptionUrl,
     remoteTranscriptionModel,
   } = useSettingsStore(useShallow((settings) => selectResolvedUploadTranscription(settings)));
 
-  const cortiClientId = useSettingsStore((s) => s.cortiClientId);
-  const cortiClientSecret = useSettingsStore((s) => s.cortiClientSecret);
-  const cortiEnvironment = useSettingsStore((s) => s.cortiEnvironment);
-  const cortiTenant = useSettingsStore((s) => s.cortiTenant);
   const preferredLanguage = useSettingsStore((s) => s.preferredLanguage);
   const isCloudCleanup = useSettingsStore((settings) => selectIsCloudCleanupMode(settings));
   const effectiveCleanupModel = useSettingsStore((settings) => {
@@ -285,14 +253,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   const useCleanupModel = useSettingsStore((s) => s.useCleanupModel);
   // Mode detection
   const isSelfHosted = transcriptionMode === "self-hosted" && !useLocalWhisper;
-  // Mode-aware file size validation. Local, self-hosted and custom endpoints
-  // have no limit; BYOK providers cap uploads at 25 MB (14 MB for Gemini's
-  // inline cap).
-  const hasProviderSizeLimit =
-    !useLocalWhisper && !isSelfHosted && cloudTranscriptionProvider !== "custom";
-  const byokMaxFileSize = byokFileSizeLimit(cloudTranscriptionProvider);
-  const byokMaxFileSizeMb = Math.floor(byokMaxFileSize / (1024 * 1024));
-  const byokTooLarge = !!file && hasProviderSizeLimit && file.sizeBytes > byokMaxFileSize;
 
   useEffect(() => {
     return () => {
@@ -344,32 +304,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     let cancelled = false;
     const checkProviderReady = async () => {
       if (!useLocalWhisper) {
-        if (isSelfHosted) {
-          if (!cancelled) setProviderReady(!!remoteTranscriptionUrl?.trim());
-        } else if (cloudTranscriptionProvider === "custom") {
-          const route = resolveTranscriptionRoute({
-            settings: { cloudTranscriptionProvider, cloudTranscriptionBaseUrl },
-            providers: getTranscriptionProviders(),
-          });
-          if (!cancelled) setProviderReady(route.transport !== "error");
-        } else if (cloudTranscriptionProvider === "corti") {
-          if (!cancelled) setProviderReady(!!(cortiClientId && cortiClientSecret));
-        } else {
-          if (!cancelled)
-            setProviderReady(
-              !!getTranscriptionApiKey(cloudTranscriptionProvider, {
-                openaiApiKey,
-                groqApiKey,
-                xaiApiKey,
-                mistralApiKey,
-                geminiApiKey,
-                tinfoilApiKey,
-                deepgramApiKey,
-                assemblyaiApiKey,
-                customTranscriptionApiKey,
-              })
-            );
-        }
+        if (!cancelled) setProviderReady(isSelfHosted && !!remoteTranscriptionUrl?.trim());
         return;
       }
       if (isSherpaLocalProvider(localTranscriptionProvider)) {
@@ -390,25 +325,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     return () => {
       cancelled = true;
     };
-  }, [
-    isSelfHosted,
-    remoteTranscriptionUrl,
-    useLocalWhisper,
-    localTranscriptionProvider,
-    cloudTranscriptionProvider,
-    cloudTranscriptionBaseUrl,
-    openaiApiKey,
-    groqApiKey,
-    xaiApiKey,
-    mistralApiKey,
-    geminiApiKey,
-    tinfoilApiKey,
-    deepgramApiKey,
-    assemblyaiApiKey,
-    customTranscriptionApiKey,
-    cortiClientId,
-    cortiClientSecret,
-  ]);
+  }, [isSelfHosted, remoteTranscriptionUrl, useLocalWhisper, localTranscriptionProvider]);
 
   const getActiveModelLabel = (): string => {
     if (useLocalWhisper) {
@@ -417,16 +334,8 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
       if (localTranscriptionProvider === "cohere") return `Cohere · ${cohereModel || "default"}`;
       return `Whisper · ${whisperModel || "base"}`;
     }
-    if (isSelfHosted) {
-      const name = t("settingsPage.transcription.modes.selfHosted");
-      return remoteTranscriptionModel ? `${name} · ${remoteTranscriptionModel}` : name;
-    }
-    const name =
-      cloudTranscriptionProvider === "custom"
-        ? t("notes.upload.custom")
-        : cloudTranscriptionProvider.charAt(0).toUpperCase() + cloudTranscriptionProvider.slice(1);
-    const model = getBatchTranscriptionModel(cloudTranscriptionProvider) ?? cloudTranscriptionModel;
-    return `${name} · ${model}`;
+    const name = t("settingsPage.transcription.modes.selfHosted");
+    return remoteTranscriptionModel ? `${name} · ${remoteTranscriptionModel}` : name;
   };
 
   const buildTranscriptionConfig = (): FileTranscriptionConfig => ({
@@ -435,23 +344,12 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     whisperModel,
     parakeetModel,
     cohereModel,
-    getApiKey: () => getTranscriptionApiKey(cloudTranscriptionProvider, apiKeys),
-    cloudTranscriptionProvider: cloudTranscriptionProvider as string,
-    cloudTranscriptionBaseUrl: cloudTranscriptionBaseUrl || "",
-    cloudTranscriptionModel,
-    // Empty = auto-detect; the resolver supplies a default where one is required.
+    // Empty = auto-detect.
     language: getBaseLanguageCode(preferredLanguage) || "",
-    cortiEnvironment,
-    cortiTenant,
     transcriptionMode,
     remoteTranscriptionUrl,
     remoteTranscriptionModel,
   });
-
-  // Batch counterpart of the single-file size gating above; returns keys under notes.upload.*.
-  const getBatchSizeErrorKey = (sizeBytes: number): string | null => {
-    return hasProviderSizeLimit && sizeBytes > byokMaxFileSize ? "byokTooLarge" : null;
-  };
 
   const generateTitle = async (text: string): Promise<string> => {
     if (!useCleanupModel) return "";
@@ -539,7 +437,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     setState("idle");
     setFile(null);
     setResult(null);
-    setPartialWarning(null);
     setDiarizationWarning(false);
     setNoteId(null);
     setError(null);
@@ -590,7 +487,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
         buildTranscriptionConfig(),
         diarization,
         currentFile.durationSeconds,
-        { requestId, timestamps: true }
+        { requestId }
       ).finally(() => {
         if (activeRequestIdRef.current === requestId) activeRequestIdRef.current = null;
       });
@@ -602,11 +499,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
       if (res.success && res.text) {
         setProgress(100);
         setResult(res.text);
-        setPartialWarning(
-          res.failedChunks && res.totalChunks
-            ? { failed: res.failedChunks, total: res.totalChunks }
-            : null
-        );
         setDiarizationWarning(!!res.diarizationWarning);
 
         let title: string;
@@ -782,7 +674,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     const transcribeOpts: TranscribeOptions = {
       transcription: buildTranscriptionConfig(),
       folderId: batchFolderId ? Number(batchFolderId) : null,
-      validateSize: getBatchSizeErrorKey,
       generateTitle: async (text) => (await generateTitle(text)) || null,
     };
 
@@ -818,12 +709,9 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
 
   const getTranscribingLabel = (): string => {
     if (useLocalWhisper) return t("notes.upload.transcribingLocal");
-    if (isSelfHosted) {
-      return t("notes.upload.transcribingProvider", {
-        provider: t("settingsPage.transcription.modes.selfHosted"),
-      });
-    }
-    return t("notes.upload.transcribingProvider", { provider: cloudTranscriptionProvider });
+    return t("notes.upload.transcribingProvider", {
+      provider: t("settingsPage.transcription.modes.selfHosted"),
+    });
   };
 
   return (
@@ -963,7 +851,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
           <div className="mt-3">
             <BatchQueueView
               queue={batch.queue}
-              byokMaxFileSizeMb={byokMaxFileSizeMb}
               completedCount={batch.completedCount}
               failedCount={batch.failedCount}
               totalCount={batch.totalCount}
@@ -1013,8 +900,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
             reset={reset}
             handleTranscribe={handleTranscribe}
             transcribeDisabled={batch.isProcessing}
-            byokTooLarge={byokTooLarge}
-            byokMaxFileSizeMb={byokMaxFileSizeMb}
             onOpenSettings={onOpenSettings}
           />
         )}
@@ -1093,7 +978,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
           <CompleteView
             t={t}
             result={result}
-            partialWarning={partialWarning}
             diarizationWarning={diarizationWarning}
             folders={folders}
             selectedFolderId={selectedFolderId}
@@ -1127,12 +1011,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
                   if (diarizationDownloading) return;
                   const next = !diarizationEnabled;
                   setDiarizationEnabled(next);
-                  // BYOK-native diarization needs no local models — don't download them.
-                  if (
-                    next &&
-                    !diarizationModelsReady &&
-                    !shouldUseByokDiarize(buildTranscriptionConfig(), true)
-                  ) {
+                  if (next && !diarizationModelsReady) {
                     const ready = await ensureDiarizationModels();
                     if (!ready) setDiarizationEnabled(false);
                   }
@@ -1155,31 +1034,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
                 />
               </button>
             </div>
-
-            {diarizationEnabled &&
-              !useLocalWhisper &&
-              !isSelfHosted &&
-              cloudTranscriptionProvider === "openai" && (
-                <p className="text-[10px] text-foreground/45 mt-1.5">
-                  {t("notes.upload.openaiDiarizeNote")}
-                </p>
-              )}
-            {diarizationEnabled &&
-              !useLocalWhisper &&
-              !isSelfHosted &&
-              cloudTranscriptionProvider === "mistral" && (
-                <p className="text-[10px] text-foreground/45 mt-1.5">
-                  {t("notes.upload.mistralDiarizeNote")}
-                </p>
-              )}
-            {diarizationEnabled &&
-              !useLocalWhisper &&
-              !isSelfHosted &&
-              cloudTranscriptionProvider === "groq" && (
-                <p className="text-[10px] text-amber-500/60 mt-1.5">
-                  {t("notes.upload.groqDiarizeNote")}
-                </p>
-              )}
 
             {diarizationDownloading && (
               <p className="text-[10px] text-primary/50 mt-1.5">
@@ -1408,8 +1262,6 @@ interface SelectedViewProps {
   reset: () => void;
   handleTranscribe: () => void;
   transcribeDisabled: boolean;
-  byokTooLarge: boolean;
-  byokMaxFileSizeMb: number;
   onOpenSettings?: (section: string) => void;
 }
 
@@ -1420,8 +1272,6 @@ function SelectedView({
   reset,
   handleTranscribe,
   transcribeDisabled,
-  byokTooLarge,
-  byokMaxFileSizeMb,
   onOpenSettings,
 }: SelectedViewProps) {
   return (
@@ -1449,30 +1299,16 @@ function SelectedView({
         </div>
       </div>
 
-      {/* BYOK file too large — shared explanation */}
-      {byokTooLarge && (
-        <div className="rounded-lg border border-primary/12 dark:border-primary/15 bg-primary/[0.03] px-3 py-2.5 mb-3">
-          <p className="text-xs text-foreground/50 leading-relaxed">
-            {t("notes.upload.byokTooLarge", { size: byokMaxFileSizeMb })}
-          </p>
-          <p className="text-xs text-foreground/45 leading-relaxed mt-1.5">
-            {t("notes.upload.byokTooLargeDetail", { size: byokMaxFileSizeMb })}
-          </p>
-        </div>
-      )}
-
       <div className="flex items-center gap-2 justify-center flex-wrap">
-        {!byokTooLarge && (
-          <Button
-            variant="default"
-            size="sm"
-            onClick={handleTranscribe}
-            disabled={transcribeDisabled}
-            className="h-8 text-xs px-5"
-          >
-            {t("notes.upload.transcribe")}
-          </Button>
-        )}
+        <Button
+          variant="default"
+          size="sm"
+          onClick={handleTranscribe}
+          disabled={transcribeDisabled}
+          className="h-8 text-xs px-5"
+        >
+          {t("notes.upload.transcribe")}
+        </Button>
 
         {/* Cancel button — always shown */}
         <Button
@@ -1609,7 +1445,6 @@ function FolderSelect({
 interface CompleteViewProps {
   t: (key: string, options?: Record<string, unknown>) => string;
   result: string;
-  partialWarning: { failed: number; total: number } | null;
   diarizationWarning: boolean;
   folders: FolderItem[];
   selectedFolderId: string;
@@ -1622,7 +1457,6 @@ interface CompleteViewProps {
 function CompleteView({
   t,
   result,
-  partialWarning,
   diarizationWarning,
   folders,
   selectedFolderId,
@@ -1678,11 +1512,7 @@ function CompleteView({
         {result.slice(0, 150)}
       </p>
 
-      <UploadCompleteWarnings
-        partialWarning={partialWarning}
-        diarizationWarning={diarizationWarning}
-        t={t}
-      />
+      <UploadCompleteWarnings diarizationWarning={diarizationWarning} t={t} />
 
       {folders.length > 0 && (
         <FolderSelect

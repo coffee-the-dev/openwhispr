@@ -12,11 +12,11 @@ test("isSelfHostedTranscription returns true for self-hosted mode with configure
   );
 });
 
-test("isSelfHostedTranscription returns false for providers mode even with configured URL", async () => {
+test("isSelfHostedTranscription returns false for local mode even with configured URL", async () => {
   const { isSelfHostedTranscription } = await import("../../src/helpers/selfHostedTranscription.js");
   assert.equal(
     isSelfHostedTranscription({
-      transcriptionMode: "providers",
+      transcriptionMode: "local",
       remoteTranscriptionUrl: "http://localhost:8000/v1",
     }),
     false
@@ -98,7 +98,7 @@ test("resolveSelfHostedTranscriptionModel returns null when mode is not self-hos
   );
   assert.equal(
     resolveSelfHostedTranscriptionModel({
-      transcriptionMode: "providers",
+      transcriptionMode: "local",
       remoteTranscriptionUrl: "http://localhost:8000/v1",
       remoteTranscriptionModel: "custom-whisper",
     }),

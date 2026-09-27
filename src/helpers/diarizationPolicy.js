@@ -1,5 +1,5 @@
 // Clustering policy for the upload/batch diarization path. Kept free of
-// electron imports so the rules stay unit-testable (pattern: cloudChunkPolicy).
+// electron imports so the rules stay unit-testable (pattern: meetingMicGate).
 
 // sherpa-onnx's cluster threshold is a cosine distance: higher merges more.
 // 0.55 suits short clean audio, but over a long single-mic recording one

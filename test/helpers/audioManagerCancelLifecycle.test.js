@@ -11,8 +11,6 @@ async function loadManagerClass(t) {
       useLocalWhisper: true,
       localTranscriptionProvider: "whisper",
       whisperModel: "base",
-      cloudTranscriptionMode: "byok",
-      isSignedIn: false,
     },
   });
   return { AudioManager, window };
@@ -24,8 +22,6 @@ function createManager(AudioManager, transcription) {
     isProcessing: true,
     _localSpeechGateState: null,
     _processingCancellationGeneration: 0,
-    _streamingStopPromise: null,
-    _streamingCancellationGeneration: 0,
     _activeTranscriptionAbortController: null,
     pendingAssistantConversation: null,
     pendingSelectionEdit: null,
@@ -37,11 +33,6 @@ function createManager(AudioManager, transcription) {
     onTranscriptionComplete: () => calls.completed++,
     saveFailedTranscription: () => calls.saved++,
   });
-  // The real implementation also aborts ReasoningService/IPC work; the test
-  // only needs the generation bump that marks the pipeline cancelled.
-  manager._requestStreamingCancellation = () => {
-    manager._streamingCancellationGeneration += 1;
-  };
   return { manager, calls };
 }
 
@@ -53,8 +44,6 @@ function createBatchFinalizationManager(AudioManager, merge) {
     isRecording: true,
     isProcessing: false,
     _processingCancellationGeneration: 0,
-    _streamingCancellationGeneration: 0,
-    _streamingStopPromise: null,
     _activeTranscriptionAbortController: null,
     _batchSegments: [],
     _receivedAudioData: true,
@@ -75,9 +64,6 @@ function createBatchFinalizationManager(AudioManager, merge) {
     },
     onStateChange() {},
   });
-  manager._requestStreamingCancellation = () => {
-    manager._streamingCancellationGeneration += 1;
-  };
   return {
     manager,
     mergedBlob,
@@ -171,26 +157,6 @@ test("batch processing carries its occurrence time into completion", async (t) =
   assert.equal(completion.analyticsOccurredAt, analyticsOccurredAt);
 });
 
-test("a cancelled current pipeline clears busy when its pending work settles", async (t) => {
-  const { AudioManager } = await loadManagerClass(t);
-  const transcription = deferred();
-  const { manager, calls } = createManager(AudioManager, transcription);
-  // Streaming finalization keeps the lifecycle busy while provider/model work
-  // is still settling instead of advertising an idle state prematurely.
-  manager._streamingStopPromise = Promise.resolve(true);
-
-  const run = manager.processAudio(new Blob(["audio"], { type: "audio/webm" }));
-  assert.equal(manager.cancelProcessing(), true);
-  assert.equal(manager.isProcessing, true, "cancel keeps busy until the owned work settles");
-
-  transcription.resolve({ success: true, text: "stale", source: "local", timings: {} });
-  await run;
-
-  assert.equal(manager.isProcessing, false);
-  assert.deepEqual(calls.states, ["idle"]);
-  assert.equal(calls.completed, 0);
-});
-
 test("a user cancel during batch transcription is not an error and saves nothing", async (t) => {
   const { AudioManager } = await loadManagerClass(t);
   const transcription = deferred();
@@ -270,137 +236,4 @@ test("cancelling when nothing is processing dismisses nothing", async (t) => {
 
   assert.equal(manager.cancelProcessing(), false);
   assert.equal(dismissCalls.length, 0);
-});
-
-// A prior batch cancellation must never transfer into a later streaming
-// session's no-speech fallback. The processing generation belongs only to the
-// batch pipeline that captured it.
-async function loadCancelGuardManagerClass(t) {
-  const { AudioManager, window } = await loadAudioManager(t, {
-    cachePrefix: "openwhispr-streaming-leak-test-",
-    settingsKey: "__streamingLeakSettings",
-    settings: {
-      useLocalWhisper: false,
-      cloudTranscriptionMode: "openwhispr",
-      isSignedIn: true,
-      preferredLanguage: "auto",
-      cleanupCloudMode: "openwhispr",
-      useCleanupModel: true,
-      customPrompts: {},
-    },
-    mockModules: {
-      "/stores/settingsStore": `
-        export const getSettings = () => globalThis.__streamingLeakSettings;
-        export const getEffectiveCleanupModel = () => null;
-        export const selectResolvedLLMConfig = () => ({ model: null, provider: null });
-        export const isCloudCleanupMode = () => true;
-        export const isCloudDictationAgentMode = () => false;
-        export const isCloudTranslationMode = () => false;
-      `,
-      // The real store: capturing recordCleanupFailure is the whole point of
-      // the streaming-fallback-leak test below, so the mock just makes its
-      // calls observable.
-      "/stores/cleanupFailureStore": `
-        export const recordCleanupFailure = (message) => {
-          globalThis.__streamingLeakCleanupFailureCalls.push(message);
-        };
-      `,
-      // processWithOpenWhisprCloud's "agent" route walks through
-      // resolveReasoningRoute -> dictationAgentPrompt -> resolvePrompt, which
-      // reads the real useSettingsStore zustand store for custom prompts.
-      // Mocking /config/prompts (as the real ReasoningService flow does in
-      // production) sidesteps that store entirely, matching the established
-      // pattern in audioManagerWakeWordLanguage.test.js.
-      "/config/prompts": `
-        export const resolvePrompt = () => "agent prompt";
-        export const appendScreenContextSuffix = (prompt) => prompt;
-      `,
-      "/dictationAgentInference": `
-        export const resolveDictationAgentInference = () => ({
-          reachable: false,
-          model: "",
-          displayProvider: "none",
-          config: {},
-        });
-        export const resolveDictationAgentVisionInference = () => ({
-          active: false,
-          model: "",
-          config: {},
-        });
-      `,
-      "/dictationTranslationInference": `
-        export const resolveDictationTranslationInference = () => ({
-          reachable: false,
-          model: "",
-          displayProvider: "none",
-          config: {},
-        });
-      `,
-    },
-  });
-  const originalNavigator = globalThis.navigator;
-  t.after(() => {
-    delete globalThis.__streamingLeakCleanupFailureCalls;
-    Object.defineProperty(globalThis, "navigator", {
-      value: originalNavigator,
-      configurable: true,
-    });
-  });
-  Object.defineProperty(globalThis, "navigator", {
-    value: { ...originalNavigator, onLine: true },
-    configurable: true,
-  });
-  Object.defineProperty(globalThis, "localStorage", {
-    value: window.localStorage,
-    writable: true,
-    configurable: true,
-  });
-  // The harness's window stub has no EventTarget surface; the batch-fallback
-  // success path fires a plain usage-changed notification off it.
-  window.dispatchEvent = () => {};
-  return { AudioManager, window };
-}
-
-// Finding 2 (round-1 review override): processWithOpenWhisprCloud's catch
-// gates _notifyAgentReasoningFailed() too, not just the logger/cleanup-store
-// calls the brief named. Without that, a cancelled voice-agent command whose
-// cloud reasoning also happens to fail would still pop an "Agent Unavailable"
-// toast via onError({ code: "AGENT_REASONING_FAILED" }) — the useAudioRecording
-// cancel guard only filters TRANSCRIPTION_CANCELLED/REASON_CANCELLED, so that
-// toast would reach the user, directly contradicting this task's goal.
-test("a cancelled voice-agent command's cloud reasoning failure notifies nothing", async (t) => {
-  const { AudioManager, window } = await loadCancelGuardManagerClass(t);
-  const errors = [];
-  const manager = Object.assign(Object.create(AudioManager.prototype), {
-    voiceAgentRequested: true,
-    translationRequested: false,
-    isDictionaryEcho: () => false,
-    getWhisperPrompt: () => null,
-    finalizeChineseScript: async (text) => text,
-    processAgentCommand: async () => {
-      throw new Error("agent boom");
-    },
-    onError: (error) => errors.push(error),
-  });
-  window.electronAPI.cloudTranscribe = async () => ({
-    success: true,
-    text: "the raw transcript",
-  });
-
-  const result = await manager.processWithOpenWhisprCloud(
-    {
-      size: 1024,
-      type: "audio/webm",
-      arrayBuffer: async () => new ArrayBuffer(8),
-    },
-    {},
-    () => true
-  );
-
-  assert.equal(result.text, "the raw transcript", "the raw transcript is still returned");
-  assert.deepEqual(
-    errors,
-    [],
-    "a cancelled agent command must notify nothing, not even Agent Unavailable"
-  );
 });
