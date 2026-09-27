@@ -43,7 +43,7 @@ export const calendarTool: ToolDefinition = {
     const windowMinutes = getWindowMinutes(timeRange);
 
     try {
-      const response = await window.electronAPI.gcalGetUpcomingEvents!(windowMinutes);
+      const response = await window.electronAPI.calendarGetUpcomingEvents!(windowMinutes);
 
       if (!response.success) {
         return {

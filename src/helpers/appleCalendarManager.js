@@ -4,11 +4,11 @@ const debugLogger = require("./debugLogger");
 const { resolveBundledBinary } = require("./binaryResolver");
 const { extractMeetingUrl } = require("./meetingJoinUrl");
 const { broadcastToWindows } = require("./windowBroadcast");
-const { FOCUS_SYNC_THROTTLE_MS } = require("./calendarSyncInterval");
 
 const BINARY_NAME = "macos-calendar-listener";
 const HELPER_RESTART_BASE_MS = 1000;
 const HELPER_RESTART_MAX_MS = 30 * 1000;
+const FOCUS_SYNC_THROTTLE_MS = 30 * 1000;
 const AVAILABILITY_STATUSES = new Set(["free", "tentative", "busy", "unavailable", "unknown"]);
 const RESPONSE_STATUSES = new Set(["accepted", "declined", "tentative", "needsAction"]);
 

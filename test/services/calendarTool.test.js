@@ -8,7 +8,7 @@ const load = () => import("../../src/services/tools/calendarTool.ts");
 function stubEvents(events, calls = []) {
   global.window = {
     electronAPI: {
-      gcalGetUpcomingEvents: async (windowMinutes) => {
+      calendarGetUpcomingEvents: async (windowMinutes) => {
         calls.push(windowMinutes);
         return { success: true, events };
       },
@@ -77,7 +77,7 @@ test("no events yields an empty payload with a plain summary", async () => {
 test("an unsuccessful IPC response fails the tool call", async () => {
   const { calendarTool } = await load();
   global.window = {
-    electronAPI: { gcalGetUpcomingEvents: async () => ({ success: false }) },
+    electronAPI: { calendarGetUpcomingEvents: async () => ({ success: false }) },
   };
 
   const result = await calendarTool.execute({});

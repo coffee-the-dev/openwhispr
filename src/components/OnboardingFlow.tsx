@@ -247,10 +247,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     session.authPath === "account" &&
     (!workspacesLoaded ||
       (!activeWorkspace && skipSetupChoiceForEnterprise && Boolean(enterpriseWorkspace)));
-  const hasConnectedCalendar =
-    settingsStore.gcalAccounts.length > 0 ||
-    settingsStore.mcalAccounts.length > 0 ||
-    (platform === "darwin" && settingsStore.appleCalendarConnected);
+  const hasConnectedCalendar = platform === "darwin" && settingsStore.appleCalendarConnected;
 
   // The setting turns on only once the permission is actually granted, so an
   // Enable click whose System Settings grant is abandoned can't leave screen

@@ -75,56 +75,6 @@ test("Apple snapshots retain events referenced by meeting notes", (t) => {
   db.db.close();
 });
 
-function restEvent(provider, calendarId, id, overrides = {}) {
-  return {
-    id,
-    calendar_id: calendarId,
-    provider,
-    summary: id,
-    start_time: "2026-07-22T10:00:00Z",
-    end_time: "2026-07-22T11:00:00Z",
-    is_all_day: false,
-    status: "confirmed",
-    ...overrides,
-  };
-}
-
-test("full-sync prune drops stale events but keeps fresh, note-linked, and other-scope rows", (t) => {
-  const db = createDb(t);
-  if (!db) return;
-
-  db.upsertCalendarEvents([
-    restEvent("microsoft", "ms-cal", "fresh"),
-    restEvent("microsoft", "ms-cal", "stale"),
-    restEvent("microsoft", "ms-cal", "stale-linked"),
-    restEvent("microsoft", "other-cal", "other-calendar"),
-    restEvent("google", "ms-cal", "other-provider"),
-  ]);
-  const note = db.saveNote("Linked meeting", "", "meeting").note;
-  db.updateNote(note.id, { calendar_event_id: "stale-linked" });
-
-  db.removeStaleCalendarEvents("microsoft", "ms-cal", ["fresh"]);
-
-  assert.equal(db.getCalendarEventById("fresh")?.summary, "fresh");
-  assert.equal(db.getCalendarEventById("stale"), null);
-  assert.equal(db.getCalendarEventById("stale-linked")?.summary, "stale-linked");
-  assert.equal(db.getCalendarEventById("other-calendar")?.summary, "other-calendar");
-  assert.equal(db.getCalendarEventById("other-provider")?.summary, "other-provider");
-  db.db.close();
-});
-
-test("full-sync prune with an empty fresh set clears the calendar's unlinked events", (t) => {
-  const db = createDb(t);
-  if (!db) return;
-
-  db.upsertCalendarEvents([restEvent("microsoft", "ms-cal", "stale")]);
-
-  db.removeStaleCalendarEvents("microsoft", "ms-cal", []);
-
-  assert.equal(db.getCalendarEventById("stale"), null);
-  db.db.close();
-});
-
 test("tentative Apple events remain visible in upcoming meetings", (t) => {
   const db = createDb(t);
   if (!db) return;
@@ -146,13 +96,8 @@ test("tentative Apple events remain visible in upcoming meetings", (t) => {
   db.db.close();
 });
 
-function insertCalendar(db, provider, id, selected = 1) {
-  const table = provider === "google" ? "google_calendars" : "microsoft_calendars";
-  db.db
-    .prepare(
-      `INSERT INTO ${table} (id, summary, is_selected, is_primary, account_email) VALUES (?, ?, ?, 1, ?)`
-    )
-    .run(id, id, selected, `${provider}@example.com`);
+function insertAppleCalendar(db, id) {
+  db.db.prepare("INSERT INTO apple_calendars (id, title) VALUES (?, ?)").run(id, id);
 }
 
 test("calendar availability fields are persisted with events", (t) => {
@@ -160,7 +105,7 @@ test("calendar availability fields are persisted with events", (t) => {
   if (!db) return;
 
   db.upsertCalendarEvents([
-    restEvent("google", "google-calendar", "free-declined", {
+    appleEvent("free-declined", {
       availability_status: "free",
       self_response_status: "declined",
     }),
@@ -172,34 +117,29 @@ test("calendar availability fields are persisted with events", (t) => {
   db.db.close();
 });
 
-test("availability range query uses overlap boundaries and selected calendars", (t) => {
+test("availability range query uses overlap boundaries and known calendars", (t) => {
   const db = createDb(t);
   if (!db) return;
-  insertCalendar(db, "google", "selected-google");
-  insertCalendar(db, "google", "hidden-google", 0);
-  insertCalendar(db, "microsoft", "selected-microsoft");
+  insertAppleCalendar(db, "apple-calendar");
 
   db.upsertCalendarEvents([
-    restEvent("google", "selected-google", "ends-at-start", {
+    appleEvent("ends-at-start", {
       start_time: "2026-07-22T09:00:00Z",
       end_time: "2026-07-22T10:00:00Z",
     }),
-    restEvent("google", "selected-google", "overlaps", {
+    appleEvent("overlaps", {
       start_time: "2026-07-22T09:30:00Z",
       end_time: "2026-07-22T10:30:00Z",
     }),
-    restEvent("google", "hidden-google", "deselected", {
-      start_time: "2026-07-22T10:15:00Z",
-      end_time: "2026-07-22T10:45:00Z",
-    }),
-    restEvent("microsoft", "selected-microsoft", "other-provider", {
+    appleEvent("removed-calendar", {
+      calendar_id: "gone-calendar",
       start_time: "2026-07-22T10:15:00Z",
       end_time: "2026-07-22T10:45:00Z",
     }),
   ]);
 
   const events = db.getCalendarEventsInRange("2026-07-22T10:00:00Z", "2026-07-22T11:00:00Z", [
-    "google",
+    "apple",
   ]);
   assert.deepEqual(
     events.map((event) => event.id),
@@ -211,9 +151,7 @@ test("availability range query uses overlap boundaries and selected calendars", 
 test("availability range query treats date-only all-day events as local dates", (t) => {
   const db = createDb(t);
   if (!db) return;
-  db.db
-    .prepare("INSERT INTO apple_calendars (id, title) VALUES (?, ?)")
-    .run("apple-calendar", "Apple");
+  insertAppleCalendar(db, "apple-calendar");
   db.upsertCalendarEvents([
     appleEvent("all-day", {
       start_time: "2026-07-22",
@@ -234,34 +172,29 @@ test("availability range query treats date-only all-day events as local dates", 
   db.db.close();
 });
 
-test("reopening a pre-v2 database clears microsoft sync tokens once", (t) => {
+test("reopening drops Google and Microsoft calendar data", (t) => {
   const db = createDb(t);
   if (!db) return;
-  insertCalendar(db, "microsoft", "ms-calendar");
-  db.updateMicrosoftCalendarSyncToken("ms-calendar", "delta-link", Date.now() + 1000000);
-  db.db.pragma("user_version = 1");
+  db.db.exec(`
+    CREATE TABLE google_calendar_tokens (id INTEGER PRIMARY KEY, refresh_token TEXT);
+    CREATE TABLE microsoft_calendars (id TEXT PRIMARY KEY);
+  `);
+  db.upsertCalendarEvents([
+    appleEvent("apple-event"),
+    appleEvent("google-event", { provider: "google", calendar_id: "google-calendar" }),
+    appleEvent("microsoft-event", { provider: "microsoft", calendar_id: "ms-calendar" }),
+  ]);
   db.db.close();
 
   const reopened = new DatabaseManager();
-  const calendar = reopened.db
-    .prepare("SELECT * FROM microsoft_calendars WHERE id = 'ms-calendar'")
-    .get();
-  assert.equal(calendar.sync_token, null);
-  assert.equal(calendar.sync_token_expires_at, null);
-  assert.equal(reopened.db.pragma("user_version", { simple: true }), 2);
+  const tables = reopened.db
+    .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE ?")
+    .all("%_calendar%")
+    .map((row) => row.name);
+  assert.equal(tables.includes("google_calendar_tokens"), false);
+  assert.equal(tables.includes("microsoft_calendars"), false);
+  assert.equal(reopened.getCalendarEventById("apple-event")?.summary, "apple-event");
+  assert.equal(reopened.getCalendarEventById("google-event"), null);
+  assert.equal(reopened.getCalendarEventById("microsoft-event"), null);
   reopened.db.close();
-});
-
-test("google sync token persists alongside its expiry", (t) => {
-  const db = createDb(t);
-  if (!db) return;
-  insertCalendar(db, "google", "google-calendar");
-
-  const expiresAt = Date.parse("2026-07-23T10:00:00Z");
-  db.updateCalendarSyncToken("google-calendar", "sync-token", expiresAt);
-
-  const calendar = db.getGoogleCalendars().find((row) => row.id === "google-calendar");
-  assert.equal(calendar.sync_token, "sync-token");
-  assert.equal(calendar.sync_token_expires_at, expiresAt);
-  db.db.close();
 });

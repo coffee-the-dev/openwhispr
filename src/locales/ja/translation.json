@@ -175,7 +175,6 @@
     "cancel": "キャンセル",
     "recommended": "推奨",
     "active": "有効",
-    "managedByOrg": "組織によって管理されています",
     "freeAccountRequired": "無料アカウントが必要です",
     "comingSoon": "近日公開",
     "cloud": "クラウド",
@@ -301,10 +300,6 @@
         },
         "connectors": {
           "connect": "接続",
-          "googleTitle": "Google カレンダー",
-          "googleDescription": "ミーティングを同期します。",
-          "microsoftTitle": "Microsoft Outlook",
-          "microsoftDescription": "仕事のミーティングと招待を取り込みます。",
           "appleTitle": "Apple カレンダー",
           "appleDescription": "Mac と iPhone の予定を同期します。"
         }
@@ -574,19 +569,6 @@
     }
   },
   "controlPanel": {
-    "update": {
-      "readyTitle": "アップデートの準備完了",
-      "readyDescription": "「アップデートをインストール」をクリックして最新バージョンで再起動します。",
-      "installTitle": "アップデートをインストール",
-      "installDescription": "OpenWhispr はアップデートを適用するために再起動します。作業中のデータは保存されます。",
-      "couldNotInstallTitle": "アップデートをインストールできませんでした",
-      "couldNotInstallDescription": "問題が発生しました。もう一度お試しください。",
-      "couldNotDownloadTitle": "アップデートをダウンロードできませんでした",
-      "couldNotDownloadDescription": "インターネット接続を確認してもう一度お試しください。",
-      "installing": "インストール中...",
-      "installButton": "アップデートをインストール",
-      "availableButton": "アップデートあり"
-    },
     "limit": {
       "weeklyTitle": "週間の利用上限に達しました",
       "weeklyDescription": "利用上限はローリング方式でリセットされます。Pro にアップグレードするか、自分の API キーを使用して無制限にご利用ください。"
@@ -2008,64 +1990,14 @@
           "rebuildNote": "sudo nixos-rebuild switchを実行し、グループの変更と/dev/uinputのルールを反映させるためにログアウト後に再ログインしてください。<you>はあなたのユーザー名に置き換えてください。"
         }
       },
-      "updates": {
-        "automaticUpdates": "自動アップデート",
-        "automaticUpdatesDescription": "アップデートをバックグラウンドでダウンロードしてインストールします",
-        "badges": {
-          "dev": "開発版",
-          "latest": "最新",
-          "update": "アップデート"
-        },
-        "checkForUpdates": "アップデートを確認",
-        "checking": "確認中...",
-        "currentVersion": "現在のバージョン",
-        "devMode": "開発モードで実行中",
-        "dialogs": {
-          "almostThere": {
-            "description": "アップデートの準備がほぼ完了しました。少々お待ちください。",
-            "title": "もうすぐです"
-          },
-          "checkFailed": {
-            "description": "アップデートの確認中に問題が発生しました。後でもう一度お試しください。",
-            "title": "アップデートを確認できませんでした"
-          },
-          "downloadFailed": {
-            "description": "アップデートのダウンロード中に問題が発生しました。もう一度お試しください。",
-            "title": "アップデートをダウンロードできませんでした"
-          },
-          "installFailed": {
-            "description": "アップデートのインストール中に問題が発生しました。もう一度お試しください。",
-            "title": "アップデートをインストールできませんでした"
-          },
-          "installUpdate": {
-            "confirmText": "インストールして再起動",
-            "description": "OpenWhispr はアップデートを適用するために再起動します。",
-            "title": "アップデートをインストール"
-          },
-          "noUpdates": {
-            "description": "最新バージョンをお使いです。",
-            "title": "アップデートはありません"
-          },
-          "updateAvailable": {
-            "description": "アップデートあり: v{{version}}",
-            "title": "アップデートあり"
-          }
-        },
-        "downloadUpdate": "アップデート v{{version}} をダウンロード",
-        "downloading": "ダウンロード中... {{progress}}%",
-        "installAndRestart": "インストールして再起動",
-        "latestVersion": "最新バージョンをお使いです",
-        "managedByPackageManager": "アップデートはパッケージマネージャーから行われます",
-        "newVersion": "新しいバージョンがあります",
-        "newVersionAvailable": "新しいバージョンが利用可能",
-        "restarting": "再起動中...",
-        "title": "アップデート",
-        "versionPlaceholder": "—",
-        "whatsNew": "v{{version}} の新機能"
-      },
       "translationHotkey": {
         "title": "翻訳ホットキー",
         "description": "どの言語で話しても、貼り付けられるテキストは翻訳済みになります"
+      },
+      "version": {
+        "currentVersion": "現在のバージョン",
+        "placeholder": "—",
+        "dev": "開発版"
       }
     },
     "permissions": {
@@ -2098,15 +2030,6 @@
       "cloudNotesMigrationDone": "すべてのノートがバックアップされました",
       "description": "デバイスからのデータ送信を管理します。初期設定ではすべてオフです。",
       "title": "プライバシー",
-      "insightsSync": "個人の統計を同期",
-      "insightsSyncDescription": "単語数、日付と各ディクテーションの正確な時刻、長さ、モデルの種類をデバイス間で同期します。文字起こしの内容は送信されません。サインイン中に履歴を消去すると、これらのカウントもこのデバイスとアカウントから削除されます。",
-      "insightsSyncRequiresAccount": "サインインすると、内容を含まない統計データをデバイス間で同期できます。",
-      "insightsSyncRequiresHistory": "データ保持を有効にすると統計が記録され、デバイス間で同期できるようになります。",
-      "leaderboardDescription": "対象となるワークスペースと勤務先ドメインのリーダーボードに、名前、メールアドレス、アクティビティを表示します。文字起こしは非公開のままです。",
-      "leaderboardRequiresAccount": "リーダーボードへの参加を管理するにはサインインしてください。",
-      "leaderboardRequiresHistory": "リーダーボードに参加する前にデータ保持を有効にしてください。",
-      "usageAnalytics": "使用状況の分析",
-      "usageAnalyticsDescription": "匿名のパフォーマンスデータを共有して OpenWhispr の改善にご協力ください。文字起こしの内容は送信されません。タイミングとエラーデータのみです。",
       "dataRetention": "データ保持",
       "dataRetentionDescription": "文字起こしと音声を履歴にローカル保存します。無効にすると、文字起こしは貼り付けられますが保存されません。",
       "transcriptRetention": "文字起こしの保持",
@@ -3246,78 +3169,6 @@
     "importList": "リストをインポート",
     "agentDefault": "デフォルトで追加済み"
   },
-  "referral": {
-    "title": "紹介して特典をゲット",
-    "subtitle": "1か月あげて、1か月もらおう。",
-    "modalTitle": "友達を紹介",
-    "tabs": {
-      "refer": "紹介する",
-      "pastInvites": "過去の招待"
-    },
-    "howItWorks": {
-      "shareLink": "招待リンクを共有",
-      "theySignUp": "相手が登録すると",
-      "freeMonthOfPro": "Pro の無料 1 か月",
-      "youGet": "あなたも",
-      "freeMonth": "無料 1 か月",
-      "whenTheyDictate": "を獲得（相手が 2,000 語ディクテーションした時点で）"
-    },
-    "inviteLink": {
-      "title": "招待リンク",
-      "copy": "コピー",
-      "copied": "コピーしました"
-    },
-    "sendInvites": {
-      "title": "招待を送信",
-      "placeholder": "friend@example.com",
-      "send": "送信",
-      "sending": "送信中"
-    },
-    "stats": {
-      "referred": "紹介済み",
-      "converted": "登録済み",
-      "monthsEarned": "獲得した月数"
-    },
-    "status": {
-      "converted": "登録済み",
-      "opened": "開封済み",
-      "failed": "失敗",
-      "sent": "送信済み"
-    },
-    "friends": {
-      "title": "フレンド",
-      "completed": "完了",
-      "sentInvites": "送信済みの招待"
-    },
-    "empty": {
-      "title": "まだ招待を送信していません",
-      "description": "リンクを共有するか招待を送信して始めましょう"
-    },
-    "toasts": {
-      "copiedTitle": "コピーしました！",
-      "copiedDescription": "紹介リンクをクリップボードにコピーしました",
-      "copyFailedTitle": "コピーに失敗しました",
-      "copyFailedDescription": "リンクをクリップボードにコピーできませんでした",
-      "invalidEmailTitle": "無効なメールアドレス",
-      "invalidEmailDescription": "有効なメールアドレスを入力してください",
-      "inviteSentTitle": "招待を送信しました！",
-      "inviteSentDescription": "{{email}} に招待を送信しました",
-      "sendFailedTitle": "送信に失敗しました",
-      "sendFailedDescription": "招待の送信に失敗しました。もう一度お試しください。"
-    },
-    "errors": {
-      "unableToLoad": "紹介データを読み込めませんでした",
-      "unableToLoadStats": "紹介統計を読み込めませんでした。後でもう一度お試しください。"
-    },
-    "tryAgain": "再試行",
-    "card": {
-      "brand": "OpenWhispr",
-      "signalId": "Signal ID",
-      "audioSignature": "あなたの音声シグネチャー",
-      "stop": "停止",
-      "playSignal": "シグナルを再生"
-    }
-  },
   "insights": {
     "title": "統計",
     "yourUsage": "利用状況",
@@ -3342,107 +3193,9 @@
     "dataRetentionDisabled": "データ保持が無効なため、新しいディクテーションは統計に集計されません。このデバイスでもアカウントでも加算されません。すでに同期済みのカウントはアカウントに残ります。",
     "onDevice": "このデバイス上",
     "onDevicePrivacy": "プライバシーを保護するため、これらのインサイトはこのデバイス上で計算されます。",
-    "synced": "デバイス間で同期済み",
-    "syncFallback": "デバイスのデータを表示中 — 同期は利用できません",
-    "syncPrompt": "内容を含まないカウンターを同期して、ローカルとクラウドのアクティビティをデバイス間でまとめます。",
-    "enableSync": "同期を有効にする",
-    "syncEnableError": "Insights の同期を有効にできませんでした。もう一度お試しください。",
-    "claimTitle": "以前のディクテーションを含めますか？",
-    "claimDescription_one": "以前のディクテーション {{count}} 件の利用状況を同期します。文字起こしは非公開のままです。",
-    "claimDescription_other": "以前のディクテーション {{count}} 件の利用状況を同期します。文字起こしは非公開のままです。",
-    "claimInclude": "含める",
-    "claimSkip": "今はしない",
-    "enableTitle": "Insights の同期をオンにしますか？",
-    "enableConfirm": "同期をオンにする",
-    "enableDescription_one": "既存のディクテーション {{count}} 件の利用状況を同期します。文字起こしは非公開のままです。",
-    "enableDescription_other": "既存のディクテーション {{count}} 件の利用状況を同期します。文字起こしは非公開のままです。",
     "emptyTitle": "まだディクテーションがありません",
     "emptyBody": "ディクテーションを始めると、単語数・連続記録・日々のアクティビティがここに表示されます。",
-    "loadError": "このデバイスから Insights を読み取れませんでした。",
-    "leaderboard": {
-      "title": "リーダーボード",
-      "inviteCta": "メンバーを招待",
-      "soloTitle": "最初のメンバーを招待しましょう",
-      "soloDescription": "リーダーボードの準備ができました。{{scope}} にメンバーを招待して、アクティビティの比較を始めましょう。",
-      "soloHint": "リーダーボードに参加すると、ここに表示されます。",
-      "topPerformers": "トップメンバー",
-      "refreshCadence": "1時間ごとに更新",
-      "moreActions": "ランキングのその他の操作",
-      "setupTitle": "チームのリーダーボードを作成",
-      "setupDescription": "ワークスペースを作成してメンバーを招待し、アクティビティを比較しながら一緒に成果を伸ばしましょう。",
-      "setupDomainDescription_one": "{{domain}} の {{count}} 人がリーダーボードに参加しています。ワークスペースを作成して招待しましょう。",
-      "setupDomainDescription_other": "{{domain}} の {{count}} 人がリーダーボードに参加しています。ワークスペースを作成して招待しましょう。",
-      "setupCta": "ワークスペースを作成",
-      "accessError": "リーダーボードへのアクセスを確認できませんでした。",
-      "signInTitle": "サインインしてリーダーボードを表示",
-      "signInDescription": "リーダーボードはアカウント内のチームメンバーと順位を比較します。利用できるかどうかはサインインして確認してください。",
-      "requestJoinTitle": "あなたのチームはすでに参加しています",
-      "requestJoinDescription_one": "{{workspace}} には {{count}} 人のメンバーがいます。管理者に追加を依頼してください。",
-      "requestJoinDescription_other": "{{workspace}} には {{count}} 人のメンバーがいます。管理者に追加を依頼してください。",
-      "requestJoinCta": "参加を申請",
-      "requestSent": "申請を送信しました",
-      "requesting": "申請を送信中…",
-      "acceptInviteTitle": "{{workspace}} に招待されています",
-      "acceptInviteDescription": "{{inviter}} さんから招待されました。参加してチームのリーダーボードを確認しましょう。",
-      "acceptInviteDescriptionNoInviter": "{{workspace}} に参加してチームのリーダーボードを確認しましょう。",
-      "acceptInviteCta": "チームに参加",
-      "joining": "参加中…",
-      "inviteAcceptedTitle": "ワークスペースに参加しました",
-      "inviteAcceptedDescription": "{{workspace}} のリーダーボードを表示できます。",
-      "inviteAcceptError": "ワークスペースに参加できませんでした",
-      "invitedList": "招待済み: {{emails}}",
-      "chooseBoard": "リーダーボードを選択",
-      "emptyStrip_one": "{{count}} 人のメンバーがまだリーダーボードに参加していません。参加するとランキングが始まります。",
-      "emptyStrip_other": "{{count}} 人のメンバーがまだリーダーボードに参加していません。参加するとランキングが始まります。",
-      "copyNudge": "案内をコピー",
-      "nudgeText": "チームのリーダーボードを表示するには、OpenWhispr → Insights でリーダーボードに参加してください。",
-      "nudgeCopied": "案内をコピーしました",
-      "nudgeCopyError": "案内をコピーできませんでした",
-      "joinTitle": "{{scope}} での順位を確認しましょう",
-      "joinDescription": "参加対象となるすべてのワークスペースおよび勤務先ドメインのリーダーボードに、名前、メールアドレス、アクティビティが表示されます。文字起こしは非公開で、いつでも退出できます。",
-      "joinCta": "リーダーボードに参加",
-      "joiningLeaderboard": "参加しています…",
-      "joinPolicyBlocked": "ワークスペースのポリシーによりリーダーボードへ参加できません。",
-      "activationError": "リーダーボードへの参加状況を確認できませんでした。接続を確認して、もう一度お試しください。",
-      "disabled": "リーダーボードは無効です",
-      "leave": "リーダーボードから退出",
-      "leavePending": "オンラインに戻り次第、リーダーボードからの退出を完了します。",
-      "allTime": "全期間",
-      "thisWeek": "今週",
-      "wpmValue": "{{count}} WPM",
-      "dayValue_one": "{{count}}日",
-      "dayValue_other": "{{count}}日",
-      "share": "共有",
-      "refresh": "リーダーボードを更新",
-      "error": "リーダーボードを読み込めませんでした。",
-      "retry": "再試行",
-      "rank": "順位",
-      "member": "メンバー",
-      "you": "（自分）",
-      "jumpToMe": "自分の順位へ移動",
-      "jumpUnavailable": "このリーダーボードでアカウントを特定できませんでした。",
-      "previous": "前のページ",
-      "jumpToRank": "指定順位へ移動",
-      "next": "次のページ",
-      "metrics": {
-        "total_words": "合計単語数",
-        "words_per_minute": "1分あたりの単語数",
-        "current_daily_streak": "現在の連続日数",
-        "desktop_words": "デスクトップの単語数",
-        "mobile_words": "モバイルの単語数"
-      },
-      "shareText": "OpenWhispr での私の順位をご覧ください。",
-      "shareTitle": "リーダーボードを共有",
-      "shareDescription": "このカードをコピーまたはダウンロードできます。SNS の投稿画面を開く前にコピーすることもできます。",
-      "copyImage": "画像をコピー",
-      "download": "ダウンロード",
-      "shareX": "X で共有",
-      "shareLinkedIn": "LinkedIn で共有",
-      "copied": "画像をコピーしました。投稿に貼り付けてください。",
-      "saved": "画像をダウンロードしました。",
-      "failed": "共有カードを作成できませんでした。",
-      "unnamedMember": "チームメイト"
-    }
+    "loadError": "このデバイスから Insights を読み取れませんでした。"
   },
   "sidebar": {
     "insights": "統計",
@@ -3450,7 +3203,6 @@
     "notes": "ノート",
     "upload": "アップロード",
     "dictionary": "辞書",
-    "referral": "1か月無料を取得",
     "inviteTeam": "チームを招待",
     "settings": "設定",
     "support": "サポート",
@@ -3692,40 +3444,6 @@
   "integrations": {
     "title": "連携",
     "description": "サービスを接続してワークフローを強化",
-    "googleCalendar": {
-      "title": "Google カレンダー",
-      "optional": "任意",
-      "description": "カレンダーから会議名と参加者を自動で入力します。",
-      "connect": "Google カレンダーを接続",
-      "connecting": "接続中...",
-      "connected": "接続済み",
-      "addAnother": "別のカレンダーを追加",
-      "primaryOnly": "メインカレンダーのみ同期",
-      "primaryOnlyDescription": "共有されたカレンダーの予定は無視します。",
-      "disconnect": "切断",
-      "disconnectConfirm": "{{email}} を切断しますか？",
-      "disconnectDescription": "このカレンダーからの会議メモは記録されなくなります。",
-      "systemAudioRequired": "システムオーディオの権限が必要です",
-      "systemAudioDescription": "会議を文字起こしするには、OpenWhispr に他の参加者の音声を録音するためのシステムオーディオの権限が必要です。画面を録画することはありません。システム設定に移動して有効にします。",
-      "openSettings": "システム設定を開く",
-      "connectFailed": "接続に失敗しました",
-      "connectFailedDescription": "Google Calendar への接続中にエラーが発生しました。もう一度お試しください。"
-    },
-    "microsoftCalendar": {
-      "title": "Microsoft カレンダー",
-      "optional": "任意",
-      "description": "Outlook または Microsoft 365 のカレンダーから会議を読み取ります。",
-      "connect": "Microsoft カレンダーを接続",
-      "connected": "接続済み",
-      "addAnother": "別のカレンダーを追加",
-      "primaryOnly": "メインカレンダーのみ同期",
-      "primaryOnlyDescription": "共有されたカレンダーの予定は無視します。",
-      "disconnect": "切断",
-      "disconnectConfirm": "{{email}} を切断しますか？",
-      "disconnectDescription": "このカレンダーからの会議メモは記録されなくなります。",
-      "connectFailed": "接続に失敗しました",
-      "connectFailedDescription": "Microsoft Calendar への接続中にエラーが発生しました。もう一度お試しください。"
-    },
     "appleCalendar": {
       "title": "Apple カレンダー",
       "optional": "任意",
@@ -3743,29 +3461,7 @@
     },
     "sections": {
       "calendar": "カレンダー",
-      "api": "API",
-      "mcp": "MCP",
       "cli": "CLI"
-    },
-    "api": {
-      "title": "APIキー",
-      "description": "プログラムからのアクセス用にAPIキーを管理",
-      "proRequired": "APIを利用するには有料プランへのアップグレードが必要です",
-      "manage": "キーを管理",
-      "viewPlans": "プランを表示",
-      "dialogTitle": "APIキー"
-    },
-    "mcp": {
-      "title": "メモをAIツールに持ち込みましょう",
-      "description": "Claude、ChatGPT、Cursor内でメモを使ってチャット、検索、作業ができます。",
-      "step1": "AIツールで、公開URLを使用してOpenWhispr MCPを追加します",
-      "step2": "上のセクションで必要なスコープを持つAPIキーを作成します。",
-      "step3": "キーを Authorization ヘッダーとして貼り付けて接続します。",
-      "learnMore": "詳細",
-      "viewPlans": "プランを表示",
-      "copyUrl": "MCP URLをコピー",
-      "proRequired": "OpenWhispr を Claude、ChatGPT、Cursor に接続するには、有料プランへのアップグレードが必要です。",
-      "copied": "コピーしました"
     },
     "cli": {
       "title": "コマンドラインアクセス",
@@ -3800,6 +3496,11 @@
     "notABot": {
       "title": "OpenWhispr はミーティング録音ツールであり、ボットではありません",
       "description": "OpenWhispr はシステムから直接オーディオをキャプチャします — 参加者としてミーティングに参加することはありません。カレンダーを接続して、通常通りノートを取るだけです。"
+    },
+    "systemAudio": {
+      "title": "システムオーディオの権限が必要です",
+      "description": "会議を文字起こしするには、OpenWhispr に他の参加者の音声を録音するためのシステムオーディオの権限が必要です。画面を録画することはありません。システム設定に移動して有効にします。",
+      "openSettings": "システム設定を開く"
     }
   },
   "calendar": {
@@ -3953,59 +3654,6 @@
     "title": "権限が必要です",
     "description": "OpenWhispr がこのコンピュータで動作するために、いくつかの権限が必要です。",
     "continue": "続行"
-  },
-  "apiKeysSection": {
-    "title": "APIキー",
-    "description": "アカウントへのプログラムアクセス用のキーを管理",
-    "docsLink": "APIドキュメント",
-    "empty": "APIキーはまだありません",
-    "createButton": "キーを作成",
-    "create": {
-      "title": "APIキーを作成",
-      "nameLabel": "キー名",
-      "namePlaceholder": "例: マイインテグレーション",
-      "scopesLabel": "権限",
-      "expiryLabel": "有効期限",
-      "expiryOptions": {
-        "never": "無期限",
-        "30days": "30日間",
-        "60days": "60日間",
-        "90days": "90日間",
-        "1year": "1年"
-      },
-      "submit": "作成",
-      "cancel": "キャンセル"
-    },
-    "created": {
-      "title": "キーが作成されました",
-      "warning": "このキーを今すぐコピーしてください。再度表示されることはありません。",
-      "copied": "コピー済み",
-      "copyButton": "クリップボードにコピー",
-      "done": "完了"
-    },
-    "scopes": {
-      "notesRead": "ノートの読み取り",
-      "notesWrite": "ノートの作成と編集",
-      "transcriptionsRead": "文字起こしの読み取り",
-      "dictionaryRead": "辞書を読み取り",
-      "dictionaryWrite": "辞書を編集",
-      "snippetsRead": "スニペットを読み取り",
-      "snippetsWrite": "スニペットを編集",
-      "transcriptionsWrite": "音声を文字起こし"
-    },
-    "revoke": {
-      "button": "取り消し",
-      "confirm": "このAPIキーを取り消しますか？このキーを使用しているインテグレーションは機能しなくなります。",
-      "success": "APIキーが取り消されました"
-    },
-    "neverUsed": "未使用",
-    "lastUsed": "{{time}}に使用",
-    "maxKeysReached": "キーの上限（{{max}}個）に達しました",
-    "errors": {
-      "loadFailed": "APIキーを読み込めませんでした",
-      "createFailed": "APIキーを作成できませんでした",
-      "revokeFailed": "APIキーを取り消せませんでした"
-    }
   },
   "embeddedChat": {
     "askPlaceholder": "何でも聞いてください...",

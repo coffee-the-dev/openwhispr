@@ -184,27 +184,6 @@ export interface AnalyticsEventInput {
   model?: string | null;
 }
 
-export interface PendingAnalyticsEvent {
-  event_id: string;
-  occurred_at: string;
-  local_date: string;
-  word_count: number;
-  spoken_duration_ms: number | null;
-  mode: AnalyticsMode;
-  provider: string | null;
-  model: string | null;
-  counter_version: number;
-}
-
-export interface PendingAnalyticsClear {
-  cleared_through: string;
-}
-
-export interface AnalyticsSyncContext {
-  accountId: string;
-  authGeneration: number;
-}
-
 export interface AnalyticsDailyBucket {
   date: string;
   words: number;
@@ -221,86 +200,6 @@ export interface AnalyticsSummary {
   longestStreakDays: number;
   wpmCoveragePercent: number;
   daily: AnalyticsDailyBucket[];
-  historyBackfillRetryRequired?: boolean;
-}
-
-export type LeaderboardMetric =
-  "total_words" | "words_per_minute" | "current_daily_streak" | "desktop_words" | "mobile_words";
-
-export type LeaderboardRange = "week" | "all";
-
-export interface AnalyticsParticipation {
-  configured: boolean;
-  enabled: boolean;
-  updatedAt: string | null;
-}
-
-export interface LeaderboardMember {
-  userId: string;
-  name: string | null;
-  // Withheld (null) on a domain board, where a shared mail suffix is the only
-  // thing the listed people have in common.
-  email: string | null;
-  image: string | null;
-  totalWords: number;
-  desktopWords: number;
-  mobileWords: number;
-  averageWpm: number | null;
-  currentStreakDays: number;
-  rank: number;
-}
-
-export type LeaderboardAccessState =
-  "ready" | "invite" | "accept_invite" | "request_join" | "create";
-
-export interface LeaderboardAccessScope {
-  key: string;
-  kind: "workspace" | "domain";
-  id: string;
-  name: string;
-  memberCount: number;
-  state: "ready" | "invite";
-  role: WorkspaceRole | null;
-}
-
-export interface LeaderboardAccess {
-  state: LeaderboardAccessState;
-  scopes: LeaderboardAccessScope[];
-  domain: string | null;
-  colleagueCount: number;
-  invitation: {
-    workspaceId: string;
-    workspaceName: string;
-    inviterName: string | null;
-  } | null;
-  joinableWorkspace: {
-    id: string;
-    name: string;
-    memberCount: number;
-    requestState: "none" | "pending";
-  } | null;
-}
-
-export interface Leaderboard {
-  scope: {
-    key: string;
-    kind: "workspace" | "domain";
-    id: string;
-    name: string;
-  };
-  viewerUserId: string | null;
-  metric: LeaderboardMetric;
-  range: LeaderboardRange;
-  weekStart: string | null;
-  availableWeekStarts: string[];
-  leaders: LeaderboardMember[];
-  members: LeaderboardMember[];
-  totalMembers: number;
-  viewerRank: number | null;
-  page: number;
-  pageSize: number;
-  generatedAt: string;
-  refreshAfterSeconds: number;
 }
 
 export interface NoteItem {
@@ -839,34 +738,6 @@ export interface ScreenContextImage {
   data: string;
 }
 
-export interface UpdateCheckResult {
-  updateAvailable: boolean;
-  version?: string;
-  releaseDate?: string;
-  files?: any[];
-  releaseNotes?: string;
-  message?: string;
-}
-
-export interface UpdateStatusResult {
-  updateAvailable: boolean;
-  updateDownloaded: boolean;
-  isDevelopment: boolean;
-  isSupported: boolean;
-}
-
-export interface UpdateInfoResult {
-  version?: string;
-  releaseDate?: string;
-  releaseNotes?: string | null;
-  files?: any[];
-}
-
-export interface UpdateResult {
-  success: boolean;
-  message: string;
-}
-
 export interface AppVersionResult {
   version: string;
 }
@@ -1097,15 +968,6 @@ export interface OnboardingDemoEvent {
   level?: number;
 }
 
-export interface ReferralItem {
-  id: string;
-  email: string;
-  name: string | null;
-  status: "pending" | "completed" | "rewarded";
-  created_at: string;
-  first_payment_at: string | null;
-}
-
 declare global {
   interface Window {
     electronAPI: {
@@ -1275,35 +1137,6 @@ declare global {
         input: AnalyticsEventInput
       ) => Promise<{ success: boolean; eventId?: string; ignored?: boolean }>;
       getAnalyticsSummary: () => Promise<AnalyticsSummary>;
-      getPendingAnalyticsEvents: (
-        limit?: number,
-        context?: AnalyticsSyncContext
-      ) => Promise<PendingAnalyticsEvent[]>;
-      markAnalyticsEventsSynced: (
-        eventIds: string[],
-        context?: AnalyticsSyncContext
-      ) => Promise<{ success: boolean; updated: number }>;
-      getPendingAnalyticsDeletes: (
-        limit?: number,
-        context?: AnalyticsSyncContext
-      ) => Promise<Array<{ event_id: string }>>;
-      hardDeleteAnalyticsEvents: (
-        eventIds: string[],
-        context?: AnalyticsSyncContext
-      ) => Promise<{ success: boolean; deleted: number }>;
-      getPendingAnalyticsClear: (
-        context?: AnalyticsSyncContext
-      ) => Promise<PendingAnalyticsClear | null>;
-      completeAnalyticsClear: (
-        clearedThrough: string,
-        context?: AnalyticsSyncContext
-      ) => Promise<{ success: boolean; deleted: number }>;
-      countUnclaimedAnalyticsEvents: (context?: AnalyticsSyncContext) => Promise<number>;
-      countAnalyticsEventsAwaitingUpload: (context?: AnalyticsSyncContext) => Promise<number>;
-      claimAnonymousAnalyticsEvents: (
-        accountId: string,
-        expectedAuthGeneration: number
-      ) => Promise<{ success: boolean; claimed: number; code?: string }>;
       clearTranscriptions: () => Promise<{ cleared: number; success: boolean }>;
       deleteTranscription: (id: number) => Promise<{ success: boolean }>;
       getTranscriptionById: (id: number) => Promise<TranscriptionItem | null>;
@@ -1671,11 +1504,6 @@ declare global {
       promptAccessibilityPermission: () => Promise<boolean>;
       readClipboard: () => Promise<string>;
       writeClipboard: (text: string) => Promise<{ success: boolean }>;
-      copyLeaderboardImage: (dataUrl: string) => Promise<{ success: boolean; error?: string }>;
-      saveLeaderboardImage: (
-        dataUrl: string,
-        suggestedName: string
-      ) => Promise<{ success: boolean; canceled?: boolean; error?: string }>;
       checkPasteTools: () => Promise<PasteToolsResult>;
 
       // Audio
@@ -1970,26 +1798,12 @@ declare global {
       cleanupApp: () => Promise<{ success: boolean; message: string; errors?: string[] }>;
       relaunchApp: () => Promise<void>;
 
-      // Update operations
-      checkForUpdates: () => Promise<UpdateCheckResult>;
-      downloadUpdate: () => Promise<UpdateResult>;
-      installUpdate: () => Promise<UpdateResult>;
       getAppVersion: () => Promise<AppVersionResult>;
       getPostMigrationState: () => Promise<{ justMigrated: boolean }>;
       getOAuthProtocolRegistered: () => Promise<boolean>;
       getOAuthProtocol: () => Promise<string>;
       markBundleMigrated: () => Promise<void>;
       markBundleMigrationDismissed: () => Promise<void>;
-      getUpdateStatus: () => Promise<UpdateStatusResult>;
-      getUpdateInfo: () => Promise<UpdateInfoResult | null>;
-      setAutoUpdatesEnabled: (enabled: boolean) => Promise<{ success: boolean }>;
-
-      // Update event listeners
-      onUpdateAvailable: (callback: (event: any, info: any) => void) => () => void;
-      onUpdateNotAvailable: (callback: (event: any, info: any) => void) => () => void;
-      onUpdateDownloaded: (callback: (event: any, info: any) => void) => () => void;
-      onUpdateDownloadProgress: (callback: (event: any, progressObj: any) => void) => () => void;
-      onUpdateError: (callback: (event: any, error: any) => void) => () => void;
 
       openExternal: (url: string) => Promise<{ success: boolean; error?: string }>;
 
@@ -2319,8 +2133,6 @@ declare global {
           prompt?: string;
           useCase?: string;
           diarization?: boolean;
-          localDate?: string;
-          analyticsOccurredAt?: string;
           // Why a managed-streaming user's dictation went batch (rollout metric).
           streamingFallbackReason?: string;
         } & SttDetectedLanguageFields
@@ -2377,10 +2189,6 @@ declare global {
           audioFormat?: string;
           clientTotalMs?: number;
           clientTranscriptionId?: string;
-          localDate?: string;
-          analyticsOccurredAt?: string;
-          analyticsWordCount?: number;
-          analyticsCounterVersion?: number;
         } & SttDetectedLanguageFields
       ) => Promise<{
         success: boolean;
@@ -2545,46 +2353,6 @@ declare global {
       onAssemblyAiSessionEnd?: (
         callback: (data: { audioDuration?: number; text?: string }) => void
       ) => () => void;
-
-      // Referral stats
-      getReferralStats?: () => Promise<{
-        referralCode: string;
-        referralLink: string;
-        totalReferrals: number;
-        completedReferrals: number;
-        pendingReferrals: number;
-        totalMonthsEarned: number;
-        referrals: Array<{
-          id: string;
-          email: string;
-          name: string;
-          status: "pending" | "completed" | "rewarded";
-          created_at: string;
-          first_payment_at: string | null;
-          words_used: number;
-        }>;
-      }>;
-
-      sendReferralInvite?: (email: string) => Promise<{
-        success: boolean;
-        invite: {
-          id: string;
-          recipientEmail: string;
-          status: "sent" | "failed" | "opened" | "converted";
-          sentAt: string;
-        };
-      }>;
-
-      getReferralInvites?: () => Promise<{
-        invites: Array<{
-          id: string;
-          recipientEmail: string;
-          status: "sent" | "failed" | "opened" | "converted";
-          sentAt: string;
-          openedAt?: string;
-          convertedAt?: string;
-        }>;
-      }>;
 
       // Agent Mode
       updateVoiceAgentHotkey?: (hotkey: string) => Promise<{ success: boolean; message: string }>;
@@ -2835,22 +2603,8 @@ declare global {
         } & CloudFailureMetadata
       >;
 
-      // Google Calendar
-      gcalStartOAuth?: () => Promise<{ success: boolean; email?: string; error?: string }>;
-      gcalDisconnect?: (email?: string) => Promise<{ success: boolean; error?: string }>;
-      gcalGetConnectionStatus?: () => Promise<{
-        connected: boolean;
-        accounts: Array<{ email: string }>;
-        email: string | null;
-      }>;
-      gcalGetCalendars?: () => Promise<{ success: boolean; calendars: any[] }>;
-      gcalSetCalendarSelection?: (
-        calendarId: string,
-        isSelected: boolean
-      ) => Promise<{ success: boolean; error?: string }>;
-      gcalSetPrimaryOnly?: (value: boolean) => Promise<{ success: boolean; error?: string }>;
-      gcalSyncEvents?: () => Promise<{ success: boolean; error?: string }>;
-      gcalGetUpcomingEvents?: (
+      // Calendar events (shared cache)
+      calendarGetUpcomingEvents?: (
         windowMinutes?: number
       ) => Promise<{ success: boolean; events: any[] }>;
       calendarGetAvailability?: (
@@ -2859,7 +2613,7 @@ declare global {
         | { success: true; availability: CalendarAvailabilityResult }
         | { success: false; error: string }
       >;
-      gcalGetEvent?: (eventId: string) => Promise<{
+      calendarGetEvent?: (eventId: string) => Promise<{
         success: boolean;
         event: {
           id: string;
@@ -3079,21 +2833,6 @@ declare global {
       ) => () => void;
       onDictationRealtimeError?: (callback: (error: string) => void) => () => void;
       onDictationRealtimeSessionEnd?: (callback: (data: { text: string }) => void) => () => void;
-
-      // Google Calendar event listeners
-      onGcalConnectionChanged?: (callback: (data: any) => void) => () => void;
-      onGcalEventsSynced?: (callback: (data: any) => void) => () => void;
-
-      // Microsoft Calendar
-      mcalStartOAuth?: () => Promise<{ success: boolean; email?: string; error?: string }>;
-      mcalDisconnect?: (email?: string) => Promise<{ success: boolean; error?: string }>;
-      mcalGetConnectionStatus?: () => Promise<{
-        connected: boolean;
-        accounts: Array<{ email: string }>;
-      }>;
-      mcalSetPrimaryOnly?: (value: boolean) => Promise<{ success: boolean; error?: string }>;
-      onMcalConnectionChanged?: (callback: (data: any) => void) => () => void;
-      onMcalEventsSynced?: (callback: (data: any) => void) => () => void;
 
       // Apple Calendar (macOS EventKit)
       acalConnect?: () => Promise<{ success: boolean; reason?: string; error?: string }>;

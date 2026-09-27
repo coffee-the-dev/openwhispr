@@ -38,8 +38,6 @@ const ARABIC_PLURAL_BASES = [
   "insights.days",
   "insights.longestStreak",
   "insights.dayTooltip",
-  "insights.claimDescription",
-  "insights.enableDescription",
 ];
 const ARABIC_NUMBER_NEUTRAL_TEMPLATES = {
   "workspaces.invite.seatUsage": "المقاعد المستخدمة: {{used}} من أصل {{seats}}",

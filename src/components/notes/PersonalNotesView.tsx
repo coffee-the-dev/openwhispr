@@ -349,7 +349,7 @@ export default function PersonalNotesView({
       setCalendarEventName(null);
       return;
     }
-    window.electronAPI.gcalGetEvent?.(activeNote.calendar_event_id).then((result) => {
+    window.electronAPI.calendarGetEvent?.(activeNote.calendar_event_id).then((result) => {
       setCalendarEventName(result?.success && result.event?.summary ? result.event.summary : null);
     });
   }, [activeNote?.calendar_event_id]);

@@ -175,7 +175,6 @@
     "cancel": "取消",
     "recommended": "推薦",
     "active": "使用中",
-    "managedByOrg": "由您的組織管理",
     "freeAccountRequired": "需要免費帳戶",
     "comingSoon": "即將推出",
     "cloud": "雲端",
@@ -301,10 +300,6 @@
         },
         "connectors": {
           "connect": "連接",
-          "googleTitle": "Google 日曆",
-          "googleDescription": "同步你的會議。",
-          "microsoftTitle": "Microsoft Outlook",
-          "microsoftDescription": "匯入工作會議與邀請。",
           "appleTitle": "Apple 日曆",
           "appleDescription": "同步你 Mac 和 iPhone 上的行程。"
         }
@@ -574,19 +569,6 @@
     }
   },
   "controlPanel": {
-    "update": {
-      "readyTitle": "更新已準備就緒",
-      "readyDescription": "點擊「安裝更新」以重新啟動並套用最新版本。",
-      "installTitle": "安裝更新",
-      "installDescription": "OpenWhispr 將重新啟動以套用更新。進行中的工作會自動儲存。",
-      "couldNotInstallTitle": "無法安裝更新",
-      "couldNotInstallDescription": "發生錯誤，請再試一次。",
-      "couldNotDownloadTitle": "無法下載更新",
-      "couldNotDownloadDescription": "請檢查你的網路連線後再試一次。",
-      "installing": "安裝中...",
-      "installButton": "安裝更新",
-      "availableButton": "有可用更新"
-    },
     "limit": {
       "weeklyTitle": "已達每週使用上限",
       "weeklyDescription": "你的額度為滾動式重置。升級至 Pro 或使用自己的 API Key 即可無限使用。"
@@ -2008,64 +1990,14 @@
           "rebuildNote": "執行 sudo nixos-rebuild switch，然後登出並重新登入，使群組變更與 /dev/uinput 規則生效。將 <you> 替換為你的使用者名稱。"
         }
       },
-      "updates": {
-        "automaticUpdates": "自動更新",
-        "automaticUpdatesDescription": "在背景下載並安裝更新",
-        "badges": {
-          "dev": "開發版",
-          "latest": "最新",
-          "update": "更新"
-        },
-        "checkForUpdates": "檢查更新",
-        "checking": "檢查中...",
-        "currentVersion": "目前版本",
-        "devMode": "正在開發模式中執行",
-        "dialogs": {
-          "almostThere": {
-            "description": "更新即將完成。請稍候。",
-            "title": "即將完成"
-          },
-          "checkFailed": {
-            "description": "檢查更新時發生問題。請稍後再試。",
-            "title": "無法檢查更新"
-          },
-          "downloadFailed": {
-            "description": "下載更新時發生問題。請再試一次。",
-            "title": "無法下載更新"
-          },
-          "installFailed": {
-            "description": "安裝更新時發生問題。請再試一次。",
-            "title": "無法安裝更新"
-          },
-          "installUpdate": {
-            "confirmText": "安裝並重新啟動",
-            "description": "OpenWhispr 將重新啟動以套用更新。",
-            "title": "安裝更新"
-          },
-          "noUpdates": {
-            "description": "你使用的是最新版本。",
-            "title": "沒有更新"
-          },
-          "updateAvailable": {
-            "description": "有可用更新：v{{version}}",
-            "title": "有可用更新"
-          }
-        },
-        "downloadUpdate": "下載更新 {{version}}",
-        "downloading": "下載中... {{progress}}%",
-        "installAndRestart": "安裝並重新啟動",
-        "latestVersion": "你使用的是最新版本",
-        "managedByPackageManager": "更新透過您的套件管理器安裝",
-        "newVersion": "有更新的版本可用",
-        "newVersionAvailable": "有新版本可用",
-        "restarting": "重新啟動中...",
-        "title": "更新",
-        "versionPlaceholder": "—",
-        "whatsNew": "v{{version}} 的新功能"
-      },
       "translationHotkey": {
         "title": "翻譯快捷鍵",
         "description": "用任何語言聽寫——貼上的文字會自動翻譯"
+      },
+      "version": {
+        "currentVersion": "目前版本",
+        "placeholder": "—",
+        "dev": "開發版"
       }
     },
     "permissions": {
@@ -2098,15 +2030,6 @@
       "cloudNotesMigrationDone": "所有筆記已備份",
       "description": "控制哪些資料會離開你的裝置。預設全部關閉。",
       "title": "隱私權",
-      "insightsSync": "同步個人統計",
-      "insightsSyncDescription": "在你的裝置之間同步字數、每次聽寫的日期與精確時間、時長與模型類型。轉錄內容永遠不會包含在內。登入後清除記錄，也會從此裝置和你的帳戶中刪除這些統計資料。",
-      "insightsSyncRequiresAccount": "登入後即可在裝置之間同步不含內容的統計資料。",
-      "insightsSyncRequiresHistory": "開啟資料保留後才會記錄統計，之後才能跨裝置同步。",
-      "leaderboardDescription": "在符合條件的工作區與工作網域排行榜中顯示你的姓名、電子郵件和活動。轉錄內容維持私密。",
-      "leaderboardRequiresAccount": "登入後即可管理排行榜參與狀態。",
-      "leaderboardRequiresHistory": "加入排行榜前，請先開啟資料保留。",
-      "usageAnalytics": "使用分析",
-      "usageAnalyticsDescription": "分享匿名的效能指標，協助我們改善 OpenWhispr。我們絕不會傳送轉錄內容——只有計時和錯誤資料。",
       "dataRetention": "資料保留",
       "dataRetentionDescription": "將轉錄和音訊本地儲存至歷史記錄。停用後，轉錄內容會被貼上但不會被儲存。",
       "transcriptRetention": "轉錄保留",
@@ -2641,78 +2564,6 @@
       "contextTooLargeGeneric": "內容過長，{{model}} 無法在這台電腦上讀取。請改用雲端模型，或對更短的選取範圍執行該動作。",
       "localServerUnavailable": "無法在這台電腦上啟動 {{model}}。請重試，或改用雲端模型。",
       "localModelBusy": "本機模型仍在處理另一個請求。請等待其完成後再試。"
-    }
-  },
-  "referral": {
-    "modalTitle": "推薦計畫",
-    "title": "推薦好友賺取獎勵",
-    "subtitle": "送一個月，得一個月。",
-    "tabs": {
-      "refer": "推薦",
-      "pastInvites": "過去的邀請"
-    },
-    "howItWorks": {
-      "shareLink": "分享您的邀請連結",
-      "theySignUp": "對方註冊即可獲得",
-      "freeMonthOfPro": "一個月免費 Pro",
-      "youGet": "您可獲得",
-      "freeMonth": "一個月免費",
-      "whenTheyDictate": "當對方聽寫滿 2,000 字時"
-    },
-    "inviteLink": {
-      "title": "您的邀請連結",
-      "copy": "複製",
-      "copied": "已複製"
-    },
-    "sendInvites": {
-      "title": "發送邀請",
-      "placeholder": "friend@example.com",
-      "send": "發送",
-      "sending": "發送中"
-    },
-    "stats": {
-      "referred": "已推薦",
-      "converted": "已轉換",
-      "monthsEarned": "已獲得月數"
-    },
-    "status": {
-      "converted": "已轉換",
-      "opened": "已開啟",
-      "failed": "失敗",
-      "sent": "已發送"
-    },
-    "empty": {
-      "title": "尚未發送任何邀請",
-      "description": "分享您的連結或發送邀請以開始使用"
-    },
-    "toasts": {
-      "copiedTitle": "已複製！",
-      "copiedDescription": "推薦連結已複製到剪貼簿",
-      "copyFailedTitle": "複製失敗",
-      "copyFailedDescription": "無法將連結複製到剪貼簿",
-      "invalidEmailTitle": "無效的電子郵件",
-      "invalidEmailDescription": "請輸入有效的電子郵件地址",
-      "inviteSentTitle": "邀請已發送！",
-      "inviteSentDescription": "邀請已發送至 {{email}}",
-      "sendFailedTitle": "發送失敗",
-      "sendFailedDescription": "無法發送邀請，請重試。"
-    },
-    "errors": {
-      "unableToLoad": "無法載入推薦資料",
-      "unableToLoadStats": "無法載入推薦統計資料，請稍後再試。"
-    },
-    "tryAgain": "重試",
-    "card": {
-      "brand": "OpenWhispr",
-      "signalId": "Signal ID",
-      "audioSignature": "您的音訊簽名",
-      "stop": "停止",
-      "playSignal": "播放信號"
-    },
-    "friends": {
-      "title": "好友",
-      "completed": "已完成",
-      "sentInvites": "已發送的邀請"
     }
   },
   "notes": {
@@ -3342,107 +3193,9 @@
     "dataRetentionDisabled": "資料保留已關閉，因此新的聽寫不會計入統計——本裝置和你的帳戶都不會計數。已同步的計數會保留在你的帳戶中。",
     "onDevice": "僅在本裝置",
     "onDevicePrivacy": "這些分析資料會在此裝置上計算，以保護你的隱私。",
-    "synced": "已跨裝置同步",
-    "syncFallback": "正在顯示本裝置資料 — 同步無法使用",
-    "syncPrompt": "同步不含內容的計數，將本機與雲端的活動跨裝置合併。",
-    "enableSync": "啟用同步",
-    "syncEnableError": "無法啟用 Insights 同步。請再試一次。",
-    "claimTitle": "要包含較早的聽寫嗎？",
-    "claimDescription_one": "同步 {{count}} 則較早聽寫的使用資料。轉錄內容保持私密。",
-    "claimDescription_other": "同步 {{count}} 則較早聽寫的使用資料。轉錄內容保持私密。",
-    "claimInclude": "包含",
-    "claimSkip": "暫不開啟",
-    "enableTitle": "要開啟 Insights 同步嗎？",
-    "enableConfirm": "開啟同步",
-    "enableDescription_one": "同步 {{count}} 則現有聽寫的使用資料。轉錄內容保持私密。",
-    "enableDescription_other": "同步 {{count}} 則現有聽寫的使用資料。轉錄內容保持私密。",
     "emptyTitle": "尚無聽寫記錄",
     "emptyBody": "開始聽寫後，你的字數、連續記錄與每日活動會顯示在這裡。",
-    "loadError": "無法從本裝置讀取 Insights。",
-    "leaderboard": {
-      "title": "排行榜",
-      "inviteCta": "邀請同事",
-      "soloTitle": "邀請第一位同事",
-      "soloDescription": "排行榜已準備就緒。邀請同事加入 {{scope}}，即可開始比較活動資料、一起累積成果。",
-      "soloHint": "對方加入排行榜後會顯示在這裡。",
-      "topPerformers": "領先成員",
-      "refreshCadence": "每小時更新",
-      "moreActions": "更多排行榜操作",
-      "setupTitle": "建立團隊排行榜",
-      "setupDescription": "建立工作區並邀請同事，以便比較活動資料、一起累積成果。",
-      "setupDomainDescription_one": "{{domain}} 有 {{count}} 人加入了排行榜。建立工作區並邀請對方吧。",
-      "setupDomainDescription_other": "{{domain}} 有 {{count}} 人加入了排行榜。建立工作區並邀請他們吧。",
-      "setupCta": "建立工作區",
-      "accessError": "無法檢查你的排行榜存取權限。",
-      "signInTitle": "登入以查看排行榜",
-      "signInDescription": "排行榜會將你與帳戶中的團隊成員進行比較。登入即可查看你的排行榜是否可用。",
-      "requestJoinTitle": "你的團隊已在這裡",
-      "requestJoinDescription_one": "{{workspace}} 有 {{count}} 名成員。請聯絡管理員將你加入工作區。",
-      "requestJoinDescription_other": "{{workspace}} 有 {{count}} 名成員。請聯絡管理員將你加入工作區。",
-      "requestJoinCta": "申請加入",
-      "requestSent": "申請已傳送",
-      "requesting": "正在傳送申請…",
-      "acceptInviteTitle": "你已受邀加入 {{workspace}}",
-      "acceptInviteDescription": "{{inviter}} 邀請了你。加入後即可查看團隊排行榜。",
-      "acceptInviteDescriptionNoInviter": "加入 {{workspace}} 後即可查看團隊排行榜。",
-      "acceptInviteCta": "加入團隊",
-      "joining": "正在加入…",
-      "inviteAcceptedTitle": "已加入工作區",
-      "inviteAcceptedDescription": "你現在可以查看 {{workspace}} 的排行榜。",
-      "inviteAcceptError": "無法加入此工作區",
-      "invitedList": "已邀請：{{emails}}",
-      "chooseBoard": "選擇排行榜",
-      "emptyStrip_one": "還有 {{count}} 位隊友尚未加入排行榜。加入後即可開始排名。",
-      "emptyStrip_other": "還有 {{count}} 位隊友尚未加入排行榜。加入後即可開始排名。",
-      "copyNudge": "複製提醒",
-      "nudgeText": "請在 OpenWhispr → Insights 中加入排行榜，這樣我們就能查看團隊排行榜。",
-      "nudgeCopied": "提醒已複製",
-      "nudgeCopyError": "無法複製提醒",
-      "joinTitle": "查看你在 {{scope}} 中的排名",
-      "joinDescription": "你的姓名、電子郵件與活動會顯示在所有符合條件的工作區和工作網域排行榜中。轉錄內容保持私密，你可以隨時退出。",
-      "joinCta": "加入排行榜",
-      "joiningLeaderboard": "正在加入…",
-      "joinPolicyBlocked": "你的工作區政策不允許加入排行榜。",
-      "activationError": "無法驗證你的排行榜參與狀態。請檢查網路連線後再試一次。",
-      "disabled": "排行榜已停用",
-      "leave": "退出排行榜",
-      "leavePending": "恢復連線後，我們會完成退出排行榜。",
-      "allTime": "全部時間",
-      "thisWeek": "本週",
-      "wpmValue": "{{count}} 字/分鐘",
-      "dayValue_one": "{{count}} 天",
-      "dayValue_other": "{{count}} 天",
-      "share": "分享",
-      "refresh": "重新整理排行榜",
-      "error": "無法載入排行榜。",
-      "retry": "再試一次",
-      "rank": "排名",
-      "member": "成員",
-      "you": "（你）",
-      "jumpToMe": "跳至我的排名",
-      "jumpUnavailable": "無法在此排行榜中識別你的帳戶。",
-      "previous": "上一頁",
-      "jumpToRank": "跳至指定排名",
-      "next": "下一頁",
-      "metrics": {
-        "total_words": "總字數",
-        "words_per_minute": "每分鐘字數",
-        "current_daily_streak": "目前連續天數",
-        "desktop_words": "桌面版字數",
-        "mobile_words": "行動版字數"
-      },
-      "shareText": "看看我在 OpenWhispr 上的排名。",
-      "shareTitle": "分享排行榜",
-      "shareDescription": "複製或下載此卡片，也可以在開啟社群貼文編輯器前先複製。",
-      "copyImage": "複製圖片",
-      "download": "下載",
-      "shareX": "分享到 X",
-      "shareLinkedIn": "分享到 LinkedIn",
-      "copied": "圖片已複製，請貼到你的貼文中。",
-      "saved": "圖片已下載。",
-      "failed": "無法建立分享卡片。",
-      "unnamedMember": "團隊成員"
-    }
+    "loadError": "無法從本裝置讀取 Insights。"
   },
   "sidebar": {
     "insights": "統計",
@@ -3450,7 +3203,6 @@
     "notes": "筆記",
     "upload": "上傳",
     "dictionary": "字典",
-    "referral": "獲得一個月免費",
     "inviteTeam": "邀請你的團隊",
     "settings": "設定",
     "support": "支援",
@@ -3692,40 +3444,6 @@
   "integrations": {
     "title": "整合",
     "description": "連接服務以增強您的工作流程",
-    "googleCalendar": {
-      "title": "Google 日曆",
-      "optional": "可選",
-      "description": "從日曆自動填入會議名稱和參與者。",
-      "connect": "連接 Google 日曆",
-      "connecting": "連接中...",
-      "connected": "已連接",
-      "addAnother": "新增其他日曆",
-      "primaryOnly": "僅同步主要日曆",
-      "primaryOnlyDescription": "忽略他人分享給你的日曆事件。",
-      "disconnect": "中斷連接",
-      "disconnectConfirm": "中斷 {{email}} 的連接？",
-      "disconnectDescription": "將不再從此日曆記錄會議筆記。",
-      "systemAudioRequired": "需要系統音訊權限",
-      "systemAudioDescription": "要轉錄會議，OpenWhispr 需要系統音訊權限來錄製其他參與者的音訊。我們絕不會錄製您的螢幕。您將被引導至系統設定以啟用此權限。",
-      "openSettings": "打開系統設定",
-      "connectFailed": "連線失敗",
-      "connectFailedDescription": "連線 Google Calendar 時發生錯誤。請再試一次。"
-    },
-    "microsoftCalendar": {
-      "title": "Microsoft 日曆",
-      "optional": "可選",
-      "description": "從 Outlook 或 Microsoft 365 日曆讀取會議。",
-      "connect": "連接 Microsoft 日曆",
-      "connected": "已連接",
-      "addAnother": "新增其他日曆",
-      "primaryOnly": "僅同步主要日曆",
-      "primaryOnlyDescription": "忽略他人分享給你的日曆事件。",
-      "disconnect": "中斷連接",
-      "disconnectConfirm": "中斷 {{email}} 的連接？",
-      "disconnectDescription": "將不再從此日曆記錄會議筆記。",
-      "connectFailed": "連線失敗",
-      "connectFailedDescription": "連線 Microsoft Calendar 時發生錯誤。請再試一次。"
-    },
     "appleCalendar": {
       "title": "Apple 日曆",
       "optional": "可選",
@@ -3743,29 +3461,7 @@
     },
     "sections": {
       "calendar": "行事曆",
-      "api": "API",
-      "mcp": "MCP",
       "cli": "CLI"
-    },
-    "api": {
-      "title": "API 金鑰",
-      "description": "管理用於程式存取的 API 金鑰",
-      "proRequired": "升級到付費方案以存取 API",
-      "manage": "管理金鑰",
-      "viewPlans": "查看方案",
-      "dialogTitle": "API 金鑰"
-    },
-    "mcp": {
-      "title": "將筆記帶到你的 AI 工具中",
-      "description": "在 Claude、ChatGPT 和 Cursor 中與你的筆記一起聊天、搜尋和工作。",
-      "step1": "在你的 AI 工具中，使用公開 URL 新增 OpenWhispr MCP",
-      "step2": "在上方建立具有所需權限的 API 金鑰。",
-      "step3": "將金鑰貼上為 Authorization 標頭以連線。",
-      "learnMore": "瞭解更多",
-      "viewPlans": "查看方案",
-      "copyUrl": "複製 MCP URL",
-      "proRequired": "升級到付費方案，以將 OpenWhispr 連接到 Claude、ChatGPT 和 Cursor。",
-      "copied": "已複製"
     },
     "cli": {
       "title": "命令列存取",
@@ -3800,6 +3496,11 @@
     "notABot": {
       "title": "OpenWhispr 是會議錄製工具，不是機器人",
       "description": "OpenWhispr 直接從您的系統擷取音訊 — 它不會以參與者身分加入您的會議。只需連接日曆，正常記錄筆記即可。"
+    },
+    "systemAudio": {
+      "title": "需要系統音訊權限",
+      "description": "要轉錄會議，OpenWhispr 需要系統音訊權限來錄製其他參與者的音訊。我們絕不會錄製您的螢幕。您將被引導至系統設定以啟用此權限。",
+      "openSettings": "打開系統設定"
     }
   },
   "calendar": {
@@ -3953,59 +3654,6 @@
     "title": "需要權限",
     "description": "OpenWhispr 需要一些權限才能在此電腦上正常運作。",
     "continue": "繼續"
-  },
-  "apiKeysSection": {
-    "title": "API 金鑰",
-    "description": "建立金鑰以程式化方式存取 OpenWhispr API。",
-    "docsLink": "API 文件",
-    "empty": "尚無 API 金鑰",
-    "createButton": "建立 API 金鑰",
-    "create": {
-      "title": "建立 API 金鑰",
-      "nameLabel": "金鑰名稱",
-      "namePlaceholder": "例如：我的整合",
-      "scopesLabel": "權限",
-      "expiryLabel": "有效期限",
-      "expiryOptions": {
-        "never": "永不過期",
-        "30days": "30 天",
-        "60days": "60 天",
-        "90days": "90 天",
-        "1year": "1 年"
-      },
-      "submit": "建立",
-      "cancel": "取消"
-    },
-    "created": {
-      "title": "API 金鑰已建立",
-      "warning": "請立即複製此金鑰，它將不會再次顯示。",
-      "copied": "已複製！",
-      "copyButton": "複製到剪貼簿",
-      "done": "完成"
-    },
-    "scopes": {
-      "notesRead": "讀取筆記",
-      "notesWrite": "建立與編輯筆記",
-      "transcriptionsRead": "讀取轉錄",
-      "dictionaryRead": "讀取字典",
-      "dictionaryWrite": "編輯字典",
-      "snippetsRead": "讀取片段",
-      "snippetsWrite": "編輯片段",
-      "transcriptionsWrite": "轉錄音訊"
-    },
-    "revoke": {
-      "button": "撤銷",
-      "confirm": "撤銷此金鑰？使用它的整合將停止運作。",
-      "success": "API 金鑰已撤銷"
-    },
-    "neverUsed": "從未使用",
-    "lastUsed": "上次使用 {{time}}",
-    "maxKeysReached": "最多允許 {{max}} 個金鑰",
-    "errors": {
-      "loadFailed": "無法載入 API 金鑰",
-      "createFailed": "無法建立 API 金鑰",
-      "revokeFailed": "無法撤銷 API 金鑰"
-    }
   },
   "embeddedChat": {
     "askPlaceholder": "隨便問點什麼...",

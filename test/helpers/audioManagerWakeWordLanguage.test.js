@@ -198,7 +198,7 @@ test("cloud auto-language routing uses detected speech before the UI language", 
   assert.equal(italianResult.text, "agent output");
 });
 
-test("cloud transcription returns the occurrence time sent with analytics", async (t) => {
+test("cloud transcription returns the occurrence time for local analytics", async (t) => {
   const { window, setSettings, createManager } = await loadAudioManager(t);
   const analyticsOccurredAt = "2026-09-02T14:00:00.000Z";
   const audioBlob = {
@@ -214,7 +214,6 @@ test("cloud transcription returns the occurrence time sent with analytics", asyn
     customDictionary: [],
     snippets: [],
     isSignedIn: true,
-    insightsSyncEnabled: true,
     dataRetentionEnabled: true,
   });
   window.electronAPI.cloudTranscribe = async (_audio, options) => {
@@ -230,7 +229,7 @@ test("cloud transcription returns the occurrence time sent with analytics", asyn
     analyticsOccurredAt,
   });
 
-  assert.equal(requestOptions.analyticsOccurredAt, analyticsOccurredAt);
+  assert.equal(requestOptions.analyticsOccurredAt, undefined);
   assert.equal(result.analyticsOccurredAt, analyticsOccurredAt);
 });
 

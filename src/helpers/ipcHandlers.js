@@ -17,7 +17,6 @@ const { BYOK_API_KEYS } = require("../config/secretKeys");
 const tokenStore = require("./tokenStore");
 const accountScopeBinding = require("./accountScopeBinding");
 const { createCloudApiRequestHandler } = require("./cloudApiRequest");
-const { decodeLeaderboardPngDataUrl, leaderboardImageFilename } = require("./leaderboardImage");
 const { createEnterpriseIdentityManager } = require("./enterpriseIdentityManager");
 const { createCloudConfigRequestHandler } = require("./cloudConfigRequest");
 const { extractAnthropicText, describeMissingAnthropicText } = require("./anthropicResponse");
@@ -45,26 +44,6 @@ const serializeIpcError =
     }
   };
 
-// Analytics uploads cross two asynchronous boundaries: renderer -> main and
-// main -> cloud. Pin every local queue operation to the same authenticated
-// account generation so a delayed pass cannot adopt a replacement session.
-function assertAnalyticsSyncContext(context) {
-  if (context == null) return null;
-  const state = tokenStore.getState();
-  if (
-    typeof context !== "object" ||
-    typeof context.accountId !== "string" ||
-    context.accountId.length === 0 ||
-    !Number.isInteger(context.authGeneration) ||
-    !state.token ||
-    state.generation !== context.authGeneration
-  ) {
-    throw Object.assign(new Error("Authentication context changed during analytics sync"), {
-      code: "AUTH_CONTEXT_CHANGED",
-    });
-  }
-  return context.accountId;
-}
 // Which diarization dialect a resolved endpoint speaks, for Custom endpoints
 // that front a known provider. Null when the host offers no known dialect.
 const diarizationHost = (endpoint) => {
@@ -595,7 +574,6 @@ class IPCHandlers {
     this.parakeetManager = managers.parakeetManager;
     this.diarizationManager = managers.diarizationManager;
     this.windowManager = managers.windowManager;
-    this.updateManager = managers.updateManager;
     this.windowsKeyManager = managers.windowsKeyManager;
     this.linuxKeyManager = managers.linuxKeyManager;
     this.textEditMonitor = managers.textEditMonitor;
@@ -603,8 +581,6 @@ class IPCHandlers {
     this.getTrayManager = managers.getTrayManager;
     this.whisperCudaManager = managers.whisperCudaManager;
     this.whisperVulkanManager = managers.whisperVulkanManager;
-    this.googleCalendarManager = managers.googleCalendarManager;
-    this.microsoftCalendarManager = managers.microsoftCalendarManager;
     this.appleCalendarManager = managers.appleCalendarManager;
     this.meetingDetectionEngine = managers.meetingDetectionEngine;
     this.audioTapManager = managers.audioTapManager;
@@ -956,12 +932,7 @@ class IPCHandlers {
       return [];
     }
     if (!Array.isArray(participants) || participants.length === 0) return [];
-    const googleEmails = new Set(
-      this.databaseManager.getGoogleAccounts().map((a) => a.email.toLowerCase())
-    );
-    return participants.filter(
-      (p) => p && p.self !== true && !googleEmails.has((p.email || "").toLowerCase())
-    );
+    return participants.filter((p) => p && p.self !== true);
   }
 
   _getNoteNonSelfParticipants(noteId) {
@@ -1546,68 +1517,6 @@ class IPCHandlers {
       await this._ensureAnalyticsHistoryBackfilled();
       return this.databaseManager.getAnalyticsSummary();
     });
-
-    ipcMain.handle("analytics-get-pending", async (_event, limit, context) => {
-      const accountId = assertAnalyticsSyncContext(context);
-      await this._ensureAnalyticsHistoryBackfilled();
-      return this.databaseManager.getPendingAnalyticsEvents(limit, accountId);
-    });
-
-    ipcMain.handle("analytics-mark-synced", async (_event, eventIds, context) => {
-      const accountId = assertAnalyticsSyncContext(context);
-      return this.databaseManager.markAnalyticsEventsSynced(eventIds, accountId);
-    });
-
-    ipcMain.handle("analytics-get-pending-deletes", async (_event, limit, context) => {
-      const accountId = assertAnalyticsSyncContext(context);
-      return this.databaseManager.getPendingAnalyticsDeletes(limit, accountId);
-    });
-
-    ipcMain.handle("analytics-hard-delete", async (_event, eventIds, context) => {
-      const accountId = assertAnalyticsSyncContext(context);
-      return this.databaseManager.hardDeleteAnalyticsEvents(eventIds, accountId);
-    });
-
-    ipcMain.handle("analytics-get-pending-clear", async (_event, context) => {
-      const accountId = assertAnalyticsSyncContext(context);
-      return this.databaseManager.getPendingAnalyticsClear(accountId);
-    });
-
-    ipcMain.handle("analytics-complete-clear", async (_event, clearedThrough, context) => {
-      const accountId = assertAnalyticsSyncContext(context);
-      return this.databaseManager.completeAnalyticsClear(clearedThrough, accountId);
-    });
-
-    ipcMain.handle("analytics-count-unclaimed", async (_event, context) => {
-      assertAnalyticsSyncContext(context);
-      await this._ensureAnalyticsHistoryBackfilled();
-      return this.databaseManager.countUnclaimedAnalyticsEvents();
-    });
-
-    ipcMain.handle("analytics-count-awaiting-upload", async (_event, context) => {
-      const accountId = assertAnalyticsSyncContext(context);
-      await this._ensureAnalyticsHistoryBackfilled();
-      return this.databaseManager.countAnalyticsEventsAwaitingUpload(accountId);
-    });
-
-    ipcMain.handle(
-      "analytics-claim-anonymous",
-      async (_event, accountId, expectedAuthGeneration) => {
-        const state = tokenStore.getState();
-        if (!state.token || state.generation !== expectedAuthGeneration) {
-          return { success: false, claimed: 0, code: "AUTH_CONTEXT_CHANGED" };
-        }
-        const result = this.databaseManager.claimAnonymousAnalyticsEvents(accountId);
-        // Claimed rows are only pushed by the Insights view's reload, and the
-        // claim itself changes nothing it renders, so tell it to reload.
-        if (result?.claimed > 0) {
-          setImmediate(() => {
-            broadcastToWindows("analytics-changed");
-          });
-        }
-        return result;
-      }
-    );
 
     ipcMain.handle("db-clear-transcriptions", async (event) => {
       this.audioStorageManager.deleteAllAudio();
@@ -3048,47 +2957,6 @@ class IPCHandlers {
       return this.clipboardManager.writeClipboard(text, event.sender);
     });
 
-    ipcMain.handle("leaderboard-copy-image", async (_event, dataUrl) => {
-      try {
-        const { clipboard, nativeImage } = require("electron");
-        const image = nativeImage.createFromBuffer(decodeLeaderboardPngDataUrl(dataUrl));
-        if (image.isEmpty()) throw new Error("Leaderboard image could not be decoded");
-        clipboard.writeImage(image);
-        return { success: true };
-      } catch (error) {
-        debugLogger.error(
-          "Failed to copy leaderboard image",
-          { error: error.message },
-          "analytics"
-        );
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("leaderboard-save-image", async (event, dataUrl, suggestedName) => {
-      try {
-        const { dialog } = require("electron");
-        const parentWindow = BrowserWindow.fromWebContents(event.sender);
-        const options = {
-          defaultPath: leaderboardImageFilename(suggestedName),
-          filters: [{ name: "PNG image", extensions: ["png"] }],
-        };
-        const result = parentWindow
-          ? await dialog.showSaveDialog(parentWindow, options)
-          : await dialog.showSaveDialog(options);
-        if (result.canceled || !result.filePath) return { success: true, canceled: true };
-        await fs.promises.writeFile(result.filePath, decodeLeaderboardPngDataUrl(dataUrl));
-        return { success: true, canceled: false };
-      } catch (error) {
-        debugLogger.error(
-          "Failed to save leaderboard image",
-          { error: error.message },
-          "analytics"
-        );
-        return { success: false, error: error.message };
-      }
-    });
-
     ipcMain.handle("check-paste-tools", async () => {
       return this.clipboardManager.checkPasteTools();
     });
@@ -3811,15 +3679,6 @@ class IPCHandlers {
     // instance would have no renderer: just quit there.
     ipcMain.handle("relaunch-app", async () => {
       if (process.env.NODE_ENV === "development") return app.quit();
-      // Once Squirrel.Mac holds a downloaded update it installs it on this quit regardless
-      // of any flag, so the updater owns that restart instead of racing app.relaunch().
-      if (this.updateManager.hasStagedUpdate()) {
-        const { success } = await this.updateManager
-          .installUpdate()
-          .catch(() => ({ success: false }));
-        if (success) return;
-      }
-      this.updateManager.deferInstallOnQuit();
       const { launcherPath, args } = getRelaunchOptions({
         argv: process.argv,
         protocol: this.oauthProtocol,
@@ -3858,16 +3717,6 @@ class IPCHandlers {
         errors.push(`Whisper stop: ${e.message}`);
       }
       try {
-        this.googleCalendarManager?.stop();
-      } catch (e) {
-        errors.push(`GCal stop: ${e.message}`);
-      }
-      try {
-        this.microsoftCalendarManager?.stop();
-      } catch (e) {
-        errors.push(`MCal stop: ${e.message}`);
-      }
-      try {
         this.appleCalendarManager?.stop();
       } catch (e) {
         errors.push(`ACal stop: ${e.message}`);
@@ -3887,13 +3736,6 @@ class IPCHandlers {
         await onnxWorkerClient.stop();
       } catch (e) {
         errors.push(`Embedding worker stop: ${e.message}`);
-      }
-
-      // Revoke Google OAuth tokens before DB is closed
-      try {
-        await this.googleCalendarManager?.revokeAllTokens();
-      } catch (e) {
-        errors.push(`GCal revoke: ${e.message}`);
       }
 
       // Close DB connection before deleting the file
@@ -6110,8 +5952,6 @@ class IPCHandlers {
           clientVersion: app.getVersion(),
           sessionId: this.sessionId,
           clientTranscriptionId,
-          localDate: opts.localDate,
-          analyticsOccurredAt: opts.analyticsOccurredAt,
           streamingFallbackReason: opts.streamingFallbackReason,
           sttDetectedLanguage: opts.sttDetectedLanguage,
           sttDetectedLanguageConfidence: opts.sttDetectedLanguageConfidence,
@@ -9582,10 +9422,6 @@ class IPCHandlers {
               clientTotalMs: opts.clientTotalMs,
               sendLogs: opts.sendLogs,
               clientTranscriptionId: opts.clientTranscriptionId,
-              localDate: opts.localDate,
-              analyticsOccurredAt: opts.analyticsOccurredAt,
-              analyticsWordCount: opts.analyticsWordCount,
-              analyticsCounterVersion: opts.analyticsCounterVersion,
             }),
           });
 
@@ -10136,116 +9972,6 @@ class IPCHandlers {
       }
     );
 
-    ipcMain.handle("get-referral-stats", async (event) => {
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) {
-          throw new Error("OpenWhispr API URL not configured");
-        }
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) {
-          throw new Error("Not authenticated");
-        }
-
-        const response = await proxyFetch(`${apiUrl}/api/referrals/stats`, {
-          headers: {
-            ...authHeader,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error("Unauthorized - please sign in");
-          }
-          if (response.status === 503) {
-            throw new Error("Service temporarily unavailable");
-          }
-          throw new Error(`Failed to fetch referral stats: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        debugLogger.error("Error fetching referral stats:", error);
-        throw error;
-      }
-    });
-
-    ipcMain.handle("send-referral-invite", async (event, email) => {
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) {
-          throw new Error("OpenWhispr API URL not configured");
-        }
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) {
-          throw new Error("Not authenticated");
-        }
-
-        const response = await proxyFetch(`${apiUrl}/api/referrals/invite`, {
-          method: "POST",
-          headers: {
-            ...authHeader,
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({ email }),
-        });
-
-        if (!response.ok) {
-          let errorMessage = `Failed to send invite: ${response.status}`;
-          try {
-            const errorData = await response.json();
-            if (errorData.error) errorMessage = errorData.error;
-          } catch (_) {}
-          throw new Error(errorMessage);
-        }
-
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        debugLogger.error("Error sending referral invite:", error);
-        throw error;
-      }
-    });
-
-    ipcMain.handle("get-referral-invites", async (event) => {
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) {
-          throw new Error("OpenWhispr API URL not configured");
-        }
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) {
-          throw new Error("Not authenticated");
-        }
-
-        const response = await proxyFetch(`${apiUrl}/api/referrals/invites`, {
-          headers: {
-            ...authHeader,
-          },
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            throw new Error("Unauthorized - please sign in");
-          }
-          if (response.status === 503) {
-            throw new Error("Service temporarily unavailable");
-          }
-          throw new Error(`Failed to fetch referral invites: ${response.status}`);
-        }
-
-        const data = await response.json();
-        return data;
-      } catch (error) {
-        debugLogger.error("Error fetching referral invites:", error);
-        throw error;
-      }
-    });
-
     ipcMain.handle("get-model-cache-root", () => {
       const { getCacheRoot } = require("./modelDirUtils");
       return getCacheRoot();
@@ -10367,21 +10093,7 @@ class IPCHandlers {
       }
     });
 
-    ipcMain.handle("check-for-updates", async () => {
-      return this.updateManager.checkForUpdates();
-    });
-
-    ipcMain.handle("download-update", async () => {
-      return this.updateManager.downloadUpdate();
-    });
-
-    ipcMain.handle("install-update", async () => {
-      return this.updateManager.installUpdate();
-    });
-
-    ipcMain.handle("get-app-version", async () => {
-      return this.updateManager.getAppVersion();
-    });
+    ipcMain.handle("get-app-version", async () => ({ version: app.getVersion() }));
 
     ipcMain.handle("get-post-migration-state", () => ({
       justMigrated: postMigrationDetector.isReturningFromOldBundle(),
@@ -10397,19 +10109,6 @@ class IPCHandlers {
 
     ipcMain.handle("mark-bundle-migration-dismissed", () => {
       postMigrationDetector.markBundleMigrationDismissed();
-    });
-
-    ipcMain.handle("get-update-status", async () => {
-      return this.updateManager.getUpdateStatus();
-    });
-
-    ipcMain.handle("get-update-info", async () => {
-      return this.updateManager.getUpdateInfo();
-    });
-
-    ipcMain.handle("set-auto-updates-enabled", async (_event, enabled) => {
-      this.updateManager.setAutoUpdatesEnabled(enabled === true);
-      return { success: true };
     });
 
     const fetchStreamingToken = async (event) => {
@@ -11253,11 +10952,7 @@ class IPCHandlers {
           availability: getCalendarAvailability({
             request,
             databaseManager: this.databaseManager,
-            calendarProviders: [
-              { provider: "google", manager: this.googleCalendarManager },
-              { provider: "microsoft", manager: this.microsoftCalendarManager },
-              { provider: "apple", manager: this.appleCalendarManager },
-            ],
+            calendarProviders: [{ provider: "apple", manager: this.appleCalendarManager }],
           }),
         };
       } catch (error) {
@@ -11273,136 +10968,24 @@ class IPCHandlers {
       }
     });
 
-    // Google Calendar
-    ipcMain.handle("gcal-start-oauth", async () => {
-      try {
-        return await this.googleCalendarManager.startOAuth();
-      } catch (error) {
-        debugLogger.error("Google Calendar OAuth failed", { error: error.message }, "calendar");
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-disconnect", async (_event, email) => {
-      try {
-        this.googleCalendarManager.disconnect(email);
-        return { success: true };
-      } catch (error) {
-        debugLogger.error(
-          "Google Calendar disconnect failed",
-          { error: error.message },
-          "calendar"
-        );
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-get-connection-status", async () => {
-      try {
-        return this.googleCalendarManager.getConnectionStatus();
-      } catch (error) {
-        return { connected: false, email: null };
-      }
-    });
-
-    ipcMain.handle("gcal-get-calendars", async () => {
-      try {
-        return { success: true, calendars: this.googleCalendarManager.getCalendars() };
-      } catch (error) {
-        return { success: false, calendars: [] };
-      }
-    });
-
-    ipcMain.handle("gcal-set-calendar-selection", async (_event, calendarId, isSelected) => {
-      try {
-        await this.googleCalendarManager.setCalendarSelection(calendarId, isSelected);
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-set-primary-only", async (_event, value) => {
-      try {
-        await this.googleCalendarManager.setPrimaryOnly(value);
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-sync-events", async () => {
-      try {
-        await this.googleCalendarManager.syncEvents();
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("gcal-get-upcoming-events", async (_event, windowMinutes) => {
+    // Provider-neutral reads over the shared calendar_events cache.
+    ipcMain.handle("calendar-get-upcoming-events", async (_event, windowMinutes) => {
       try {
         return {
           success: true,
-          events: await this.googleCalendarManager.getUpcomingEvents(windowMinutes),
+          events: this.databaseManager.getUpcomingEvents(windowMinutes),
         };
       } catch (error) {
         return { success: false, events: [] };
       }
     });
 
-    ipcMain.handle("gcal-get-event", async (_event, eventId) => {
+    ipcMain.handle("calendar-get-event", async (_event, eventId) => {
       try {
         const event = this.databaseManager.getCalendarEventById(eventId);
         return { success: true, event };
       } catch (error) {
         return { success: false, event: null };
-      }
-    });
-
-    // Microsoft Calendar
-    ipcMain.handle("mcal-start-oauth", async () => {
-      try {
-        return await this.microsoftCalendarManager.startOAuth();
-      } catch (error) {
-        debugLogger.error("Microsoft Calendar OAuth failed", { error: error.message }, "calendar");
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("mcal-disconnect", async (_event, email) => {
-      try {
-        this.microsoftCalendarManager.disconnect(email);
-        return { success: true };
-      } catch (error) {
-        debugLogger.error(
-          "Microsoft Calendar disconnect failed",
-          { error: error.message },
-          "calendar"
-        );
-        return { success: false, error: error.message };
-      }
-    });
-
-    ipcMain.handle("mcal-get-connection-status", async () => {
-      try {
-        return this.microsoftCalendarManager.getConnectionStatus();
-      } catch (error) {
-        debugLogger.error(
-          "Microsoft Calendar connection status failed",
-          { error: error.message },
-          "calendar"
-        );
-        return { connected: false, accounts: [] };
-      }
-    });
-
-    ipcMain.handle("mcal-set-primary-only", async (_event, value) => {
-      try {
-        await this.microsoftCalendarManager.setPrimaryOnly(value);
-        return { success: true };
-      } catch (error) {
-        return { success: false, error: error.message };
       }
     });
 

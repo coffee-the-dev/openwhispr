@@ -20,10 +20,7 @@ function getLookaheadMinutes(): number {
 }
 
 export function useUpcomingEvents(): UseUpcomingEventsReturn {
-  const gcalAccounts = useSettingsStore((s) => s.gcalAccounts);
-  const mcalAccounts = useSettingsStore((s) => s.mcalAccounts);
-  const appleCalendarConnected = useSettingsStore((s) => s.appleCalendarConnected);
-  const isConnected = gcalAccounts.length > 0 || mcalAccounts.length > 0 || appleCalendarConnected;
+  const isConnected = useSettingsStore((s) => s.appleCalendarConnected);
 
   const [events, setEvents] = useState<CalendarEvent[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -36,7 +33,7 @@ export function useUpcomingEvents(): UseUpcomingEventsReturn {
     setIsLoading(true);
     try {
       const windowMinutes = getLookaheadMinutes();
-      const result = await window.electronAPI?.gcalGetUpcomingEvents?.(windowMinutes);
+      const result = await window.electronAPI?.calendarGetUpcomingEvents?.(windowMinutes);
       if (result?.success && Array.isArray(result.events)) {
         setEvents(result.events.filter(hasOtherAttendees));
       } else {
@@ -54,23 +51,12 @@ export function useUpcomingEvents(): UseUpcomingEventsReturn {
     fetchEvents();
   }, [fetchEvents]);
 
-  // Re-fetch when any provider syncs events
+  // Re-fetch when the calendar syncs events
   useEffect(() => {
     if (!isConnected) return;
-    const unsubGcal = window.electronAPI?.onGcalEventsSynced?.(() => {
+    return window.electronAPI?.onAcalEventsSynced?.(() => {
       fetchEvents();
     });
-    const unsubMcal = window.electronAPI?.onMcalEventsSynced?.(() => {
-      fetchEvents();
-    });
-    const unsubAcal = window.electronAPI?.onAcalEventsSynced?.(() => {
-      fetchEvents();
-    });
-    return () => {
-      unsubGcal?.();
-      unsubMcal?.();
-      unsubAcal?.();
-    };
   }, [isConnected, fetchEvents]);
 
   return { events, isLoading, isConnected };

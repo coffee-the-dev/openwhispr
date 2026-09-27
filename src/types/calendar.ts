@@ -1,13 +1,3 @@
-export interface GoogleCalendar {
-  id: string;
-  summary: string;
-  description: string | null;
-  background_color: string | null;
-  is_selected: number;
-  is_primary: number;
-  sync_token: string | null;
-}
-
 export type CalendarResponseStatus = "needsAction" | "declined" | "tentative" | "accepted";
 
 export interface CalendarEvent {
@@ -57,15 +47,6 @@ export interface CalendarAvailabilityResult {
     source: "local-calendar-cache";
     lookaheadDays: number;
   };
-}
-
-export interface CalendarAccount {
-  email: string;
-}
-
-export interface CalendarConnectionStatus {
-  connected: boolean;
-  email: string | null;
 }
 
 export interface CalendarAttendee {

@@ -481,19 +481,6 @@
     }
   },
   "controlPanel": {
-    "update": {
-      "readyTitle": "التحديث جاهز للتثبيت",
-      "readyDescription": "انقر فوق «تثبيت التحديث» لإعادة التشغيل باستخدام أحدث إصدار.",
-      "installTitle": "تثبيت التحديث",
-      "installDescription": "سيتم إعادة تشغيل OpenWhispr لتطبيق التحديث. سيتم حفظ أي عمل قيد التقدم.",
-      "couldNotInstallTitle": "تعذر تثبيت التحديث",
-      "couldNotInstallDescription": "حدث خطأ ما. يرجى المحاولة مرة أخرى.",
-      "couldNotDownloadTitle": "تعذر تنزيل التحديث",
-      "couldNotDownloadDescription": "تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
-      "installing": "جاري التثبيت...",
-      "installButton": "تثبيت التحديث",
-      "availableButton": "التحديث متاح"
-    },
     "limit": {
       "weeklyTitle": "تم الوصول إلى الحد الأسبوعي",
       "weeklyDescription": "تتم إعادة تعيين الحد الخاص بك على أساس متجدد. قم بالترقية إلى Pro أو استخدم مفتاح API الخاص بك للاستخدام غير المحدود."
@@ -591,40 +578,6 @@
   "integrations": {
     "title": "التكاملات (Integrations)",
     "description": "قم بتوصيل الخدمات لتعزيز سير عملك",
-    "googleCalendar": {
-      "title": "تقويم Google",
-      "optional": "اختياري",
-      "description": "الملء التلقائي لعناوين الاجتماعات والحاضرين من التقويم الخاص بك.",
-      "connect": "ربط تقويم Google",
-      "connecting": "جاري الربط...",
-      "connected": "متصل",
-      "addAnother": "إضافة تقويم آخر",
-      "primaryOnly": "مزامنة التقويم الأساسي فقط",
-      "primaryOnlyDescription": "تجاهل الأحداث من التقاويم المشتركة معك.",
-      "disconnect": "قطع الاتصال",
-      "disconnectConfirm": "هل تريد قطع اتصال {{email}}؟",
-      "disconnectDescription": "لن يتم تسجيل ملاحظات الاجتماع من هذا التقويم بعد الآن.",
-      "systemAudioRequired": "إذن صوت النظام مطلوب",
-      "systemAudioDescription": "لتفريغ الاجتماعات، يحتاج OpenWhispr إلى إذن صوت النظام لالتقاط صوت المشاركين الآخرين. نحن لا نسجل شاشتك أبدًا. سيتم توجيهك إلى إعدادات النظام لتمكين ذلك.",
-      "openSettings": "فتح إعدادات النظام",
-      "connectFailed": "فشل الاتصال",
-      "connectFailedDescription": "حدث خطأ ما أثناء الاتصال بتقويم Google. يرجى المحاولة مرة أخرى."
-    },
-    "microsoftCalendar": {
-      "title": "تقويم Microsoft",
-      "optional": "اختياري",
-      "description": "قراءة الاجتماعات من تقويم Outlook أو Microsoft 365 الخاص بك.",
-      "connect": "ربط تقويم Microsoft",
-      "connected": "متصل",
-      "addAnother": "إضافة تقويم آخر",
-      "primaryOnly": "مزامنة التقويم الأساسي فقط",
-      "primaryOnlyDescription": "تجاهل الأحداث من التقاويم المشتركة معك.",
-      "disconnect": "قطع الاتصال",
-      "disconnectConfirm": "هل تريد قطع اتصال {{email}}؟",
-      "disconnectDescription": "لن يتم تسجيل ملاحظات الاجتماع من هذا التقويم بعد الآن.",
-      "connectFailed": "فشل الاتصال",
-      "connectFailedDescription": "حدث خطأ ما أثناء الاتصال بتقويم Microsoft. يرجى المحاولة مرة أخرى."
-    },
     "appleCalendar": {
       "title": "تقويم Apple",
       "optional": "اختياري",
@@ -642,29 +595,7 @@
     },
     "sections": {
       "calendar": "التقويم (Calendar)",
-      "api": "API",
-      "mcp": "MCP",
       "cli": "CLI"
-    },
-    "api": {
-      "title": "مفاتيح API",
-      "description": "إدارة مفاتيح API للوصول البرمجي",
-      "proRequired": "قم بالترقية إلى خطة مدفوعة للوصول إلى API",
-      "manage": "إدارة المفاتيح",
-      "viewPlans": "عرض الخطط",
-      "dialogTitle": "مفاتيح API"
-    },
-    "mcp": {
-      "title": "اجلب ملاحظاتك إلى أدوات الذكاء الاصطناعي الخاصة بك",
-      "description": "الدردشة والبحث والعمل مع ملاحظاتك داخل Claude وChatGPT وCursor.",
-      "step1": "في أداة الذكاء الاصطناعي الخاصة بك، أضف OpenWhispr MCP باستخدام عنوان URL العام",
-      "step2": "قم بإنشاء مفتاح API أعلاه بالنطاقات (scopes) التي تحتاجها.",
-      "step3": "الصق المفتاح في ترويسة Authorization للاتصال.",
-      "learnMore": "اعرف المزيد",
-      "viewPlans": "عرض الخطط",
-      "copyUrl": "نسخ عنوان URL لـ MCP",
-      "proRequired": "قم بالترقية إلى خطة مدفوعة لتوصيل OpenWhispr بـ Claude وChatGPT وCursor.",
-      "copied": "تم النسخ"
     },
     "cli": {
       "title": "الوصول عبر سطر الأوامر (Command-line)",
@@ -699,6 +630,11 @@
     "notABot": {
       "title": "OpenWhispr هو مسجل اجتماعات، وليس روبوتًا",
       "description": "يلتقط OpenWhispr الصوت مباشرة من نظامك — فهو لا ينضم أبدًا إلى اجتماعاتك كمشارك. ما عليك سوى ربط التقويم الخاص بك وتدوين الملاحظات كالمعتاد."
+    },
+    "systemAudio": {
+      "title": "إذن صوت النظام مطلوب",
+      "description": "لتفريغ الاجتماعات، يحتاج OpenWhispr إلى إذن صوت النظام لالتقاط صوت المشاركين الآخرين. نحن لا نسجل شاشتك أبدًا. سيتم توجيهك إلى إعدادات النظام لتمكين ذلك.",
+      "openSettings": "فتح إعدادات النظام"
     }
   },
   "auth": {
@@ -1048,131 +984,6 @@
         "transcriptionPipeline": "مسار التفريغ الصوتي"
       },
       "title": "ما يتم تسجيله"
-    }
-  },
-  "apiKeysSection": {
-    "title": "مفاتيح API",
-    "description": "أنشئ مفاتيح للوصول إلى API الخاص بـ OpenWhispr برمجيًا.",
-    "docsLink": "مستندات API",
-    "empty": "لا توجد مفاتيح API بعد",
-    "createButton": "إنشاء مفتاح API",
-    "create": {
-      "title": "إنشاء مفتاح API",
-      "nameLabel": "اسم المفتاح",
-      "namePlaceholder": "مثال: التكامل الخاص بي",
-      "scopesLabel": "الأذونات",
-      "expiryLabel": "انتهاء الصلاحية",
-      "expiryOptions": {
-        "never": "لا تنتهي صلاحيته أبدًا",
-        "30days": "30 يومًا",
-        "60days": "60 يومًا",
-        "90days": "90 يومًا",
-        "1year": "سنة واحدة"
-      },
-      "submit": "إنشاء",
-      "cancel": "إلغاء"
-    },
-    "created": {
-      "title": "تم إنشاء مفتاح API",
-      "warning": "انسخ هذا المفتاح الآن. لن يتم عرضه مرة أخرى.",
-      "copied": "تم النسخ!",
-      "copyButton": "نسخ إلى الحافظة",
-      "done": "تم"
-    },
-    "scopes": {
-      "notesRead": "قراءة الملاحظات",
-      "notesWrite": "إنشاء وتعديل الملاحظات",
-      "transcriptionsRead": "قراءة النصوص المفرَّغة",
-      "dictionaryRead": "قراءة القاموس",
-      "dictionaryWrite": "تعديل القاموس",
-      "snippetsRead": "قراءة المقتطفات",
-      "snippetsWrite": "تعديل المقتطفات",
-      "transcriptionsWrite": "تحويل الصوت إلى نص"
-    },
-    "revoke": {
-      "button": "إبطال",
-      "confirm": "هل تريد إبطال هذا المفتاح؟ ستتوقف أي عمليات تكامل تستخدمه عن العمل.",
-      "success": "تم إبطال مفتاح API"
-    },
-    "neverUsed": "لم يُستخدم أبدًا",
-    "lastUsed": "آخر استخدام {{time}}",
-    "maxKeysReached": "الحد الأقصى المسموح به هو {{max}} من المفاتيح",
-    "errors": {
-      "loadFailed": "فشل تحميل مفاتيح API",
-      "createFailed": "فشل إنشاء مفتاح API",
-      "revokeFailed": "فشل إبطال مفتاح API"
-    }
-  },
-  "referral": {
-    "title": "قم بإحالة أصدقائك واكسب المكافآت",
-    "modalTitle": "قم بإحالة أصدقائك واكسب المكافآت",
-    "subtitle": "امنح شهرًا. احصل على شهر.",
-    "tabs": {
-      "refer": "إحالة",
-      "pastInvites": "الدعوات السابقة"
-    },
-    "howItWorks": {
-      "shareLink": "شارك رابط الدعوة الخاص بك",
-      "theySignUp": "يقومون بالتسجيل ويحصلون على ",
-      "freeMonthOfPro": "شهر مجاني من Pro",
-      "youGet": "أنت تحصل على ",
-      "freeMonth": "شهر مجاني",
-      "whenTheyDictate": "عندما يُملون 2,000 كلمة"
-    },
-    "inviteLink": {
-      "title": "رابط الدعوة الخاص بك",
-      "copy": "نسخ",
-      "copied": "تم النسخ"
-    },
-    "sendInvites": {
-      "title": "إرسال الدعوات",
-      "placeholder": "الصديق@example.com",
-      "send": "إرسال",
-      "sending": "جاري الإرسال"
-    },
-    "stats": {
-      "referred": "المُحالون",
-      "converted": "المتحولون إلى مدفوع",
-      "monthsEarned": "الأشهر المكتسبة"
-    },
-    "status": {
-      "converted": "اشترك",
-      "opened": "تم فتح الدعوة",
-      "failed": "فشل",
-      "sent": "تم الإرسال"
-    },
-    "friends": {
-      "title": "الأصدقاء",
-      "completed": "مكتمل",
-      "sentInvites": "الدعوات المرسلة"
-    },
-    "empty": {
-      "title": "لم يتم إرسال أي دعوات بعد",
-      "description": "شارك رابطك أو أرسل دعوة للبدء"
-    },
-    "toasts": {
-      "copiedTitle": "تم النسخ!",
-      "copiedDescription": "تم نسخ رابط الإحالة إلى الحافظة",
-      "copyFailedTitle": "فشل النسخ",
-      "copyFailedDescription": "فشل نسخ الرابط إلى الحافظة",
-      "invalidEmailTitle": "بريد إلكتروني غير صالح",
-      "invalidEmailDescription": "يرجى إدخال عنوان بريد إلكتروني صالح",
-      "inviteSentTitle": "تم إرسال الدعوة!",
-      "inviteSentDescription": "تم إرسال الدعوة إلى {{email}}",
-      "sendFailedTitle": "فشل الإرسال",
-      "sendFailedDescription": "فشل إرسال الدعوة. يرجى المحاولة مرة أخرى."
-    },
-    "errors": {
-      "unableToLoad": "تعذر تحميل بيانات الإحالة",
-      "unableToLoadStats": "تعذر تحميل إحصائيات الإحالة. يرجى المحاولة مرة أخرى لاحقًا."
-    },
-    "tryAgain": "حاول مرة أخرى",
-    "card": {
-      "brand": "OpenWhispr",
-      "signalId": "معرف الإشارة",
-      "audioSignature": "توقيعك الصوتي",
-      "stop": "إيقاف",
-      "playSignal": "تشغيل الإشارة"
     }
   },
   "dictationAgent": {
@@ -2073,10 +1884,6 @@
         },
         "connectors": {
           "connect": "ربط",
-          "googleTitle": "Google Calendar",
-          "googleDescription": "مزامنة اجتماعاتك.",
-          "microsoftTitle": "Microsoft Outlook",
-          "microsoftDescription": "استيراد اجتماعات العمل والدعوات.",
           "appleTitle": "Apple Calendar",
           "appleDescription": "مزامنة الأحداث من جهازي Mac وiPhone الخاصين بك."
         }
@@ -3099,64 +2906,14 @@
           "rebuildNote": "قم بتشغيل sudo nixos-rebuild switch، ثم قم بتسجيل الخروج وتسجيل الدخول مرة أخرى حتى يسري تغيير المجموعة وقاعدة /dev/uinput. استبدل <you> باسم المستخدم الخاص بك."
         }
       },
-      "updates": {
-        "automaticUpdates": "التحديثات التلقائية",
-        "automaticUpdatesDescription": "تنزيل التحديثات وتثبيتها في الخلفية",
-        "badges": {
-          "dev": "تطوير",
-          "latest": "الأحدث",
-          "update": "تحديث"
-        },
-        "checkForUpdates": "التحقق من وجود تحديثات",
-        "checking": "جاري التحقق...",
-        "currentVersion": "الإصدار الحالي",
-        "devMode": "قيد التشغيل في وضع التطوير",
-        "dialogs": {
-          "almostThere": {
-            "description": "التحديث جاهز تقريبًا. يرجى الانتظار لحظة.",
-            "title": "أوشكنا على الانتهاء"
-          },
-          "checkFailed": {
-            "description": "واجهنا مشكلة في التحقق من وجود تحديثات. يرجى المحاولة مرة أخرى لاحقًا.",
-            "title": "تعذر التحقق من التحديثات"
-          },
-          "downloadFailed": {
-            "description": "واجهنا مشكلة في تنزيل التحديث. يرجى المحاولة مرة أخرى.",
-            "title": "تعذر تنزيل التحديث"
-          },
-          "installFailed": {
-            "description": "واجهنا مشكلة في تثبيت التحديث. يرجى المحاولة مرة أخرى.",
-            "title": "تعذر تثبيت التحديث"
-          },
-          "installUpdate": {
-            "confirmText": "تثبيت وإعادة التشغيل",
-            "description": "سيتم إعادة تشغيل OpenWhispr لتطبيق التحديث.",
-            "title": "تثبيت التحديث"
-          },
-          "noUpdates": {
-            "description": "أنت تستخدم أحدث إصدار.",
-            "title": "لا توجد تحديثات"
-          },
-          "updateAvailable": {
-            "description": "التحديث متاح: v{{version}}",
-            "title": "تحديث متاح"
-          }
-        },
-        "downloadUpdate": "تنزيل التحديث {{version}}",
-        "downloading": "جاري التنزيل... {{progress}}%",
-        "installAndRestart": "تثبيت وإعادة التشغيل",
-        "latestVersion": "أنت تستخدم أحدث إصدار",
-        "managedByPackageManager": "يتم تثبيت التحديثات عبر مدير الحزم لديك",
-        "newVersion": "يتوفر إصدار أحدث",
-        "newVersionAvailable": "يتوفر إصدار جديد",
-        "restarting": "جاري إعادة التشغيل...",
-        "title": "التحديثات",
-        "versionPlaceholder": "—",
-        "whatsNew": "ما الجديد في v{{version}}"
-      },
       "translationHotkey": {
         "title": "مفتاح اختصار الترجمة",
         "description": "قم بالإملاء بأي لغة — يخرج النص الملصق مترجمًا"
+      },
+      "version": {
+        "currentVersion": "الإصدار الحالي",
+        "placeholder": "—",
+        "dev": "تطوير"
       }
     },
     "permissions": {
@@ -3189,8 +2946,6 @@
       "cloudNotesMigrationDone": "تم نسخ جميع الملاحظات احتياطيًا",
       "description": "تحكم في البيانات التي تغادر جهازك. كل شيء متوقف افتراضيًا.",
       "title": "الخصوصية",
-      "usageAnalytics": "تحليلات الاستخدام",
-      "usageAnalyticsDescription": "ساعدنا في تحسين OpenWhispr من خلال مشاركة مقاييس الأداء المجهولة. لا نرسل أبدًا محتوى التفريغ — فقط بيانات التوقيت والأخطاء.",
       "audioRetention": "الاحتفاظ بالصوت",
       "audioRetentionDescription": "تخزين صوت الإملاء محليًا لإعادة التفريغ والتنزيل. يتم حذف الملفات تلقائيًا بعد فترة الاحتفاظ. لا يتم تخزين صوت الاجتماعات أبدًا.",
       "audioRetentionDisabled": "معطل",
@@ -3234,14 +2989,7 @@
       "minutesAgo_many": "منذ {{count}} دقيقةً",
       "minutesAgo_other": "منذ {{count}} دقيقة",
       "saveDiscarded": "حفظ الإملاءات المهملة",
-      "saveDiscardedDescription": "عندما تلغي إملاء باستخدام مفتاح Escape، احتفظ بصوته في السجل حتى تتمكن من استعادته. يتطلب تشغيل الاحتفاظ بالبيانات والصوت.",
-      "insightsSync": "مزامنة الإحصاءات الشخصية",
-      "insightsSyncDescription": "مزامنة عدد الكلمات وتاريخ كل عملية إملاء ووقتها بالضبط ومدتها ونوع النموذج عبر أجهزتك. لا يُضمَّن محتوى النصوص المفرَّغة مطلقًا. وعند تسجيل دخولك، يؤدي مسح السجل أيضًا إلى إزالة هذه العدادات من هذا الجهاز ومن حسابك.",
-      "insightsSyncRequiresAccount": "سجّل الدخول لمزامنة بيانات الإحصاءات الخالية من المحتوى عبر أجهزتك.",
-      "insightsSyncRequiresHistory": "فعّل الاحتفاظ بالبيانات لتسجيل الإحصاءات قبل مزامنتها عبر أجهزتك.",
-      "leaderboardDescription": "اعرض اسمك وبريدك الإلكتروني ونشاطك على لوائح المتصدرين المؤهلة لمساحة العمل ونطاق العمل. تبقى النصوص المفرَّغة خاصة.",
-      "leaderboardRequiresAccount": "سجّل الدخول لإدارة المشاركة في لوائح المتصدرين.",
-      "leaderboardRequiresHistory": "فعّل الاحتفاظ بالبيانات قبل الانضمام إلى لوائح المتصدرين."
+      "saveDiscardedDescription": "عندما تلغي إملاء باستخدام مفتاح Escape، احتفظ بصوته في السجل حتى تتمكن من استعادته. يتطلب تشغيل الاحتفاظ بالبيانات والصوت."
     },
     "prompts": {
       "description": "عرض وتخصيص واختبار موجه النظام الموحد الذي يشغل تنظيف النص واكتشاف التعليمات",
@@ -3591,7 +3339,6 @@
     "cancel": "إلغاء",
     "recommended": "موصى به",
     "active": "نشط",
-    "managedByOrg": "مُدار بواسطة مؤسستك",
     "freeAccountRequired": "حساب مجاني مطلوب",
     "comingSoon": "قريبًا",
     "cloud": "سحابي",
@@ -3884,7 +3631,6 @@
     "notes": "الملاحظات",
     "upload": "رفع",
     "dictionary": "القاموس",
-    "referral": "احصل على شهر مجاني",
     "inviteTeam": "ادعُ فريقك",
     "settings": "الإعدادات",
     "support": "الدعم",
@@ -3941,131 +3687,9 @@
     "dataRetentionDisabled": "الاحتفاظ بالبيانات قيد الإيقاف، لذا لا تُحتسب عمليات الإملاء الجديدة في الإحصاءات — لا على هذا الجهاز ولا في حسابك. أما العدادات التي تمت مزامنتها بالفعل فتبقى في حسابك.",
     "onDevice": "على هذا الجهاز",
     "onDevicePrivacy": "تُحسب هذه الإحصاءات على هذا الجهاز لحماية خصوصيتك.",
-    "synced": "متزامنة عبر الأجهزة",
-    "syncFallback": "عرض بيانات الجهاز — المزامنة غير متاحة",
-    "syncPrompt": "زامن العدادات الخالية من المحتوى لدمج النشاط المحلي والسحابي عبر أجهزتك.",
-    "enableSync": "تفعيل المزامنة",
-    "syncEnableError": "تعذر تفعيل مزامنة الإحصاءات. يرجى المحاولة مرة أخرى.",
-    "claimTitle": "هل تريد تضمين عمليات الإملاء السابقة؟",
-    "claimDescription_zero": "مزامنة الاستخدام من {{count}} عمليات إملاء سابقة. تبقى النصوص المفرَّغة خاصة.",
-    "claimDescription_one": "مزامنة الاستخدام من {{count}} عملية إملاء سابقة. تبقى النصوص المفرَّغة خاصة.",
-    "claimDescription_two": "مزامنة الاستخدام من {{count}} عمليتي إملاء سابقتين. تبقى النصوص المفرَّغة خاصة.",
-    "claimDescription_few": "مزامنة الاستخدام من {{count}} عمليات إملاء سابقة. تبقى النصوص المفرَّغة خاصة.",
-    "claimDescription_many": "مزامنة الاستخدام من {{count}} عملية إملاء سابقة. تبقى النصوص المفرَّغة خاصة.",
-    "claimDescription_other": "مزامنة الاستخدام من {{count}} عملية إملاء سابقة. تبقى النصوص المفرَّغة خاصة.",
-    "claimInclude": "تضمين",
-    "claimSkip": "ليس الآن",
-    "enableTitle": "هل تريد تفعيل مزامنة الإحصاءات؟",
-    "enableConfirm": "تفعيل المزامنة",
-    "enableDescription_zero": "مزامنة الاستخدام من {{count}} عمليات إملاء حالية. تبقى النصوص المفرَّغة خاصة.",
-    "enableDescription_one": "مزامنة الاستخدام من {{count}} عملية إملاء حالية. تبقى النصوص المفرَّغة خاصة.",
-    "enableDescription_two": "مزامنة الاستخدام من {{count}} عمليتي إملاء حاليتين. تبقى النصوص المفرَّغة خاصة.",
-    "enableDescription_few": "مزامنة الاستخدام من {{count}} عمليات إملاء حالية. تبقى النصوص المفرَّغة خاصة.",
-    "enableDescription_many": "مزامنة الاستخدام من {{count}} عملية إملاء حالية. تبقى النصوص المفرَّغة خاصة.",
-    "enableDescription_other": "مزامنة الاستخدام من {{count}} عملية إملاء حالية. تبقى النصوص المفرَّغة خاصة.",
     "emptyTitle": "لا توجد عمليات إملاء بعد",
     "emptyBody": "ابدأ الإملاء وستظهر هنا كلماتك وسلاسل تتابعك ونشاطك اليومي.",
-    "loadError": "تعذرت قراءة الإحصاءات من هذا الجهاز.",
-    "leaderboard": {
-      "dayValue_zero": "{{count}} يوم",
-      "dayValue_one": "{{count}} يوم",
-      "dayValue_two": "{{count}} يومان",
-      "dayValue_few": "{{count}} أيام",
-      "dayValue_many": "{{count}} يومًا",
-      "dayValue_other": "{{count}} يوم",
-      "share": "مشاركة",
-      "refresh": "تحديث لائحة المتصدرين",
-      "error": "تعذر تحميل لائحة المتصدرين.",
-      "retry": "حاول مرة أخرى",
-      "rank": "الترتيب",
-      "member": "العضو",
-      "you": "(أنت)",
-      "jumpToMe": "الانتقال إلى موقعي",
-      "jumpUnavailable": "تعذر تحديد حسابك في لائحة المتصدرين هذه.",
-      "previous": "الصفحة السابقة",
-      "jumpToRank": "الانتقال إلى ترتيب",
-      "next": "الصفحة التالية",
-      "emptyStrip_zero": "لم ينضم {{count}} من الزملاء إلى لائحة المتصدرين بعد. يبدأ التصنيف عند انضمامهم.",
-      "emptyStrip_one": "لم ينضم {{count}} زميل إلى لائحة المتصدرين بعد. يبدأ التصنيف عند انضمامه.",
-      "emptyStrip_two": "لم ينضم {{count}} زميلان إلى لائحة المتصدرين بعد. يبدأ التصنيف عند انضمامهما.",
-      "emptyStrip_few": "لم ينضم {{count}} زملاء إلى لائحة المتصدرين بعد. يبدأ التصنيف عند انضمامهم.",
-      "emptyStrip_many": "لم ينضم {{count}} زميلًا إلى لائحة المتصدرين بعد. يبدأ التصنيف عند انضمامهم.",
-      "emptyStrip_other": "لم ينضم {{count}} زميل إلى لائحة المتصدرين بعد. يبدأ التصنيف عند انضمامهم.",
-      "copyNudge": "نسخ رسالة تشجيع",
-      "nudgeText": "انضم إلى لائحة المتصدرين في OpenWhispr ← الإحصاءات (Insights) حتى نرى لائحة الفريق.",
-      "nudgeCopied": "تم نسخ رسالة التشجيع",
-      "nudgeCopyError": "تعذر نسخ رسالة التشجيع",
-      "joinTitle": "اعرف ترتيبك في {{scope}}",
-      "joinDescription": "يظهر اسمك وبريدك الإلكتروني ونشاطك على جميع لوائح المتصدرين المؤهلة لمساحة العمل ونطاق العمل. تبقى النصوص المفرَّغة خاصة، ويمكنك المغادرة في أي وقت.",
-      "joinCta": "الانضمام إلى لوائح المتصدرين",
-      "joiningLeaderboard": "جاري الانضمام…",
-      "joinPolicyBlocked": "لا تسمح سياسة مساحة العمل الخاصة بك بالمشاركة في لوائح المتصدرين.",
-      "activationError": "تعذر التحقق من مشاركتك في لائحة المتصدرين. تحقق من اتصالك وحاول مرة أخرى.",
-      "disabled": "لائحة المتصدرين معطّلة",
-      "leave": "مغادرة لوائح المتصدرين",
-      "leavePending": "سنُكمل مغادرة لوائح المتصدرين عندما تكون متصلًا بالإنترنت.",
-      "allTime": "كل الأوقات",
-      "thisWeek": "هذا الأسبوع",
-      "wpmValue": "{{count}} كلمة/دقيقة",
-      "requestJoinDescription_zero": "يضم {{workspace}} {{count}} أعضاء. اطلب من مسؤول إضافتك.",
-      "requestJoinDescription_one": "يضم {{workspace}} {{count}} عضو. اطلب من مسؤول إضافتك.",
-      "requestJoinDescription_two": "يضم {{workspace}} {{count}} عضوين. اطلب من مسؤول إضافتك.",
-      "requestJoinDescription_few": "يضم {{workspace}} {{count}} أعضاء. اطلب من مسؤول إضافتك.",
-      "requestJoinDescription_many": "يضم {{workspace}} {{count}} عضوًا. اطلب من مسؤول إضافتك.",
-      "requestJoinDescription_other": "يضم {{workspace}} {{count}} عضو. اطلب من مسؤول إضافتك.",
-      "requestJoinCta": "طلب الانضمام",
-      "requestSent": "تم إرسال الطلب",
-      "requesting": "جاري إرسال الطلب…",
-      "acceptInviteTitle": "أنت مدعو إلى {{workspace}}",
-      "acceptInviteDescription": "دعاك {{inviter}}. انضم لعرض لائحة الفريق.",
-      "acceptInviteDescriptionNoInviter": "انضم إلى {{workspace}} لعرض لائحة الفريق.",
-      "acceptInviteCta": "الانضمام إلى الفريق",
-      "joining": "جاري الانضمام…",
-      "inviteAcceptedTitle": "تم الانضمام إلى مساحة العمل",
-      "inviteAcceptedDescription": "يمكنك الآن عرض لائحة المتصدرين في {{workspace}}.",
-      "inviteAcceptError": "تعذر الانضمام إلى مساحة العمل هذه",
-      "invitedList": "تمت دعوة: {{emails}}",
-      "chooseBoard": "اختر لائحة",
-      "setupDomainDescription_zero": "انضم {{count}} أشخاص في {{domain}} إلى لوائح المتصدرين. أنشئ مساحة عمل وادعُهم.",
-      "setupDomainDescription_one": "انضم {{count}} شخص في {{domain}} إلى لوائح المتصدرين. أنشئ مساحة عمل وادعُه.",
-      "setupDomainDescription_two": "انضم {{count}} شخصان في {{domain}} إلى لوائح المتصدرين. أنشئ مساحة عمل وادعُهما.",
-      "setupDomainDescription_few": "انضم {{count}} أشخاص في {{domain}} إلى لوائح المتصدرين. أنشئ مساحة عمل وادعُهم.",
-      "setupDomainDescription_many": "انضم {{count}} شخصًا في {{domain}} إلى لوائح المتصدرين. أنشئ مساحة عمل وادعُهم.",
-      "setupDomainDescription_other": "انضم {{count}} شخص في {{domain}} إلى لوائح المتصدرين. أنشئ مساحة عمل وادعُهم.",
-      "setupCta": "إنشاء مساحة عمل",
-      "accessError": "تعذر التحقق من إمكانية وصولك إلى لائحة المتصدرين.",
-      "signInTitle": "سجّل الدخول لعرض لائحة المتصدرين",
-      "signInDescription": "تصنّفك لوائح المتصدرين مقابل زملائك في حسابك. سجّل الدخول للتحقق مما إذا كانت لائحتك متاحة.",
-      "requestJoinTitle": "فريقك موجود هنا بالفعل",
-      "title": "لائحة المتصدرين",
-      "inviteCta": "دعوة زملاء العمل",
-      "soloTitle": "ادعُ أول زميل لك",
-      "soloDescription": "لائحة المتصدرين جاهزة. ادعُ شخصًا إلى {{scope}} لبدء مقارنة النشاط وبناء الزخم معًا.",
-      "soloHint": "سيظهرون هنا بعد انضمامهم إلى لائحة المتصدرين.",
-      "topPerformers": "الأفضل أداءً",
-      "refreshCadence": "يتم التحديث كل ساعة",
-      "moreActions": "مزيد من إجراءات لائحة المتصدرين",
-      "setupTitle": "أنشئ لائحة متصدرين لفريقك",
-      "setupDescription": "أنشئ مساحة عمل، ثم ادعُ زملاءك لبدء مقارنة النشاط وبناء الزخم معًا.",
-      "metrics": {
-        "total_words": "إجمالي الكلمات",
-        "words_per_minute": "الكلمات في الدقيقة",
-        "current_daily_streak": "التتابع اليومي الحالي",
-        "desktop_words": "كلمات سطح المكتب",
-        "mobile_words": "كلمات الجوال"
-      },
-      "shareText": "اعرف ترتيبي في OpenWhispr.",
-      "shareTitle": "مشاركة لائحة المتصدرين",
-      "shareDescription": "انسخ هذه البطاقة أو نزّلها، أو انسخها قبل فتح محرر النشر على وسائل التواصل.",
-      "copyImage": "نسخ الصورة",
-      "download": "تنزيل",
-      "shareX": "المشاركة على X",
-      "shareLinkedIn": "المشاركة على LinkedIn",
-      "copied": "تم نسخ الصورة — الصقها في منشورك.",
-      "saved": "تم تنزيل الصورة.",
-      "failed": "تعذر إنشاء بطاقة المشاركة.",
-      "unnamedMember": "زميل"
-    }
+    "loadError": "تعذرت قراءة الإحصاءات من هذا الجهاز."
   },
   "chat": {
     "newChat": "محادثة جديدة",

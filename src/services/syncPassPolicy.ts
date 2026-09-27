@@ -6,8 +6,6 @@ export interface SyncConsent {
   backup: boolean;
   /** Shared notes and team-space content. */
   shared: boolean;
-  /** Content-free Insights counters. */
-  analytics: boolean;
 }
 
 /**
@@ -17,49 +15,18 @@ export interface SyncConsent {
  * gave deliberately, so it syncs whenever they are signed in — collaboration
  * is not a paid feature, and gating it on the *invitee's* plan silently
  * stranded free teammates in workspaces they had already been added to.
- *
- * Insights counters carry no content and are free, so they answer to their own
- * opt-in rather than the backup toggle or the plan. They still require local
- * history.
  */
 export function resolveSyncConsent(state: {
   authValidated: boolean;
   signedIn: boolean;
   backupEnabled: boolean;
   subscribed: boolean;
-  dataRetentionEnabled: boolean;
-  insightsSyncEnabled: boolean;
 }): SyncConsent {
   const shared = state.authValidated && state.signedIn;
   return {
     shared,
     backup: shared && state.backupEnabled && state.subscribed,
-    analytics: shared && state.insightsSyncEnabled && state.dataRetentionEnabled,
   };
-}
-
-/**
- * Whether the Insights view offers to adopt the counters recorded while signed
- * out. The offer is gated on there being rows to adopt, never on the sync
- * toggle: account-scope bootstrap can leave rows unattributed while the local
- * setting is on. Gating the offer on the toggle left exactly those rows
- * unreachable — excluded from the account summary the view then shows, so
- * visible totals silently dropped. Offering is not adopting: the prompt still
- * has to be confirmed (useInsightsSyncOptIn).
- *
- * The other three inputs are the preconditions the offer always had. Retention
- * being off is not a technicality here: it stops new counters being recorded,
- * so a sync the user turns on would have nothing to carry.
- */
-export function canOfferAnalyticsClaim(state: {
-  signedIn: boolean;
-  syncAllowedByPolicy: boolean;
-  dataRetentionEnabled: boolean;
-  insightsSyncEnabled: boolean;
-  unclaimedCount: number;
-}): boolean {
-  if (!state.signedIn || !state.syncAllowedByPolicy || !state.dataRetentionEnabled) return false;
-  return !state.insightsSyncEnabled || state.unclaimedCount > 0;
 }
 
 const TEAM_ONLY_PASS_BASE_MS = 5 * 60 * 1000;
@@ -91,19 +58,9 @@ export function shouldRunAmbientTeamOnlyPass(state: {
   return state.now - state.lastPassAt >= teamOnlyPassDelayMs(state.emptyStreak);
 }
 
-/**
- * The empty streak after an ambient pass. Insights counters are the second kind
- * of work such a pass can move, and they get their own input rather than
- * borrowing the team flag: a pass that uploaded counters did real work and
- * resets the backoff, while merely having the opt-in on does not — that
- * conflation would pin every backup-off Insights account to the 5-minute
- * cadence teamOnlyPassDelayMs exists to remove.
- */
-export function nextAmbientEmptyStreak(
-  emptyStreak: number,
-  moved: { team: boolean; analytics: boolean }
-): number {
-  return moved.team || moved.analytics ? 0 : emptyStreak + 1;
+/** The empty streak after an ambient pass: any moved work resets the backoff. */
+export function nextAmbientEmptyStreak(emptyStreak: number, moved: { team: boolean }): number {
+  return moved.team ? 0 : emptyStreak + 1;
 }
 
 export interface PullCursorAdvance {

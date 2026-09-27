@@ -175,7 +175,6 @@
     "cancel": "Cancel",
     "recommended": "Recommended",
     "active": "Active",
-    "managedByOrg": "Managed by your organization",
     "freeAccountRequired": "Free account required",
     "comingSoon": "Coming Soon",
     "cloud": "Cloud",
@@ -301,10 +300,6 @@
         },
         "connectors": {
           "connect": "Connect",
-          "googleTitle": "Google Calendar",
-          "googleDescription": "Sync your meetings.",
-          "microsoftTitle": "Microsoft Outlook",
-          "microsoftDescription": "Bring in work meetings and invites.",
           "appleTitle": "Apple Calendar",
           "appleDescription": "Sync events from your Mac and iPhone."
         }
@@ -574,19 +569,6 @@
     }
   },
   "controlPanel": {
-    "update": {
-      "readyTitle": "Update ready to install",
-      "readyDescription": "Click 'Install Update' to restart with the latest version.",
-      "installTitle": "Install Update",
-      "installDescription": "OpenWhispr will restart to apply the update. Any in-progress work will be saved.",
-      "couldNotInstallTitle": "Couldn't install update",
-      "couldNotInstallDescription": "Something went wrong. Please try again.",
-      "couldNotDownloadTitle": "Couldn't download update",
-      "couldNotDownloadDescription": "Check your internet connection and try again.",
-      "installing": "Installing...",
-      "installButton": "Install Update",
-      "availableButton": "Update Available"
-    },
     "limit": {
       "weeklyTitle": "Weekly limit reached",
       "weeklyDescription": "Your limit resets on a rolling basis. Upgrade to Pro or use your own API key for unlimited use."
@@ -1235,59 +1217,6 @@
         "transcriptionPipeline": "Transcription pipeline"
       },
       "title": "What gets logged"
-    }
-  },
-  "apiKeysSection": {
-    "title": "API Keys",
-    "description": "Create keys to access the OpenWhispr API programmatically.",
-    "docsLink": "API Docs",
-    "empty": "No API keys yet",
-    "createButton": "Create API Key",
-    "create": {
-      "title": "Create API Key",
-      "nameLabel": "Key Name",
-      "namePlaceholder": "e.g. My Integration",
-      "scopesLabel": "Permissions",
-      "expiryLabel": "Expiration",
-      "expiryOptions": {
-        "never": "Never expires",
-        "30days": "30 days",
-        "60days": "60 days",
-        "90days": "90 days",
-        "1year": "1 year"
-      },
-      "submit": "Create",
-      "cancel": "Cancel"
-    },
-    "created": {
-      "title": "API Key Created",
-      "warning": "Copy this key now. It won't be shown again.",
-      "copied": "Copied!",
-      "copyButton": "Copy to Clipboard",
-      "done": "Done"
-    },
-    "scopes": {
-      "notesRead": "Read notes",
-      "notesWrite": "Create & edit notes",
-      "transcriptionsRead": "Read transcriptions",
-      "dictionaryRead": "Read dictionary",
-      "dictionaryWrite": "Edit dictionary",
-      "snippetsRead": "Read snippets",
-      "snippetsWrite": "Edit snippets",
-      "transcriptionsWrite": "Transcribe audio"
-    },
-    "revoke": {
-      "button": "Revoke",
-      "confirm": "Revoke this key? Any integrations using it will stop working.",
-      "success": "API key revoked"
-    },
-    "neverUsed": "Never used",
-    "lastUsed": "Last used {{time}}",
-    "maxKeysReached": "Maximum {{max}} keys allowed",
-    "errors": {
-      "loadFailed": "Failed to load API keys",
-      "createFailed": "Failed to create API key",
-      "revokeFailed": "Failed to revoke API key"
     }
   },
   "dictionarySuffix": "Dictionary Suffix",
@@ -2301,64 +2230,14 @@
           "rebuildNote": "Run sudo nixos-rebuild switch, then log out and back in so the group change and the /dev/uinput rule take effect. Replace <you> with your username."
         }
       },
-      "updates": {
-        "automaticUpdates": "Automatic updates",
-        "automaticUpdatesDescription": "Download and install updates in the background",
-        "badges": {
-          "dev": "Dev",
-          "latest": "Latest",
-          "update": "Update"
-        },
-        "checkForUpdates": "Check for Updates",
-        "checking": "Checking...",
-        "currentVersion": "Current version",
-        "devMode": "Running in development mode",
-        "dialogs": {
-          "almostThere": {
-            "description": "The update is almost ready. Please wait a moment.",
-            "title": "Almost there"
-          },
-          "checkFailed": {
-            "description": "We had trouble checking for updates. Please try again later.",
-            "title": "Couldn't check for updates"
-          },
-          "downloadFailed": {
-            "description": "We had trouble downloading the update. Please try again.",
-            "title": "Couldn't download update"
-          },
-          "installFailed": {
-            "description": "We had trouble installing the update. Please try again.",
-            "title": "Couldn't install update"
-          },
-          "installUpdate": {
-            "confirmText": "Install & Restart",
-            "description": "OpenWhispr will restart to apply the update.",
-            "title": "Install Update"
-          },
-          "noUpdates": {
-            "description": "You're on the latest version.",
-            "title": "No Updates"
-          },
-          "updateAvailable": {
-            "description": "Update available: v{{version}}",
-            "title": "Update Available"
-          }
-        },
-        "downloadUpdate": "Download Update {{version}}",
-        "downloading": "Downloading... {{progress}}%",
-        "installAndRestart": "Install & Restart",
-        "latestVersion": "You're on the latest version",
-        "managedByPackageManager": "Updates are installed through your package manager",
-        "newVersion": "A newer version is available",
-        "newVersionAvailable": "New version available",
-        "restarting": "Restarting...",
-        "title": "Updates",
-        "versionPlaceholder": "—",
-        "whatsNew": "What's new in v{{version}}"
-      },
       "translationHotkey": {
         "title": "Translation Hotkey",
         "description": "Dictate in any language — the pasted text comes out translated"
+      },
+      "version": {
+        "currentVersion": "Current version",
+        "placeholder": "—",
+        "dev": "Dev"
       }
     },
     "permissions": {
@@ -2391,15 +2270,6 @@
       "cloudNotesMigrationDone": "All notes backed up",
       "description": "Control what data leaves your device. Everything is off by default.",
       "title": "Privacy",
-      "usageAnalytics": "Usage analytics",
-      "usageAnalyticsDescription": "Help us improve OpenWhispr by sharing anonymous performance metrics. We never send transcription content — only timing and error data.",
-      "insightsSync": "Sync personal Insights",
-      "insightsSyncDescription": "Sync word counts, the date and exact time of each dictation, durations, and model types across your devices. Transcript content is never included. When you're signed in, clearing history also removes these counters from this device and your account.",
-      "insightsSyncRequiresAccount": "Sign in to sync content-free Insights data across your devices.",
-      "insightsSyncRequiresHistory": "Turn on data retention to record Insights before syncing them across your devices.",
-      "leaderboardDescription": "Show your name, email, and activity on eligible workspace and work-domain leaderboards. Transcripts stay private.",
-      "leaderboardRequiresAccount": "Sign in to manage leaderboard participation.",
-      "leaderboardRequiresHistory": "Turn on data retention before joining leaderboards.",
       "audioRetention": "Audio Retention",
       "audioRetentionDescription": "Store dictation audio locally for re-transcription and download. Files are automatically deleted after the retention period. Meeting audio is never stored.",
       "audioRetentionDisabled": "Disabled",
@@ -2742,7 +2612,6 @@
     "notes": "Notes",
     "upload": "Upload",
     "dictionary": "Dictionary",
-    "referral": "Get a free month",
     "inviteTeam": "Invite your team",
     "settings": "Settings",
     "support": "Support",
@@ -2786,107 +2655,9 @@
     "dataRetentionDisabled": "Data retention is off, so new dictations aren't counted in Insights — not on this device and not in your account. Counters already synced stay in your account.",
     "onDevice": "On this device",
     "onDevicePrivacy": "These insights are calculated on this device to protect your privacy.",
-    "synced": "Synced across devices",
-    "syncFallback": "Showing device data — sync unavailable",
-    "syncPrompt": "Sync content-free counters to combine local and cloud activity across devices.",
-    "enableSync": "Enable Sync",
-    "syncEnableError": "Insights sync couldn't be enabled. Please try again.",
-    "claimTitle": "Include earlier dictations?",
-    "claimDescription_one": "Sync usage from {{count}} earlier dictation. Transcripts stay private.",
-    "claimDescription_other": "Sync usage from {{count}} earlier dictations. Transcripts stay private.",
-    "claimInclude": "Include",
-    "claimSkip": "Not now",
-    "enableTitle": "Turn on Insights sync?",
-    "enableConfirm": "Turn on sync",
-    "enableDescription_one": "Sync usage from {{count}} existing dictation. Transcripts stay private.",
-    "enableDescription_other": "Sync usage from {{count}} existing dictations. Transcripts stay private.",
     "emptyTitle": "No dictations yet",
     "emptyBody": "Start dictating and your words, streaks, and daily activity will show up here.",
-    "loadError": "Insights couldn't be read from this device.",
-    "leaderboard": {
-      "title": "Leaderboard",
-      "inviteCta": "Invite teammates",
-      "soloTitle": "Invite your first teammate",
-      "soloDescription": "Your leaderboard is ready. Invite someone to {{scope}} to start comparing activity and building momentum together.",
-      "soloHint": "They’ll appear here after they join the leaderboard.",
-      "topPerformers": "Top performers",
-      "refreshCadence": "Updates hourly",
-      "moreActions": "More leaderboard actions",
-      "setupTitle": "Create your team leaderboard",
-      "setupDescription": "Create a workspace, then invite teammates to start comparing activity and building momentum together.",
-      "setupDomainDescription_one": "{{count}} person at {{domain}} has joined leaderboards. Create a workspace and invite them.",
-      "setupDomainDescription_other": "{{count}} people at {{domain}} have joined leaderboards. Create a workspace and invite them.",
-      "setupCta": "Create workspace",
-      "accessError": "We couldn't check your leaderboard access.",
-      "signInTitle": "Sign in to see your leaderboard",
-      "signInDescription": "Leaderboards rank you against teammates on your account. Sign in to check whether yours is available.",
-      "requestJoinTitle": "Your team is already here",
-      "requestJoinDescription_one": "{{workspace}} has {{count}} member. Ask an admin to add you.",
-      "requestJoinDescription_other": "{{workspace}} has {{count}} members. Ask an admin to add you.",
-      "requestJoinCta": "Request to join",
-      "requestSent": "Request sent",
-      "requesting": "Sending request…",
-      "acceptInviteTitle": "You're invited to {{workspace}}",
-      "acceptInviteDescription": "{{inviter}} invited you. Join to see the team board.",
-      "acceptInviteDescriptionNoInviter": "Join {{workspace}} to see the team board.",
-      "acceptInviteCta": "Join Team",
-      "joining": "Joining…",
-      "inviteAcceptedTitle": "Workspace joined",
-      "inviteAcceptedDescription": "You can now see the {{workspace}} leaderboard.",
-      "inviteAcceptError": "Couldn't join this workspace",
-      "invitedList": "Invited: {{emails}}",
-      "chooseBoard": "Choose a board",
-      "emptyStrip_one": "{{count}} teammate hasn't joined the leaderboard yet. Rankings start when they do.",
-      "emptyStrip_other": "{{count}} teammates haven't joined the leaderboard yet. Rankings start when they do.",
-      "copyNudge": "Copy a nudge",
-      "nudgeText": "Join the leaderboard in OpenWhispr → Insights so we can see the team board.",
-      "nudgeCopied": "Nudge copied",
-      "nudgeCopyError": "Couldn't copy the nudge",
-      "joinTitle": "See where you rank in {{scope}}",
-      "joinDescription": "Your name, email, and activity appear on all your eligible workspace and work-domain leaderboards. Transcripts stay private, and you can leave at any time.",
-      "joinCta": "Join leaderboards",
-      "joiningLeaderboard": "Joining…",
-      "joinPolicyBlocked": "Your workspace policy doesn't allow leaderboard participation.",
-      "activationError": "We couldn't verify your leaderboard participation. Check your connection and try again.",
-      "disabled": "Leaderboard is disabled",
-      "leave": "Leave leaderboards",
-      "leavePending": "We'll finish leaving the leaderboards when you're online.",
-      "allTime": "All time",
-      "thisWeek": "This week",
-      "wpmValue": "{{count}} WPM",
-      "dayValue_one": "{{count}} day",
-      "dayValue_other": "{{count}} days",
-      "share": "Share",
-      "refresh": "Refresh leaderboard",
-      "error": "The leaderboard couldn't be loaded.",
-      "retry": "Try again",
-      "rank": "Rank",
-      "member": "Member",
-      "you": "(you)",
-      "jumpToMe": "Jump to me",
-      "jumpUnavailable": "Your account couldn't be identified in this leaderboard.",
-      "previous": "Previous page",
-      "jumpToRank": "Jump to rank",
-      "next": "Next page",
-      "metrics": {
-        "total_words": "Total words",
-        "words_per_minute": "Words per minute",
-        "current_daily_streak": "Current daily streak",
-        "desktop_words": "Desktop words",
-        "mobile_words": "Mobile words"
-      },
-      "shareText": "See where I rank on OpenWhispr.",
-      "shareTitle": "Share leaderboard",
-      "shareDescription": "Copy or download this card, or copy it before opening a social composer.",
-      "copyImage": "Copy image",
-      "download": "Download",
-      "shareX": "Share to X",
-      "shareLinkedIn": "Share to LinkedIn",
-      "copied": "Image copied — paste it into your post.",
-      "saved": "Image downloaded.",
-      "failed": "The share card couldn't be created.",
-      "unnamedMember": "Teammate"
-    }
+    "loadError": "Insights couldn't be read from this device."
   },
   "workspaces": {
     "switcher": {
@@ -2985,78 +2756,6 @@
     "searchTitle": "Search conversations",
     "searchDescription": "Search across all your conversations",
     "newChatEmpty": "Ask about your notes, transcripts, or anything else"
-  },
-  "referral": {
-    "title": "Refer and earn rewards",
-    "modalTitle": "Refer and earn rewards",
-    "subtitle": "Give a month. Get a month.",
-    "tabs": {
-      "refer": "Refer",
-      "pastInvites": "Past invites"
-    },
-    "howItWorks": {
-      "shareLink": "Share your invite link",
-      "theySignUp": "They sign up and get a ",
-      "freeMonthOfPro": "free month of Pro",
-      "youGet": "You get a ",
-      "freeMonth": "free month",
-      "whenTheyDictate": " when they dictate 2,000 words"
-    },
-    "inviteLink": {
-      "title": "Your invite link",
-      "copy": "Copy",
-      "copied": "Copied"
-    },
-    "sendInvites": {
-      "title": "Send invites",
-      "placeholder": "friend@example.com",
-      "send": "Send",
-      "sending": "Sending"
-    },
-    "stats": {
-      "referred": "Referred",
-      "converted": "Converted",
-      "monthsEarned": "Months earned"
-    },
-    "status": {
-      "converted": "Converted",
-      "opened": "Opened",
-      "failed": "Failed",
-      "sent": "Sent"
-    },
-    "friends": {
-      "title": "Friends",
-      "completed": "Completed",
-      "sentInvites": "Sent invites"
-    },
-    "empty": {
-      "title": "No invites sent yet",
-      "description": "Share your link or send an invite to get started"
-    },
-    "toasts": {
-      "copiedTitle": "Copied!",
-      "copiedDescription": "Referral link copied to clipboard",
-      "copyFailedTitle": "Copy Failed",
-      "copyFailedDescription": "Failed to copy link to clipboard",
-      "invalidEmailTitle": "Invalid Email",
-      "invalidEmailDescription": "Please enter a valid email address",
-      "inviteSentTitle": "Invite Sent!",
-      "inviteSentDescription": "Invitation sent to {{email}}",
-      "sendFailedTitle": "Send Failed",
-      "sendFailedDescription": "Failed to send invitation. Please try again."
-    },
-    "errors": {
-      "unableToLoad": "Unable to load referral data",
-      "unableToLoadStats": "Unable to load referral stats. Please try again later."
-    },
-    "tryAgain": "Try Again",
-    "card": {
-      "brand": "OpenWhispr",
-      "signalId": "Signal ID",
-      "audioSignature": "Your audio signature",
-      "stop": "Stop",
-      "playSignal": "Play signal"
-    }
   },
   "notes": {
     "mutationErrors": {
@@ -3861,40 +3560,6 @@
   "integrations": {
     "title": "Integrations",
     "description": "Connect services to supercharge your workflow",
-    "googleCalendar": {
-      "title": "Google Calendar",
-      "optional": "Optional",
-      "description": "Auto-fill meeting titles and attendees from your calendar.",
-      "connect": "Connect Google Calendar",
-      "connecting": "Connecting...",
-      "connected": "Connected",
-      "addAnother": "Add another calendar",
-      "primaryOnly": "Sync primary calendar only",
-      "primaryOnlyDescription": "Ignore events from calendars shared with you.",
-      "disconnect": "Disconnect",
-      "disconnectConfirm": "Disconnect {{email}}?",
-      "disconnectDescription": "Meeting notes will no longer be recorded from this calendar.",
-      "systemAudioRequired": "System Audio Permission Required",
-      "systemAudioDescription": "To transcribe meetings, OpenWhispr needs the System Audio permission to capture other participants' audio. We never record your screen. You'll be taken to System Settings to enable it.",
-      "openSettings": "Open System Settings",
-      "connectFailed": "Connection Failed",
-      "connectFailedDescription": "Something went wrong while connecting Google Calendar. Please try again."
-    },
-    "microsoftCalendar": {
-      "title": "Microsoft Calendar",
-      "optional": "Optional",
-      "description": "Read meetings from your Outlook or Microsoft 365 calendar.",
-      "connect": "Connect Microsoft Calendar",
-      "connected": "Connected",
-      "addAnother": "Add another calendar",
-      "primaryOnly": "Sync primary calendar only",
-      "primaryOnlyDescription": "Ignore events from calendars shared with you.",
-      "disconnect": "Disconnect",
-      "disconnectConfirm": "Disconnect {{email}}?",
-      "disconnectDescription": "Meeting notes will no longer be recorded from this calendar.",
-      "connectFailed": "Connection Failed",
-      "connectFailedDescription": "Something went wrong while connecting Microsoft Calendar. Please try again."
-    },
     "appleCalendar": {
       "title": "Apple Calendar",
       "optional": "Optional",
@@ -3912,29 +3577,7 @@
     },
     "sections": {
       "calendar": "Calendar",
-      "api": "API",
-      "mcp": "MCP",
       "cli": "CLI"
-    },
-    "api": {
-      "title": "API keys",
-      "description": "Manage API keys for programmatic access",
-      "proRequired": "Upgrade to a paid plan to access the API",
-      "manage": "Manage keys",
-      "viewPlans": "View Plans",
-      "dialogTitle": "API keys"
-    },
-    "mcp": {
-      "title": "Bring your notes to your AI tools",
-      "description": "Chat, search, and work with your notes inside Claude, ChatGPT, and Cursor.",
-      "step1": "In your AI tool, add OpenWhispr MCP using the public URL",
-      "step2": "Create an API key above with the scopes you need.",
-      "step3": "Paste the key as the Authorization header to connect.",
-      "learnMore": "Learn more",
-      "viewPlans": "View Plans",
-      "copyUrl": "Copy MCP URL",
-      "proRequired": "Upgrade to a paid plan to connect OpenWhispr to Claude, ChatGPT, and Cursor.",
-      "copied": "Copied"
     },
     "cli": {
       "title": "Command-line access",
@@ -3969,6 +3612,11 @@
     "notABot": {
       "title": "OpenWhispr is a meeting recorder, not a bot",
       "description": "OpenWhispr captures audio directly from your system — it never joins your meetings as a participant. Just connect your calendar and take notes as normal."
+    },
+    "systemAudio": {
+      "title": "System Audio Permission Required",
+      "description": "To transcribe meetings, OpenWhispr needs the System Audio permission to capture other participants' audio. We never record your screen. You'll be taken to System Settings to enable it.",
+      "openSettings": "Open System Settings"
     }
   },
   "notesView": {

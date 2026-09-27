@@ -75,7 +75,6 @@ test("technical output values remain LTR inside an Arabic document", () => {
     ],
     ["src/components/ui/TechnicalErrorDetails.tsx", /<pre\s+dir="ltr"[\s\S]*?\{text\}/],
     ["src/components/ui/NixOsPasteInfo.tsx", /<div\s+dir="ltr"[\s\S]*?<pre/],
-    ["src/components/McpIntegrationCard.tsx", /<span\s+dir="ltr"[\s\S]*?\{MCP_URL\}/],
     [
       "src/components/settings/WorkspaceBillingCard.tsx",
       /<span\s+dir="ltr"[^>]*>\s*\{seatsUsed\} \/ \{seatsTotal\}/,
@@ -125,24 +124,12 @@ test("localized sentences isolate technical interpolations without changing word
       /<BidiInterpolatedText[\s\S]*?resetToDefault[\s\S]*?value=\{formatHotkeyLabel\(effectiveDefaultHotkey\)\}/,
     ],
     [
-      "src/components/SettingsPage.tsx",
-      /<BidiInterpolatedText[\s\S]*?updates\.whatsNew[\s\S]*?value=\{updateInfo\.version\}/,
-    ],
-    [
       "src/components/MemberRoster.tsx",
       /<BidiInterpolatedText[\s\S]*?members\.inviteFooter[\s\S]*?value=\{addSearch\.trim\(\)\}/,
     ],
     [
       "src/components/notes/SpaceMembersPanel.tsx",
       /<BidiInterpolatedText[\s\S]*?members\.invited[\s\S]*?value=\{invitedEmail\}/,
-    ],
-    [
-      "src/components/IntegrationsView.tsx",
-      /<BidiInterpolatedText[\s\S]*?googleCalendar\.disconnectConfirm[\s\S]*?value=\{confirmDisconnectEmail\}/,
-    ],
-    [
-      "src/components/IntegrationsView.tsx",
-      /<BidiInterpolatedText[\s\S]*?microsoftCalendar\.disconnectConfirm[\s\S]*?value=\{confirmMsDisconnectEmail\}/,
     ],
   ];
 

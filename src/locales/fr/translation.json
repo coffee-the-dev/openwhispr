@@ -175,7 +175,6 @@
     "cancel": "Annuler",
     "recommended": "Recommandé",
     "active": "Actif",
-    "managedByOrg": "Géré par votre organisation",
     "freeAccountRequired": "Compte gratuit requis",
     "comingSoon": "Bientôt disponible",
     "cloud": "Cloud",
@@ -301,10 +300,6 @@
         },
         "connectors": {
           "connect": "Connecter",
-          "googleTitle": "Google Agenda",
-          "googleDescription": "Synchronisez vos réunions.",
-          "microsoftTitle": "Microsoft Outlook",
-          "microsoftDescription": "Importez vos réunions et invitations professionnelles.",
           "appleTitle": "Calendrier Apple",
           "appleDescription": "Synchronisez les événements de votre Mac et de votre iPhone."
         }
@@ -574,19 +569,6 @@
     }
   },
   "controlPanel": {
-    "update": {
-      "readyTitle": "Mise à jour prête à installer",
-      "readyDescription": "Cliquez sur « Installer la mise à jour » pour redémarrer avec la dernière version.",
-      "installTitle": "Installer la mise à jour",
-      "installDescription": "OpenWhispr va redémarrer pour appliquer la mise à jour. Le travail en cours sera sauvegardé.",
-      "couldNotInstallTitle": "Impossible d'installer la mise à jour",
-      "couldNotInstallDescription": "Une erreur est survenue. Veuillez réessayer.",
-      "couldNotDownloadTitle": "Impossible de télécharger la mise à jour",
-      "couldNotDownloadDescription": "Vérifiez votre connexion internet puis réessayez.",
-      "installing": "Installation...",
-      "installButton": "Installer la mise à jour",
-      "availableButton": "Mise à jour disponible"
-    },
     "limit": {
       "weeklyTitle": "Limite hebdomadaire atteinte",
       "weeklyDescription": "Votre limite se renouvelle de manière glissante. Passez à Pro ou utilisez votre propre clé API pour un usage illimité."
@@ -1235,59 +1217,6 @@
         "transcriptionPipeline": "Pipeline de transcription"
       },
       "title": "Ce qui est enregistré"
-    }
-  },
-  "apiKeysSection": {
-    "title": "Clés API",
-    "description": "Créez des clés pour accéder à l'API OpenWhispr de manière programmatique.",
-    "docsLink": "Docs de l'API",
-    "empty": "Aucune clé API pour le moment",
-    "createButton": "Créer une clé API",
-    "create": {
-      "title": "Créer une clé API",
-      "nameLabel": "Nom de la clé",
-      "namePlaceholder": "ex. Mon intégration",
-      "scopesLabel": "Autorisations",
-      "expiryLabel": "Expiration",
-      "expiryOptions": {
-        "never": "N'expire jamais",
-        "30days": "30 jours",
-        "60days": "60 jours",
-        "90days": "90 jours",
-        "1year": "1 an"
-      },
-      "submit": "Créer",
-      "cancel": "Annuler"
-    },
-    "created": {
-      "title": "Clé API créée",
-      "warning": "Copiez cette clé maintenant. Elle ne sera plus affichée.",
-      "copied": "Copié !",
-      "copyButton": "Copier dans le presse-papiers",
-      "done": "Terminé"
-    },
-    "scopes": {
-      "notesRead": "Lire les notes",
-      "notesWrite": "Créer et modifier les notes",
-      "transcriptionsRead": "Lire les transcriptions",
-      "dictionaryRead": "Lire le dictionnaire",
-      "dictionaryWrite": "Modifier le dictionnaire",
-      "snippetsRead": "Lire les snippets",
-      "snippetsWrite": "Modifier les snippets",
-      "transcriptionsWrite": "Transcrire l'audio"
-    },
-    "revoke": {
-      "button": "Révoquer",
-      "confirm": "Révoquer cette clé ? Les intégrations qui l'utilisent cesseront de fonctionner.",
-      "success": "Clé API révoquée"
-    },
-    "neverUsed": "Jamais utilisée",
-    "lastUsed": "Dernière utilisation {{time}}",
-    "maxKeysReached": "Maximum de {{max}} clés autorisées",
-    "errors": {
-      "loadFailed": "Impossible de charger les clés API",
-      "createFailed": "Impossible de créer la clé API",
-      "revokeFailed": "Impossible de révoquer la clé API"
     }
   },
   "dictionarySuffix": "Suffixe du dictionnaire",
@@ -2301,64 +2230,14 @@
           "rebuildNote": "Exécutez sudo nixos-rebuild switch, puis déconnectez-vous et reconnectez-vous pour que le changement de groupe et la règle /dev/uinput prennent effet. Remplacez <you> par votre nom d'utilisateur."
         }
       },
-      "updates": {
-        "automaticUpdates": "Mises à jour automatiques",
-        "automaticUpdatesDescription": "Télécharger et installer les mises à jour en arrière-plan",
-        "badges": {
-          "dev": "Dev",
-          "latest": "À jour",
-          "update": "Mise à jour"
-        },
-        "checkForUpdates": "Rechercher les mises à jour",
-        "checking": "Vérification...",
-        "currentVersion": "Version actuelle",
-        "devMode": "Exécution en mode développement",
-        "dialogs": {
-          "almostThere": {
-            "description": "La mise à jour est presque prête. Veuillez patienter un instant.",
-            "title": "Presque terminé"
-          },
-          "checkFailed": {
-            "description": "Nous avons eu un problème pour vérifier les mises à jour. Réessayez plus tard.",
-            "title": "Impossible de vérifier les mises à jour"
-          },
-          "downloadFailed": {
-            "description": "Nous avons eu un problème pour télécharger la mise à jour. Veuillez réessayer.",
-            "title": "Impossible de télécharger la mise à jour"
-          },
-          "installFailed": {
-            "description": "Nous avons eu un problème pour installer la mise à jour. Veuillez réessayer.",
-            "title": "Impossible d'installer la mise à jour"
-          },
-          "installUpdate": {
-            "confirmText": "Installer et redémarrer",
-            "description": "OpenWhispr va redémarrer pour appliquer la mise à jour.",
-            "title": "Installer la mise à jour"
-          },
-          "noUpdates": {
-            "description": "Vous avez la dernière version.",
-            "title": "Pas de mise à jour"
-          },
-          "updateAvailable": {
-            "description": "Mise à jour disponible : v{{version}}",
-            "title": "Mise à jour disponible"
-          }
-        },
-        "downloadUpdate": "Télécharger la mise à jour {{version}}",
-        "downloading": "Téléchargement... {{progress}}%",
-        "installAndRestart": "Installer et redémarrer",
-        "latestVersion": "Vous avez la dernière version",
-        "managedByPackageManager": "Les mises à jour sont installées via votre gestionnaire de paquets",
-        "newVersion": "Une version plus récente est disponible",
-        "newVersionAvailable": "Nouvelle version disponible",
-        "restarting": "Redémarrage...",
-        "title": "Mises à jour",
-        "versionPlaceholder": "—",
-        "whatsNew": "Nouveautés de la v{{version}}"
-      },
       "translationHotkey": {
         "title": "Raccourci de Traduction",
         "description": "Dictez dans n'importe quelle langue : le texte collé ressort traduit"
+      },
+      "version": {
+        "currentVersion": "Version actuelle",
+        "placeholder": "—",
+        "dev": "Dev"
       }
     },
     "permissions": {
@@ -2391,15 +2270,6 @@
       "cloudNotesMigrationDone": "Toutes les notes sauvegardées",
       "description": "Contrôlez quelles données quittent votre appareil. Tout est désactivé par défaut.",
       "title": "Confidentialité",
-      "insightsSync": "Synchroniser les Statistiques personnelles",
-      "insightsSyncDescription": "Synchronisez le nombre de mots, la date et l'heure exacte de chaque dictée, les durées et les types de modèle entre vos appareils. Le contenu des transcriptions n'est jamais inclus. Lorsque vous êtes connecté, effacer l'historique supprime également ces compteurs de cet appareil et de votre compte.",
-      "insightsSyncRequiresAccount": "Connectez-vous pour synchroniser des données de Statistiques sans contenu entre vos appareils.",
-      "insightsSyncRequiresHistory": "Activez la conservation des données pour enregistrer les Statistiques avant de les synchroniser entre vos appareils.",
-      "leaderboardDescription": "Affichez votre nom, votre adresse e-mail et votre activité dans les classements des espaces de travail et domaines professionnels éligibles. Vos transcriptions restent privées.",
-      "leaderboardRequiresAccount": "Connectez-vous pour gérer votre participation aux classements.",
-      "leaderboardRequiresHistory": "Activez la conservation des données avant de rejoindre les classements.",
-      "usageAnalytics": "Analyse d'utilisation",
-      "usageAnalyticsDescription": "Aidez-nous à améliorer OpenWhispr en partageant des métriques de performance anonymes. Nous n'envoyons jamais le contenu de vos transcriptions — uniquement des données de performance et d'erreurs.",
       "audioRetention": "Conservation de l'audio",
       "audioRetentionDescription": "Stocke l'audio de dictée localement pour la retranscription et le téléchargement. Les fichiers sont automatiquement supprimés après la période de conservation. L'audio des réunions n'est jamais stocké.",
       "audioRetentionDisabled": "Désactivé",
@@ -2760,107 +2630,9 @@
     "dataRetentionDisabled": "La conservation des données est désactivée : les nouvelles dictées ne sont comptabilisées dans les Statistiques ni sur cet appareil ni dans votre compte. Les compteurs déjà synchronisés restent dans votre compte.",
     "onDevice": "Sur cet appareil",
     "onDevicePrivacy": "Ces statistiques sont calculées sur cet appareil afin de protéger votre vie privée.",
-    "synced": "Synchronisé entre les appareils",
-    "syncFallback": "Données de l'appareil affichées — synchronisation indisponible",
-    "syncPrompt": "Synchronisez des compteurs sans contenu pour combiner l'activité locale et cloud sur tous vos appareils.",
-    "enableSync": "Activer la synchronisation",
-    "syncEnableError": "La synchronisation d’Insights n’a pas pu être activée. Réessayez.",
-    "claimTitle": "Inclure les dictées antérieures ?",
-    "claimDescription_one": "Synchronisez l’utilisation de {{count}} dictée antérieure. Les transcriptions restent privées.",
-    "claimDescription_other": "Synchronisez l’utilisation de {{count}} dictées antérieures. Les transcriptions restent privées.",
-    "claimInclude": "Inclure",
-    "claimSkip": "Pas maintenant",
-    "enableTitle": "Activer la synchronisation d'Insights ?",
-    "enableConfirm": "Activer la synchronisation",
-    "enableDescription_one": "Synchronisez l’utilisation de {{count}} dictée existante. Les transcriptions restent privées.",
-    "enableDescription_other": "Synchronisez l’utilisation de {{count}} dictées existantes. Les transcriptions restent privées.",
     "emptyTitle": "Aucune dictée pour l'instant",
     "emptyBody": "Commencez à dicter : vos mots, vos séries et votre activité quotidienne apparaîtront ici.",
-    "loadError": "Impossible de lire les Insights depuis cet appareil.",
-    "leaderboard": {
-      "title": "Classement",
-      "inviteCta": "Inviter des collègues",
-      "soloTitle": "Invitez votre premier collègue",
-      "soloDescription": "Votre classement est prêt. Invitez quelqu’un dans {{scope}} pour commencer à comparer l’activité et progresser ensemble.",
-      "soloHint": "Cette personne apparaîtra ici après avoir rejoint le classement.",
-      "topPerformers": "Meilleurs classements",
-      "refreshCadence": "Actualisé chaque heure",
-      "moreActions": "Plus d’actions du classement",
-      "setupTitle": "Créez le classement de votre équipe",
-      "setupDescription": "Créez un espace de travail, puis invitez des collègues pour comparer votre activité et progresser ensemble.",
-      "setupDomainDescription_one": "{{count}} personne chez {{domain}} participe aux classements. Créez un espace de travail et invitez-la.",
-      "setupDomainDescription_other": "{{count}} personnes chez {{domain}} participent aux classements. Créez un espace de travail et invitez-les.",
-      "setupCta": "Créer un espace de travail",
-      "accessError": "Nous n'avons pas pu vérifier votre accès au classement.",
-      "signInTitle": "Connectez-vous pour voir votre classement",
-      "signInDescription": "Les classements vous comparent aux coéquipiers de votre compte. Connectez-vous pour voir si le vôtre est disponible.",
-      "requestJoinTitle": "Votre équipe est déjà là",
-      "requestJoinDescription_one": "{{workspace}} compte {{count}} membre. Demandez à un administrateur de vous ajouter.",
-      "requestJoinDescription_other": "{{workspace}} compte {{count}} membres. Demandez à un administrateur de vous ajouter.",
-      "requestJoinCta": "Demander à rejoindre",
-      "requestSent": "Demande envoyée",
-      "requesting": "Envoi de la demande…",
-      "acceptInviteTitle": "Vous êtes invité dans {{workspace}}",
-      "acceptInviteDescription": "{{inviter}} vous a invité. Rejoignez l'espace pour voir le classement de l'équipe.",
-      "acceptInviteDescriptionNoInviter": "Rejoignez {{workspace}} pour voir le classement de l'équipe.",
-      "acceptInviteCta": "Rejoindre l’équipe",
-      "joining": "Connexion en cours…",
-      "inviteAcceptedTitle": "Espace de travail rejoint",
-      "inviteAcceptedDescription": "Vous pouvez maintenant voir le classement de {{workspace}}.",
-      "inviteAcceptError": "Impossible de rejoindre cet espace de travail",
-      "invitedList": "Invités : {{emails}}",
-      "chooseBoard": "Choisir un classement",
-      "emptyStrip_one": "{{count}} coéquipier n'a pas encore rejoint le classement. Le classement commencera ensuite.",
-      "emptyStrip_other": "{{count}} coéquipiers n'ont pas encore rejoint le classement. Le classement commencera ensuite.",
-      "copyNudge": "Copier un rappel",
-      "nudgeText": "Rejoignez le classement dans OpenWhispr → Insights pour que nous puissions voir le classement de l'équipe.",
-      "nudgeCopied": "Rappel copié",
-      "nudgeCopyError": "Impossible de copier le rappel",
-      "joinTitle": "Découvrez votre classement dans {{scope}}",
-      "joinDescription": "Votre nom, votre e-mail et votre activité figurent dans tous vos classements d’espaces et domaines professionnels. Les transcriptions restent privées et vous pouvez partir à tout moment.",
-      "joinCta": "Participer aux classements",
-      "joiningLeaderboard": "Inscription…",
-      "joinPolicyBlocked": "La politique de votre espace de travail n'autorise pas la participation aux classements.",
-      "activationError": "Nous n’avons pas pu vérifier votre participation au classement. Vérifiez votre connexion et réessayez.",
-      "disabled": "Le classement est désactivé",
-      "leave": "Quitter les classements",
-      "leavePending": "Vous quitterez les classements dès votre retour en ligne.",
-      "allTime": "Depuis toujours",
-      "thisWeek": "Cette semaine",
-      "wpmValue": "{{count}} MPM",
-      "dayValue_one": "{{count}} jour",
-      "dayValue_other": "{{count}} jours",
-      "share": "Partager",
-      "refresh": "Actualiser le classement",
-      "error": "Le classement n’a pas pu être chargé.",
-      "retry": "Réessayer",
-      "rank": "Rang",
-      "member": "Membre",
-      "you": "(vous)",
-      "jumpToMe": "Aller à mon rang",
-      "jumpUnavailable": "Votre compte n’a pas pu être identifié dans ce classement.",
-      "previous": "Page précédente",
-      "jumpToRank": "Aller au rang",
-      "next": "Page suivante",
-      "metrics": {
-        "total_words": "Nombre total de mots",
-        "words_per_minute": "Mots par minute",
-        "current_daily_streak": "Série quotidienne actuelle",
-        "desktop_words": "Mots sur ordinateur",
-        "mobile_words": "Mots sur mobile"
-      },
-      "shareText": "Découvrez mon classement sur OpenWhispr.",
-      "shareTitle": "Partager le classement",
-      "shareDescription": "Copiez ou téléchargez cette carte, ou copiez-la avant d’ouvrir un éditeur de publication.",
-      "copyImage": "Copier l’image",
-      "download": "Télécharger",
-      "shareX": "Partager sur X",
-      "shareLinkedIn": "Partager sur LinkedIn",
-      "copied": "Image copiée — collez-la dans votre publication.",
-      "saved": "Image téléchargée.",
-      "failed": "La carte de partage n’a pas pu être créée.",
-      "unnamedMember": "Coéquipier"
-    }
+    "loadError": "Impossible de lire les Insights depuis cet appareil."
   },
   "sidebar": {
     "insights": "Statistiques",
@@ -2868,7 +2640,6 @@
     "notes": "Notes",
     "upload": "Importer",
     "dictionary": "Dictionnaire",
-    "referral": "Obtenir un mois gratuit",
     "inviteTeam": "Invitez votre équipe",
     "settings": "Paramètres",
     "support": "Assistance",
@@ -2985,78 +2756,6 @@
     "searchTitle": "Rechercher des conversations",
     "searchDescription": "Rechercher dans toutes vos conversations",
     "newChatEmpty": "Posez des questions sur vos notes, transcriptions ou autre"
-  },
-  "referral": {
-    "title": "Parrainez et gagnez des récompenses",
-    "modalTitle": "Parrainez et gagnez des récompenses",
-    "subtitle": "Offrez un mois. Recevez un mois.",
-    "tabs": {
-      "refer": "Parrainer",
-      "pastInvites": "Invitations passées"
-    },
-    "howItWorks": {
-      "shareLink": "Partagez votre lien d'invitation",
-      "theySignUp": "Ils s'inscrivent et obtiennent un ",
-      "freeMonthOfPro": "mois gratuit de Pro",
-      "youGet": "Vous recevez un ",
-      "freeMonth": "mois gratuit",
-      "whenTheyDictate": " lorsqu'ils dictent 2 000 mots"
-    },
-    "inviteLink": {
-      "title": "Votre lien d'invitation",
-      "copy": "Copier",
-      "copied": "Copié"
-    },
-    "sendInvites": {
-      "title": "Envoyer des invitations",
-      "placeholder": "friend@example.com",
-      "send": "Envoyer",
-      "sending": "Envoi en cours"
-    },
-    "stats": {
-      "referred": "Parrainés",
-      "converted": "Convertis",
-      "monthsEarned": "Mois gagnés"
-    },
-    "status": {
-      "converted": "Converti",
-      "opened": "Ouvert",
-      "failed": "Échoué",
-      "sent": "Envoyé"
-    },
-    "friends": {
-      "title": "Amis",
-      "completed": "Complété",
-      "sentInvites": "Invitations envoyées"
-    },
-    "empty": {
-      "title": "Aucune invitation envoyée",
-      "description": "Partagez votre lien ou envoyez une invitation pour commencer"
-    },
-    "toasts": {
-      "copiedTitle": "Copié !",
-      "copiedDescription": "Lien de parrainage copié dans le presse-papiers",
-      "copyFailedTitle": "Échec de la copie",
-      "copyFailedDescription": "Impossible de copier le lien dans le presse-papiers",
-      "invalidEmailTitle": "E-mail invalide",
-      "invalidEmailDescription": "Veuillez entrer une adresse e-mail valide",
-      "inviteSentTitle": "Invitation envoyée !",
-      "inviteSentDescription": "Invitation envoyée à {{email}}",
-      "sendFailedTitle": "Échec de l'envoi",
-      "sendFailedDescription": "Impossible d'envoyer l'invitation. Veuillez réessayer."
-    },
-    "errors": {
-      "unableToLoad": "Impossible de charger les données de parrainage",
-      "unableToLoadStats": "Impossible de charger les statistiques de parrainage. Veuillez réessayer plus tard."
-    },
-    "tryAgain": "Réessayer",
-    "card": {
-      "brand": "OpenWhispr",
-      "signalId": "Signal ID",
-      "audioSignature": "Votre signature audio",
-      "stop": "Arrêter",
-      "playSignal": "Lire le signal"
-    }
   },
   "notes": {
     "mutationErrors": {
@@ -3861,40 +3560,6 @@
   "integrations": {
     "title": "Intégrations",
     "description": "Connectez des services pour booster votre productivité",
-    "googleCalendar": {
-      "title": "Google Calendar",
-      "optional": "Facultatif",
-      "description": "Remplissez automatiquement les titres et participants des réunions depuis votre calendrier.",
-      "connect": "Connecter Google Calendar",
-      "connecting": "Connexion...",
-      "connected": "Connecté",
-      "addAnother": "Ajouter un autre calendrier",
-      "primaryOnly": "Synchroniser uniquement le calendrier principal",
-      "primaryOnlyDescription": "Ignorer les événements des calendriers partagés avec vous.",
-      "disconnect": "Déconnecter",
-      "disconnectConfirm": "Déconnecter {{email}} ?",
-      "disconnectDescription": "Les notes de réunion ne seront plus enregistrées depuis ce calendrier.",
-      "systemAudioRequired": "Autorisation Audio Système requise",
-      "systemAudioDescription": "Pour transcrire les réunions, OpenWhispr a besoin de l'autorisation Audio Système pour capturer l'audio des autres participants. Nous n'enregistrons jamais votre écran. Vous serez dirigé vers les Réglages Système pour l'activer.",
-      "openSettings": "Ouvrir les Réglages Système",
-      "connectFailed": "Échec de la connexion",
-      "connectFailedDescription": "Une erreur s'est produite lors de la connexion à Google Calendar. Veuillez réessayer."
-    },
-    "microsoftCalendar": {
-      "title": "Microsoft Calendar",
-      "optional": "Facultatif",
-      "description": "Lisez les réunions depuis votre calendrier Outlook ou Microsoft 365.",
-      "connect": "Connecter Microsoft Calendar",
-      "connected": "Connecté",
-      "addAnother": "Ajouter un autre calendrier",
-      "primaryOnly": "Synchroniser uniquement le calendrier principal",
-      "primaryOnlyDescription": "Ignorer les événements des calendriers partagés avec vous.",
-      "disconnect": "Déconnecter",
-      "disconnectConfirm": "Déconnecter {{email}} ?",
-      "disconnectDescription": "Les notes de réunion ne seront plus enregistrées depuis ce calendrier.",
-      "connectFailed": "Échec de la connexion",
-      "connectFailedDescription": "Une erreur s'est produite lors de la connexion à Microsoft Calendar. Veuillez réessayer."
-    },
     "appleCalendar": {
       "title": "Calendrier Apple",
       "optional": "Facultatif",
@@ -3912,29 +3577,7 @@
     },
     "sections": {
       "calendar": "Calendrier",
-      "api": "API",
-      "mcp": "MCP",
       "cli": "CLI"
-    },
-    "api": {
-      "title": "Clés API",
-      "description": "Gérez les clés API pour un accès programmatique",
-      "proRequired": "Passez à un plan payant pour accéder à l'API",
-      "manage": "Gérer les clés",
-      "viewPlans": "Voir les forfaits",
-      "dialogTitle": "Clés API"
-    },
-    "mcp": {
-      "title": "Apportez vos notes à vos outils d'IA",
-      "description": "Discutez, recherchez et travaillez avec vos notes dans Claude, ChatGPT et Cursor.",
-      "step1": "Dans votre outil d'IA, ajoutez OpenWhispr MCP avec l'URL publique",
-      "step2": "Créez une clé API ci-dessus avec les permissions dont vous avez besoin.",
-      "step3": "Collez la clé comme en-tête Authorization pour vous connecter.",
-      "learnMore": "En savoir plus",
-      "viewPlans": "Voir les forfaits",
-      "copyUrl": "Copier l'URL MCP",
-      "proRequired": "Passez à un plan payant pour connecter OpenWhispr à Claude, ChatGPT et Cursor.",
-      "copied": "Copié"
     },
     "cli": {
       "title": "Accès en ligne de commande",
@@ -3969,6 +3612,11 @@
     "notABot": {
       "title": "OpenWhispr est un enregistreur de réunions, pas un bot",
       "description": "OpenWhispr capture l'audio directement depuis votre système — il ne rejoint jamais vos réunions en tant que participant. Connectez simplement votre calendrier et prenez vos notes normalement."
+    },
+    "systemAudio": {
+      "title": "Autorisation Audio Système requise",
+      "description": "Pour transcrire les réunions, OpenWhispr a besoin de l'autorisation Audio Système pour capturer l'audio des autres participants. Nous n'enregistrons jamais votre écran. Vous serez dirigé vers les Réglages Système pour l'activer.",
+      "openSettings": "Ouvrir les Réglages Système"
     }
   },
   "notesView": {

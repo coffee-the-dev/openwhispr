@@ -122,27 +122,19 @@ test("retention purges analytics counters on the same schedule as transcripts", 
   const db = createDb(t);
   if (!db) return;
 
-  db.setActiveAccountId("account-a");
-  insertAnalytics(db, "stale-pending", 10);
-  insertAnalytics(db, "stale-synced", 10);
+  insertAnalytics(db, "stale-a", 10);
+  insertAnalytics(db, "stale-b", 10);
   insertAnalytics(db, "fresh", 0);
-  db.markAnalyticsEventsSynced(["stale-synced"]);
 
   const { analyticsPurged } = db.deleteTranscriptionsExpiredBefore(7);
 
   assert.equal(analyticsPurged, 2);
   assert.deepEqual(
-    (db.getPendingAnalyticsDeletes?.() ?? []).map((row) => row.event_id).sort(),
-    ["stale-synced"],
-    "only the counter the cloud received needs erasing there; stale-pending never left"
-  );
-  assert.deepEqual(
     db.db
       .prepare("SELECT event_id FROM analytics_events WHERE deleted_at IS NULL")
       .all()
       .map((row) => row.event_id),
-    ["fresh"],
-    "a counter never uploaded is still deleted: retention is an instruction to delete"
+    ["fresh"]
   );
   assert.equal(db.getAnalyticsSummary().totalDictations, 1);
 });

@@ -9,7 +9,6 @@ const SIZES = {
 
 interface MemberAvatarProps {
   name: string | null;
-  // Null wherever the address is withheld, as it is on a domain leaderboard.
   email: string | null;
   image?: string | null;
   size?: keyof typeof SIZES;

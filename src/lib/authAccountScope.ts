@@ -172,10 +172,6 @@ async function applyReconcile(
     // Persist before cleanup starts: capability flags may disappear even when
     // a database operation fails, and must not reopen the gate.
     markAccountScopePurgeRequired();
-    // Insights consent belongs to the account that granted it. Clear the
-    // device flag before the identity boundary opens so a replacement account
-    // can never inherit the previous user's upload permission.
-    storage()?.setItem("insightsSyncEnabled", "false");
   }
   pendingAction = action;
   notify();

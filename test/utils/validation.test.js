@@ -6,8 +6,7 @@ const load = async () => import("../../src/utils/validation.ts");
 // The #1700 regression itself — a plus-addressed alias reaching account
 // discovery untouched — is pinned behaviourally in
 // test/components/authenticationStep.test.js. These cover the shared regex the
-// sign-in gate, the referral dashboard and the share-note dialog all validate
-// with.
+// sign-in gate and the share-note dialog both validate with.
 
 test("accepts plus-addressed emails", async () => {
   const { EMAIL_REGEX } = await load();
@@ -52,8 +51,8 @@ test("rejects obviously malformed input", async () => {
   }
 });
 
-// Callers test the trimmed address (AuthenticationStep, ReferralDashboard,
-// ShareNoteDialog all pass `.trim()`), so the regex itself must stay strict
+// Callers test the trimmed address (AuthenticationStep and ShareNoteDialog
+// both pass `.trim()`), so the regex itself must stay strict
 // about surrounding whitespace rather than absorbing it.
 test("rejects surrounding whitespace so callers must trim", async () => {
   const { EMAIL_REGEX } = await load();

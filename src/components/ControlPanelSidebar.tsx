@@ -1,15 +1,5 @@
 import React, { useState } from "react";
-import {
-  Gift,
-  Lock,
-  Settings,
-  ShieldCheck,
-  HelpCircle,
-  UserCircle,
-  UserPlus,
-  X,
-  Zap,
-} from "./icons";
+import { Lock, Settings, ShieldCheck, HelpCircle, UserCircle, UserPlus, X, Zap } from "./icons";
 import logoIcon from "../assets/icon.png";
 import { useTranslation } from "react-i18next";
 import { cn } from "./lib/utils";
@@ -31,7 +21,6 @@ interface ControlPanelSidebarProps {
   activeView: ControlPanelView;
   onViewChange: (view: ControlPanelView) => void;
   onOpenSettings: () => void;
-  onOpenReferrals?: () => void;
   onInviteTeam?: () => void;
   onUpgrade?: () => void;
   isOverLimit?: boolean;
@@ -41,14 +30,12 @@ interface ControlPanelSidebarProps {
   isSignedIn?: boolean;
   authLoaded?: boolean;
   upsell: UpsellDecision;
-  updateAction?: React.ReactNode;
 }
 
 export default function ControlPanelSidebar({
   activeView,
   onViewChange,
   onOpenSettings,
-  onOpenReferrals,
   onInviteTeam,
   onUpgrade,
   isOverLimit,
@@ -58,7 +45,6 @@ export default function ControlPanelSidebar({
   isSignedIn,
   authLoaded,
   upsell,
-  updateAction,
 }: ControlPanelSidebarProps) {
   const { t } = useTranslation();
   const [upgradeDismissed, setUpgradeDismissed] = useState(
@@ -181,12 +167,6 @@ export default function ControlPanelSidebar({
       )}
 
       <div className="px-2 pb-2 space-y-0.5">
-        {updateAction && (
-          <div className="px-1 pb-1" style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}>
-            {updateAction}
-          </div>
-        )}
-
         {onInviteTeam && (
           <button
             onClick={onInviteTeam}
@@ -195,17 +175,6 @@ export default function ControlPanelSidebar({
           >
             <UserPlus size={16} className={rowIconClass} />
             <span className={rowLabelClass}>{t("sidebar.inviteTeam")}</span>
-          </button>
-        )}
-
-        {isSignedIn && onOpenReferrals && (
-          <button
-            onClick={onOpenReferrals}
-            aria-label={t("sidebar.referral")}
-            className={rowButtonClass}
-          >
-            <Gift size={16} className={rowIconClass} />
-            <span className={rowLabelClass}>{t("sidebar.referral")}</span>
           </button>
         )}
 
