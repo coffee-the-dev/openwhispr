@@ -18,19 +18,14 @@ const tokenStore = require("./tokenStore");
 const accountScopeBinding = require("./accountScopeBinding");
 const { createCloudApiRequestHandler } = require("./cloudApiRequest");
 const { decodeLeaderboardPngDataUrl, leaderboardImageFilename } = require("./leaderboardImage");
-const { withPolicyRequestHeaders } = require("./policyRequestHeaders");
-const {
-  createWorkspacePolicyManager,
-  isScreenContextBlocked,
-} = require("./workspacePolicyManager");
 const { createEnterpriseIdentityManager } = require("./enterpriseIdentityManager");
 const { createCloudConfigRequestHandler } = require("./cloudConfigRequest");
 const { extractAnthropicText, describeMissingAnthropicText } = require("./anthropicResponse");
 const {
-  createPolicyResponseError,
-  readPolicyResponseError,
-  toPolicyFailure,
-} = require("./policyResponseError");
+  createCloudResponseError,
+  readCloudResponseError,
+  toCloudFailure,
+} = require("./cloudResponseError");
 const { classifyAndLog } = require("./networkErrors");
 const { resolveSystemDefaultMicrophone } = require("./systemDefaultMicrophone");
 // The renderer's ModelRegistry is not main-loadable; the raw registry data is
@@ -381,7 +376,7 @@ function interpretTranscribeResponse(data) {
     });
   }
   if (data.statusCode !== 200) {
-    throw createPolicyResponseError(data.statusCode, data.data, `API error: ${data.statusCode}`);
+    throw createCloudResponseError(data.statusCode, data.data, `API error: ${data.statusCode}`);
   }
   return data.data;
 }
@@ -390,7 +385,7 @@ async function chunkedCloudTranscribe({
   buffer = null,
   filePath = null,
   apiUrl,
-  policyHeaders,
+  requestHeaders,
   multipartFields = {},
   onProgress,
   signal,
@@ -457,7 +452,7 @@ async function chunkedCloudTranscribe({
               "audio/mpeg",
               withoutChunkAnalytics(multipartFields)
             );
-            const data = await postMultipart(url, body, boundary, policyHeaders, {
+            const data = await postMultipart(url, body, boundary, requestHeaders, {
               signal: AbortSignal.any([jobSignal, timeoutSignal]),
               session: getChunkCloudUploadSession(),
             });
@@ -718,30 +713,12 @@ class IPCHandlers {
     return this._retentionSettingsSynced && this._retentionSettings.dataRetentionEnabled;
   }
 
-  /** Whether a signed-in account is bound to this install. */
-  _hasActiveAccountScope() {
-    return Boolean(accountScopeBinding.read());
-  }
-
-  // The switch alone is not enough to start: a managed workspace can force local
-  // history off, and that policy arrives over the network while this scan takes
-  // milliseconds, so the renderer reports the permissive personal default until
-  // it lands. Waiting for the real answer is only possible where there is one --
-  // signed out the policy store stays idle forever and the user's own preference
-  // is the only authority there is. Mid-scan arrival needs no separate check:
-  // a policy that resolves "always_off" flips the switch, which the loop reads.
-  _mayStartAnalyticsHistoryReconstruction() {
-    if (!this._canReconstructAnalyticsHistory()) return false;
-    if (this._retentionSettings.localHistoryPolicyResolved === true) return true;
-    return !this._hasActiveAccountScope();
-  }
-
   // Reconciliation is best-effort. Analytics reads await it so later-eligible
   // history shows up before the numbers are read, which means a failure here
   // must never fail the read itself: a broken scan would otherwise blank an
   // Insights summary that SQLite could have answered perfectly well.
   async _ensureAnalyticsHistoryBackfilled() {
-    if (!this._mayStartAnalyticsHistoryReconstruction()) return { inserted: 0, scanned: 0 };
+    if (!this._canReconstructAnalyticsHistory()) return { inserted: 0, scanned: 0 };
     if (this._analyticsHistoryBackfillPromise) return this._analyticsHistoryBackfillPromise;
     // The failure is absorbed inside this promise rather than around the
     // creator's await, because callers that join an in-flight pass are handed
@@ -770,11 +747,9 @@ class IPCHandlers {
         skipped += batch.skipped;
         if (batch.complete) break;
         await new Promise((resolve) => setImmediate(resolve));
-        // The switch can be turned off while this pass yields -- by the user, or
-        // by a managed policy that resolved after the renderer's first sync sent
-        // the personal default. Re-reading it here stops the scan at the next
-        // batch boundary instead of mining the rest of a history the user has
-        // just opted out of.
+        // The user can turn the switch off while this pass yields. Re-reading it
+        // here stops the scan at the next batch boundary instead of mining the
+        // rest of a history the user has just opted out of.
         if (!this._canReconstructAnalyticsHistory()) {
           stoppedEarly = true;
           break;
@@ -2200,7 +2175,6 @@ class IPCHandlers {
               : "Authentication context changed before account scoping",
         };
       }
-      this.databaseManager.setActiveAccountId(accountId);
       if (accountId !== null) accountScopeBinding.persist(accountId, state.token);
       else accountScopeBinding.clear();
       broadcastToWindows(
@@ -4004,7 +3978,6 @@ class IPCHandlers {
       }
       try {
         for (const fileName of [
-          "workspace-policy.json",
           "managed-enterprise-config.json",
           "globe-preference-state.json",
           ".system-audio-permission",
@@ -5170,40 +5143,35 @@ class IPCHandlers {
       // the read fallback is removed (~2 releases after this lands).
       clearVars.push("REASONING_PROVIDER", "LOCAL_REASONING_MODEL");
 
-      // A signed-in window whose workspace policy is still loading reports
-      // unclamped modes, so it neither pre-warms nor stops the shared
-      // llama-server; signed out, the policy never loads.
-      if (prefs.policySettled || !this._hasActiveAccountScope()) {
-        const localServer = resolveLocalServerNeeds(prefs);
+      const localServer = resolveLocalServerNeeds(prefs);
 
-        if (localServer.cleanup) {
-          setVars.CLEANUP_PROVIDER = "local";
-          setVars.LOCAL_CLEANUP_MODEL = localServer.cleanup;
-        } else {
-          clearVars.push("CLEANUP_PROVIDER", "LOCAL_CLEANUP_MODEL");
-        }
+      if (localServer.cleanup) {
+        setVars.CLEANUP_PROVIDER = "local";
+        setVars.LOCAL_CLEANUP_MODEL = localServer.cleanup;
+      } else {
+        clearVars.push("CLEANUP_PROVIDER", "LOCAL_CLEANUP_MODEL");
+      }
 
-        if (localServer.dictationAgent) {
-          setVars.DICTATION_AGENT_PROVIDER = "local";
-          setVars.LOCAL_DICTATION_AGENT_MODEL = localServer.dictationAgent;
-        } else {
-          clearVars.push("DICTATION_AGENT_PROVIDER", "LOCAL_DICTATION_AGENT_MODEL");
-        }
+      if (localServer.dictationAgent) {
+        setVars.DICTATION_AGENT_PROVIDER = "local";
+        setVars.LOCAL_DICTATION_AGENT_MODEL = localServer.dictationAgent;
+      } else {
+        clearVars.push("DICTATION_AGENT_PROVIDER", "LOCAL_DICTATION_AGENT_MODEL");
+      }
 
-        // Stop the shared llama-server only when no scope still needs the model
-        // it holds, so the active scopes keep their server when another leaves.
-        const modelManager = require("./modelManagerBridge").default;
-        if (shouldStopLocalServer(localServer, modelManager.currentServerModelId)) {
-          if (modelManager.getServerStatus().running) {
-            debugLogger.debug("Stopping llama-server: no scope needs its model", {
-              loadedModel: modelManager.currentServerModelId,
-              neededModels: localServer.models,
-            });
-          }
-          modelManager.stopServer().catch((err) => {
-            debugLogger.error("Failed to stop llama-server", { error: err.message });
+      // Stop the shared llama-server only when no scope still needs the model
+      // it holds, so the active scopes keep their server when another leaves.
+      const modelManager = require("./modelManagerBridge").default;
+      if (shouldStopLocalServer(localServer, modelManager.currentServerModelId)) {
+        if (modelManager.getServerStatus().running) {
+          debugLogger.debug("Stopping llama-server: no scope needs its model", {
+            loadedModel: modelManager.currentServerModelId,
+            neededModels: localServer.models,
           });
         }
+        modelManager.stopServer().catch((err) => {
+          debugLogger.error("Failed to stop llama-server", { error: err.message });
+        });
       }
 
       this._syncStartupEnv(setVars, clearVars);
@@ -5599,48 +5567,18 @@ class IPCHandlers {
     ipcMain.handle("open-screen-recording-settings", () => openSystemSettings("screenRecording"));
     ipcMain.handle("open-login-items-settings", () => openSystemSettings("loginItems"));
 
-    ipcMain.handle("capture-screen-context", async (event) => {
-      // Capture immediately so the screenshot reflects the invocation moment;
-      // the policy verdict resolves concurrently and decides whether to
-      // return it. A signed-out user has no workspace and no policy; managed
-      // users are gated even if a stale renderer asks. null matches capture's
-      // contract — a screenshot must never break the dictation it accompanies.
+    ipcMain.handle("capture-screen-context", async () => {
       // The target's window rect picks the display it is on rather than the one
       // under the cursor, and the panel reposition has normally cached it already.
-      // A failed rect read falls back to the cursor rather than rejecting: the
-      // policy branch below can abandon this promise, and capture's contract is
-      // to yield null, never to throw.
+      // A failed rect read falls back to the cursor rather than rejecting:
+      // capture's contract is to yield null, never to throw — a screenshot must
+      // never break the dictation it accompanies.
       const targetPid = this.textEditMonitor?.lastTargetPid;
-      const capturePromise = Promise.resolve(
+      return Promise.resolve(
         targetPid ? this.textEditMonitor.getTargetWindowBounds?.(targetPid) : null
       )
         .catch(() => null)
         .then((targetBounds) => screenContextCapture.captureActiveDisplay(targetBounds));
-      const authHeaders = await getAuthHeader(event);
-      if (authHeaders.Authorization || authHeaders.Cookie) {
-        // Bound the verdict wait: a lapsed policy TTL on a degraded network
-        // must not stall an allowed user's capture past the renderer's 3s
-        // consume race. The renderer gate already fails closed while policy
-        // is unresolved, so this defense-in-depth gate lets an unresolved
-        // verdict through while the refresh completes in flight — a resolved
-        // denial (cached or fresh) still blocks.
-        const snapshot = await Promise.race([
-          workspacePolicyManager.getPolicy({
-            expectedAuthGeneration: tokenStore.getState().generation,
-            authHeaders,
-          }),
-          new Promise((resolve) => setTimeout(() => resolve(null), 1500)),
-        ]);
-        if (snapshot && isScreenContextBlocked(snapshot)) {
-          debugLogger.warn(
-            "Screen context capture blocked by org policy",
-            { code: snapshot.code ?? null },
-            "screenContext"
-          );
-          return null;
-        }
-      }
-      return capturePromise;
     });
 
     // Snapshot the launch-time TCC status so a mid-session grant (which macOS
@@ -6029,21 +5967,11 @@ class IPCHandlers {
     // Honors system proxy via Electron's net stack. useSessionCookies:false so
     // Electron doesn't auto-attach jar cookies on top of our explicit headers.
     const proxyFetch = (url, init = {}) => net.fetch(url, { ...init, useSessionCookies: false });
-    const withPolicyHeaders = (headers) => withPolicyRequestHeaders(headers, app.getVersion());
     const handleCloudApiRequest = createCloudApiRequestHandler({
       getApiUrl,
       getAppVersion: () => app.getVersion(),
       proxyFetch,
       tokenStore,
-      logger: debugLogger,
-    });
-    const workspacePolicyManager = createWorkspacePolicyManager({
-      cachePath: path.join(app.getPath("userData"), "workspace-policy.json"),
-      getApiUrl,
-      getAppVersion: () => app.getVersion(),
-      proxyFetch,
-      tokenStore,
-      broadcast: (snapshot) => broadcastToWindows("workspace-policy-changed", snapshot),
       logger: debugLogger,
     });
     this.enterpriseIdentityManager = createEnterpriseIdentityManager({
@@ -6144,7 +6072,6 @@ class IPCHandlers {
       getApiUrl,
       getAuthHeader,
       proxyFetch,
-      withPolicyHeaders,
       logger: debugLogger,
       configPath: "stt-config",
     });
@@ -6152,7 +6079,6 @@ class IPCHandlers {
       getApiUrl,
       getAuthHeader,
       proxyFetch,
-      withPolicyHeaders,
       logger: debugLogger,
       configPath: "note-recording-config",
     });
@@ -6199,7 +6125,7 @@ class IPCHandlers {
           const { text, responses, lastResponse, warning } = await chunkedCloudTranscribe({
             buffer: audioData,
             apiUrl,
-            policyHeaders: withPolicyHeaders(authHeader),
+            requestHeaders: authHeader,
             multipartFields,
             signal: controller.signal,
           });
@@ -6229,7 +6155,7 @@ class IPCHandlers {
           multipartFields
         );
         const url = new URL(`${apiUrl}/api/transcribe`);
-        const data = await postMultipart(url, body, boundary, withPolicyHeaders(authHeader), {
+        const data = await postMultipart(url, body, boundary, authHeader, {
           signal: AbortSignal.any([
             controller.signal,
             AbortSignal.timeout(CLOUD_UPLOAD_TIMEOUT_MS),
@@ -6264,7 +6190,7 @@ class IPCHandlers {
           return { success: false, error: "Cancelled", code: "TRANSCRIPTION_CANCELLED" };
         }
         debugLogger.error("Cloud transcription error", { error: error.message }, "cloud-api");
-        return toPolicyFailure(error);
+        return toCloudFailure(error);
       } finally {
         sender.removeListener("destroyed", cancelSenderRequests);
         this._cloudTranscriptionRequests.complete(senderId, requestId, controller);
@@ -6408,7 +6334,7 @@ class IPCHandlers {
                   const { text } = await chunkedCloudTranscribe({
                     buffer,
                     apiUrl,
-                    policyHeaders: withPolicyHeaders(authHeader),
+                    requestHeaders: authHeader,
                     multipartFields,
                   });
                   result = { text, source: "openwhispr", model: "cloud" };
@@ -6420,16 +6346,10 @@ class IPCHandlers {
                     multipartFields
                   );
                   const url = new URL(`${apiUrl}/api/transcribe`);
-                  const data = await postMultipart(
-                    url,
-                    body,
-                    boundary,
-                    withPolicyHeaders(authHeader),
-                    {
-                      signal: AbortSignal.timeout(CLOUD_UPLOAD_TIMEOUT_MS),
-                      session: getInlineCloudUploadSession(),
-                    }
-                  );
+                  const data = await postMultipart(url, body, boundary, authHeader, {
+                    signal: AbortSignal.timeout(CLOUD_UPLOAD_TIMEOUT_MS),
+                    session: getInlineCloudUploadSession(),
+                  });
                   const responseData = interpretTranscribeResponse(data);
                   result = {
                     text: responseData.text,
@@ -7232,7 +7152,7 @@ class IPCHandlers {
         try {
           response = await proxyFetch(url, {
             method: "POST",
-            headers: withPolicyHeaders({ "Content-Type": "application/json", ...authHeader }),
+            headers: { "Content-Type": "application/json", ...authHeader },
             body: JSON.stringify(body),
           });
         } catch (err) {
@@ -7247,7 +7167,7 @@ class IPCHandlers {
           throw err;
         }
         if (!response.ok) {
-          throw await readPolicyResponseError(response, `Token request failed: ${response.status}`);
+          throw await readCloudResponseError(response, `Token request failed: ${response.status}`);
         }
         return response.json();
       };
@@ -8418,7 +8338,6 @@ class IPCHandlers {
                 getApiUrl,
                 proxyFetch,
                 tokenStore,
-                withPolicyHeaders,
               });
             } else {
               await streaming.connect({
@@ -8505,7 +8424,7 @@ class IPCHandlers {
           return { success: true };
         } catch (error) {
           debugLogger.error("Meeting transcription prepare error", { error: error.message });
-          return toPolicyFailure(error);
+          return toCloudFailure(error);
         } finally {
           if (timeoutHandle) clearTimeout(timeoutHandle);
           meetingTranscriptionPrepareInProgress = false;
@@ -8682,7 +8601,7 @@ class IPCHandlers {
         this.meetingDetectionEngine?.endRecordingSession(recordingSessionId);
         this.meetingDetectionEngine?.setUserRecording(false);
         debugLogger.error("Meeting transcription start error", { error: error.message });
-        return toPolicyFailure(error);
+        return toCloudFailure(error);
       } finally {
         meetingTranscriptionStartInProgress = false;
       }
@@ -9087,7 +9006,7 @@ class IPCHandlers {
     );
 
     const streamingStartFailure = (err) => {
-      const result = toPolicyFailure(err);
+      const result = toCloudFailure(err);
       if (err.messageKey) result.messageKey = err.messageKey;
       if (err.networkCode) result.networkCode = err.networkCode;
       return result;
@@ -9380,10 +9299,10 @@ class IPCHandlers {
         const response = await proxyFetch(`${apiUrl}/api/reason`, {
           method: "POST",
           signal: controller.signal,
-          headers: withPolicyHeaders({
+          headers: {
             "Content-Type": "application/json",
             ...authHeader,
-          }),
+          },
           body: JSON.stringify({
             text,
             model: opts.model,
@@ -9425,7 +9344,7 @@ class IPCHandlers {
           if (response.status === 503) {
             return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
           }
-          throw await readPolicyResponseError(response, `API error: ${response.status}`);
+          throw await readCloudResponseError(response, `API error: ${response.status}`);
         }
 
         const data = await response.json();
@@ -9455,7 +9374,7 @@ class IPCHandlers {
           return { success: false, error: "Cancelled", code: "REASON_CANCELLED" };
         }
         debugLogger.error("Cloud reasoning error:", error);
-        return toPolicyFailure(error);
+        return toCloudFailure(error);
       } finally {
         sender.removeListener("destroyed", cancelSenderRequests);
         this._cloudReasonRequests.complete(senderId, requestId, controller);
@@ -9487,10 +9406,10 @@ class IPCHandlers {
 
         const response = await proxyFetch(`${apiUrl}/api/agent/stream`, {
           method: "POST",
-          headers: withPolicyHeaders({
+          headers: {
             "Content-Type": "application/json",
             ...authHeader,
-          }),
+          },
           body: JSON.stringify({
             messages,
             systemPrompt: opts.systemPrompt,
@@ -9504,12 +9423,12 @@ class IPCHandlers {
         });
 
         if (!response.ok) {
-          const error = await readPolicyResponseError(response, `API error: ${response.status}`);
+          const error = await readCloudResponseError(response, `API error: ${response.status}`);
           if (response.status === 401 && !error.code) error.code = "AUTH_EXPIRED";
           if (response.status === 503 && !error.code) error.code = "SERVER_ERROR";
           sendToRenderer("cloud-agent-stream-error", {
             requestId,
-            ...toPolicyFailure(error),
+            ...toCloudFailure(error),
           });
           return;
         }
@@ -9562,7 +9481,7 @@ class IPCHandlers {
         debugLogger.error("Cloud agent stream error:", error);
         sendToRenderer("cloud-agent-stream-error", {
           requestId,
-          ...toPolicyFailure(error),
+          ...toCloudFailure(error),
         });
       } finally {
         sender.removeListener("destroyed", cancelSenderRequests);
@@ -9601,10 +9520,10 @@ class IPCHandlers {
 
         const response = await proxyFetch(`${apiUrl}/api/agent/web-search`, {
           method: "POST",
-          headers: withPolicyHeaders({
+          headers: {
             "Content-Type": "application/json",
             ...authHeader,
-          }),
+          },
           body: JSON.stringify({ query, numResults }),
         });
 
@@ -9615,15 +9534,15 @@ class IPCHandlers {
           if (response.status === 503) {
             return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
           }
-          const error = await readPolicyResponseError(response, `API error: ${response.status}`);
-          return toPolicyFailure(error);
+          const error = await readCloudResponseError(response, `API error: ${response.status}`);
+          return toCloudFailure(error);
         }
 
         const data = await response.json();
         return { success: true, ...data };
       } catch (error) {
         debugLogger.error("Agent web search error:", error);
-        return toPolicyFailure(error);
+        return toCloudFailure(error);
       }
     });
 
@@ -9639,10 +9558,10 @@ class IPCHandlers {
 
           const response = await proxyFetch(`${apiUrl}/api/streaming-usage`, {
             method: "POST",
-            headers: withPolicyHeaders({
+            headers: {
               "Content-Type": "application/json",
               ...authHeader,
-            }),
+            },
             body: JSON.stringify({
               text,
               audioDurationSeconds,
@@ -9839,11 +9758,6 @@ class IPCHandlers {
 
     ipcMain.handle("get-stt-config", handleSttConfigRequest);
 
-    ipcMain.handle("get-workspace-policy", async (event, accountId, expectedAuthGeneration) => {
-      const authHeaders = await getAuthHeader(event);
-      return workspacePolicyManager.getPolicy({ accountId, expectedAuthGeneration, authHeaders });
-    });
-
     ipcMain.handle(
       "get-managed-enterprise-config",
       async (event, accountId, workspaceId, expectedAuthGeneration, forceRefresh = false) => {
@@ -9898,7 +9812,7 @@ class IPCHandlers {
           const { text, warning, failedChunks, totalChunks } = await chunkedCloudTranscribe({
             filePath: realCloud,
             apiUrl,
-            policyHeaders: withPolicyHeaders(authHeader),
+            requestHeaders: authHeader,
             multipartFields,
             onProgress: (payload) => event.sender.send("upload-transcription-progress", payload),
             signal,
@@ -9919,7 +9833,7 @@ class IPCHandlers {
           multipartFields
         );
         const url = new URL(`${apiUrl}/api/transcribe`);
-        const data = await postMultipart(url, body, boundary, withPolicyHeaders(authHeader), {
+        const data = await postMultipart(url, body, boundary, authHeader, {
           signal: AbortSignal.any([
             ...(signal ? [signal] : []),
             AbortSignal.timeout(CLOUD_UPLOAD_TIMEOUT_MS),
@@ -9935,7 +9849,7 @@ class IPCHandlers {
           return { success: false, error: "Cancelled", code: "UPLOAD_CANCELLED" };
         }
         debugLogger.error("Cloud audio file transcription error", { error: error.message });
-        return toPolicyFailure(error);
+        return toCloudFailure(error);
       } finally {
         cleanupUpload?.();
         release();
@@ -10511,9 +10425,9 @@ class IPCHandlers {
 
       const tokenResponse = await proxyFetch(`${apiUrl}/api/streaming-token`, {
         method: "POST",
-        headers: withPolicyHeaders({
+        headers: {
           ...authHeader,
-        }),
+        },
       });
 
       if (!tokenResponse.ok) {
@@ -10522,7 +10436,7 @@ class IPCHandlers {
           err.code = "AUTH_EXPIRED";
           throw err;
         }
-        throw await readPolicyResponseError(
+        throw await readCloudResponseError(
           tokenResponse,
           `Failed to get streaming token: ${tokenResponse.status}`
         );
@@ -10575,7 +10489,7 @@ class IPCHandlers {
         return { success: true };
       } catch (error) {
         debugLogger.error("AssemblyAI warmup error", { error: error.message });
-        return toPolicyFailure(error);
+        return toCloudFailure(error);
       }
     });
 
@@ -10721,7 +10635,7 @@ class IPCHandlers {
 
       const tokenResponse = await proxyFetch(`${apiUrl}/api/deepgram-streaming-token`, {
         method: "POST",
-        headers: withPolicyHeaders(authHeader),
+        headers: authHeader,
       });
 
       if (!tokenResponse.ok) {
@@ -10730,7 +10644,7 @@ class IPCHandlers {
           err.code = "AUTH_EXPIRED";
           throw err;
         }
-        throw await readPolicyResponseError(
+        throw await readCloudResponseError(
           tokenResponse,
           `Failed to get Deepgram streaming token: ${tokenResponse.status}`
         );
@@ -10754,9 +10668,9 @@ class IPCHandlers {
 
       const tokenResponse = await proxyFetch(`${apiUrl}/api/deepgram-streaming-token`, {
         method: "POST",
-        headers: withPolicyHeaders({
+        headers: {
           ...authHeader,
-        }),
+        },
       });
 
       if (!tokenResponse.ok) {
@@ -10765,7 +10679,7 @@ class IPCHandlers {
           err.code = "AUTH_EXPIRED";
           throw err;
         }
-        throw await readPolicyResponseError(
+        throw await readCloudResponseError(
           tokenResponse,
           `Failed to get Deepgram streaming token: ${tokenResponse.status}`
         );
@@ -10835,7 +10749,7 @@ class IPCHandlers {
         return { success: true };
       } catch (error) {
         debugLogger.error("Deepgram warmup error", { error: error.message });
-        return toPolicyFailure(error);
+        return toCloudFailure(error);
       }
     });
 
@@ -11062,7 +10976,7 @@ class IPCHandlers {
         return { success: true };
       } catch (error) {
         debugLogger.error("Gemini streaming warmup error", { error: error.message });
-        return toPolicyFailure(error);
+        return toCloudFailure(error);
       }
     });
 

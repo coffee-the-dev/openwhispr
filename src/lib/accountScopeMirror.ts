@@ -1,10 +1,9 @@
 import { useEnterpriseIdentityStore } from "../stores/enterpriseIdentityStore";
-import { usePolicyStore } from "../stores/policyStore";
 import { ACTIVE_WORKSPACE_KEY, refreshManagedEnterpriseIdentity } from "../stores/workspaceStore";
 import type { ActiveAccountScope } from "../types/electron";
 
 /**
- * Hydrates the workspace policy and managed enterprise identity in a window
+ * Hydrates the managed enterprise identity in a window
  * that cannot resolve its own session. The dictation window is sandboxed with
  * web security enforced, so Better Auth's cross-origin session fetch fails
  * there and the session-driven hydration in useAuth never runs. The control
@@ -29,11 +28,9 @@ export function mirrorActiveAccountScope(): () => void {
   const applyScope = (next: ActiveAccountScope | null) => {
     scope = next;
     if (!next) {
-      usePolicyStore.getState().clearPolicy();
       useEnterpriseIdentityStore.getState().clear();
       return;
     }
-    void usePolicyStore.getState().fetchPolicy(next.accountId, next.authGeneration);
     refreshIdentity();
   };
   const onStorage = (event: StorageEvent) => {

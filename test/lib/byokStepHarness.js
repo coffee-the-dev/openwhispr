@@ -6,7 +6,11 @@ const {
   installHookDom,
 } = require("./rendererTestHarness");
 
-const MIGRATED = { _providerSettingsMigrated: "1", uploadTranscriptionMigrated: "true" };
+const MIGRATED = {
+  _providerSettingsMigrated: "1",
+  uploadTranscriptionMigrated: "true",
+  _localOnlyModesMigrated: "1",
+};
 
 function findAll(node, predicate, found = []) {
   if (Array.isArray(node)) {

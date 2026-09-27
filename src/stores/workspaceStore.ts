@@ -2,7 +2,6 @@ import { create } from "zustand";
 import type { Workspace, WorkspaceMember } from "../types/electron";
 import { WorkspacesService } from "../services/WorkspacesService";
 import logger from "../utils/logger";
-import { usePolicyStore } from "./policyStore";
 import { useEnterpriseIdentityStore } from "./enterpriseIdentityStore";
 
 interface WorkspaceState {
@@ -64,7 +63,7 @@ export function refreshManagedEnterpriseIdentity(
 }
 
 function refreshForWorkspace(workspaceId: string | null): void {
-  const { accountId, authGeneration } = usePolicyStore.getState();
+  const { accountId, authGeneration } = useEnterpriseIdentityStore.getState();
   refreshManagedEnterpriseIdentity(accountId, authGeneration, workspaceId);
 }
 

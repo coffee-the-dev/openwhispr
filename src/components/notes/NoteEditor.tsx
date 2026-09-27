@@ -187,7 +187,6 @@ interface NoteEditorProps {
   isSaving: boolean;
   isRecording: boolean;
   isProcessing: boolean;
-  recordingAllowed?: boolean;
   onStartRecording: () => void;
   onStopRecording: () => void;
   onExportNote?: (format: "md" | "txt") => void;
@@ -223,7 +222,6 @@ export default function NoteEditor({
   isSaving,
   isRecording,
   isProcessing,
-  recordingAllowed = true,
   onStartRecording,
   onStopRecording,
   onExportNote,
@@ -1091,7 +1089,6 @@ export default function NoteEditor({
                 <NoteRecordControl
                   isRecording={isRecording}
                   isProcessing={isProcessing}
-                  disabled={!recordingAllowed}
                   onStart={onStartRecording}
                   onStop={onStopRecording}
                 />
@@ -1208,7 +1205,7 @@ export default function NoteEditor({
                 description={t("notes.editor.transcriptEmptyDescription")}
                 className={cn(PAGE_CONTENT_WIDTH_CLASS, "mt-2")}
               >
-                {canEditNote && recordingAllowed && (
+                {canEditNote && (
                   <Button size="sm" onClick={onStartRecording} disabled={isProcessing}>
                     <Mic size={13} />
                     {t("notes.editor.startRecording")}

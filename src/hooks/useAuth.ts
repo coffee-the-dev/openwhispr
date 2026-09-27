@@ -27,7 +27,6 @@ import {
 } from "../lib/authRequestContext";
 import logger from "../utils/logger";
 import { useSettingsStore } from "../stores/settingsStore";
-import { usePolicyStore } from "../stores/policyStore";
 import { useEnterpriseIdentityStore } from "../stores/enterpriseIdentityStore";
 import { useLeaderboardParticipationStore } from "../stores/leaderboardParticipationStore";
 
@@ -140,7 +139,6 @@ export function useAuth() {
 
   useEffect(() => {
     if (!sessionResolutionFailed || !resolvedUserId || boundGeneration == null) return;
-    void usePolicyStore.getState().fetchPolicy(resolvedUserId, boundGeneration);
     void refreshManagedEnterpriseIdentity(resolvedUserId, boundGeneration);
   }, [boundGeneration, resolvedUserId, sessionResolutionFailed]);
 
@@ -192,7 +190,6 @@ export function useAuth() {
         // This legacy marker drives every already-running SyncService window;
         // its generation gate provides the immediate fence.
         useSettingsStore.getState().setIsSignedIn(false);
-        usePolicyStore.getState().suspendPolicy();
       }
 
       await reconcileAccountScope(resolvedUserId, {
@@ -208,14 +205,12 @@ export function useAuth() {
         if (!cancelled) {
           logger.debug("Auth state sync", { isSignedIn: true, userId: resolvedUserId }, "auth");
           useSettingsStore.getState().setIsSignedIn(true);
-          void usePolicyStore.getState().fetchPolicy(resolvedUserId, boundGeneration);
           void refreshManagedEnterpriseIdentity(resolvedUserId, boundGeneration);
         }
       } else {
         invalidateValidatedAuthContext();
         if (!cancelled) {
           useSettingsStore.getState().setIsSignedIn(false);
-          usePolicyStore.getState().clearPolicy();
           useEnterpriseIdentityStore.getState().clear();
         }
       }

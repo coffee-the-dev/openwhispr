@@ -6,6 +6,7 @@ test("per-provider reasoning model memory", async (t) => {
   installBrowserGlobals(t, {
     initialStorage: {
       _llmScopeKeysMigrated: "1",
+      _localOnlyModesMigrated: "1",
       cleanupMode: "providers",
       cleanupProvider: "custom",
       cleanupModel: "parasail-llm-v1",
@@ -76,6 +77,7 @@ test("explicit model click commits the (provider, model) pair atomically", async
   installBrowserGlobals(t, {
     initialStorage: {
       _llmScopeKeysMigrated: "1",
+      _localOnlyModesMigrated: "1",
       cleanupMode: "providers",
       cleanupProvider: "openai",
       cleanupModel: "gpt-5-mini",
@@ -118,6 +120,7 @@ test("corrupt persisted reasoning model memory hydrates as empty, not a crash", 
   installBrowserGlobals(t, {
     initialStorage: {
       _llmScopeKeysMigrated: "1",
+      _localOnlyModesMigrated: "1",
       reasoningModelByProvider: "{not json",
     },
   });
@@ -132,6 +135,7 @@ test("retired cloud model selections are repointed to the provider default", asy
   installBrowserGlobals(t, {
     initialStorage: {
       _llmScopeKeysMigrated: "1",
+      _localOnlyModesMigrated: "1",
       cleanupProvider: "groq",
       cleanupModel: "meta-llama/llama-4-scout-17b-16e-instruct",
       chatAgentProvider: "openai",

@@ -19,10 +19,6 @@ import {
   resolveSelfHostedTranscriptionModel,
 } from "./selfHostedTranscription.js";
 import {
-  isTranscriptionSelectionAllowed,
-  type PolicyDecisionSnapshot,
-} from "../stores/policyRules.ts";
-import {
   isTinfoilInferenceUrl,
   TINFOIL_PROXY_REQUIRED_ERROR,
   type TranscriptionProviderBaseUrl,
@@ -88,10 +84,8 @@ export type ManagedTranscriptionResolution =
   | { kind: "error"; message: string; code: string; messageKey?: string };
 
 export interface TranscriptionRouteInput {
-  /** Policy-EFFECTIVE, scope-resolved snapshot — the resolver never re-maps selections. */
+  /** Scope-resolved snapshot — the resolver never re-maps selections. */
   settings: TranscriptionRouteSettings;
-  /** Optional fail-closed floor; renderer callers pass the policy store state, main-process callers omit it. */
-  policy?: PolicyDecisionSnapshot | null;
   /** Provider registry, for the Tinfoil-host guard. Renderer passes ModelRegistry, main the raw JSON. */
   providers?: readonly TranscriptionProviderBaseUrl[];
   /** Managed enterprise STT outcome; when present it outranks every personal setting. */
@@ -220,14 +214,7 @@ function buildBatchEndpoint(rawUrl: string, base: string, model: string | null):
   return buildAzureTranscriptionUrl(rawUrl, model || "") || fallback;
 }
 
-function customEndpointError(managed: boolean): TranscriptionRoute {
-  if (managed) {
-    return error(
-      "Transcription is restricted by your organization.",
-      "POLICY_RESTRICTED",
-      "common.policyTranscriptionRestricted"
-    );
-  }
+function customEndpointError(): TranscriptionRoute {
   return error(
     "Custom transcription endpoint is invalid or unsupported",
     "CUSTOM_ENDPOINT_INVALID",
@@ -237,23 +224,19 @@ function customEndpointError(managed: boolean): TranscriptionRoute {
 
 export function resolveTranscriptionRoute({
   settings,
-  policy,
   providers = [],
   managed: managedResolution,
   hasProviderKey,
   request,
 }: TranscriptionRouteInput): TranscriptionRoute {
   const s = settings || {};
-  const managed = policy?.status === "managed";
   const language =
     request?.effectiveLanguage ??
     (!s.preferredLanguage || s.preferredLanguage === "auto"
       ? undefined
       : s.preferredLanguage.split("-")[0]);
 
-  // Managed enterprise STT outranks every personal setting; the resolution is
-  // already policy-checked where it was computed (enterpriseIdentityStore /
-  // enterpriseIdentityManager), so the selection floor below does not apply.
+  // Managed enterprise STT outranks every personal setting.
   if (managedResolution) {
     if (managedResolution.kind === "error") {
       return error(managedResolution.message, managedResolution.code, managedResolution.messageKey);
@@ -268,7 +251,7 @@ export function resolveTranscriptionRoute({
     };
   }
 
-  // A policy-effective "enterprise" selection with no managed resolution means
+  // An "enterprise" selection with no managed resolution means
   // the managed config has not resolved (loading, evicted, or absent). Never
   // fall through to a personal lane in that state.
   if (s.transcriptionMode === "enterprise") {
@@ -276,22 +259,6 @@ export function resolveTranscriptionRoute({
       "Managed transcription is not available right now. Try again in a moment.",
       "MANAGED_CONFIG_UNAVAILABLE",
       MANAGED_TRANSCRIPTION_UNAVAILABLE_MESSAGE_KEY
-    );
-  }
-
-  // Fail-closed floor only: callers pass policy-effective settings, so a
-  // disallowed selection here means the policy layer was bypassed upstream.
-  if (
-    managed &&
-    !isTranscriptionSelectionAllowed(policy!, {
-      mode: (s.transcriptionMode || (s.useLocalWhisper ? "local" : "providers")) as never,
-      provider: s.cloudTranscriptionProvider || "",
-    })
-  ) {
-    return error(
-      "Transcription is restricted by your organization.",
-      "POLICY_RESTRICTED",
-      "common.policyTranscriptionRestricted"
     );
   }
 
@@ -377,7 +344,7 @@ export function resolveTranscriptionRoute({
       !base ||
       !isSecureHttpEndpoint(base)
     ) {
-      return customEndpointError(managed);
+      return customEndpointError();
     }
     if (isTinfoilInferenceUrl(base, providers)) {
       return error(TINFOIL_PROXY_REQUIRED_ERROR);

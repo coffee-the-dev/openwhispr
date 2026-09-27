@@ -12,9 +12,7 @@ import {
 import { syncService } from "../services/SyncService";
 import { buildAnalyticsActivityDays } from "../helpers/analytics";
 import { canOfferAnalyticsClaim } from "../services/syncPassPolicy";
-import { effectiveLocalHistoryEnabled } from "../stores/policyRules";
 import { useLeaderboardParticipationStore } from "../stores/leaderboardParticipationStore";
-import { usePolicyStore } from "../stores/policyStore";
 import type { AnalyticsDailyBucket, AnalyticsSummary } from "../types/electron";
 import { cn } from "./lib/utils";
 import LeaderboardSkeleton from "./LeaderboardSkeleton";
@@ -405,10 +403,7 @@ export default function InsightsView({ onSignIn }: InsightsViewProps) {
   const { t } = useTranslation();
   const { isLoaded, isSignedIn, user } = useAuth();
   const authValidated = hasValidatedAuthContext();
-  const { dataRetentionEnabled: personalDataRetentionEnabled, insightsSyncEnabled } = useSettings();
-  const dataRetentionEnabled = usePolicyStore((policyState) =>
-    effectiveLocalHistoryEnabled(policyState, personalDataRetentionEnabled)
-  );
+  const { dataRetentionEnabled, insightsSyncEnabled } = useSettings();
   const { canToggleSync, enableInsightsSync, optInDialog, syncAllowedByPolicy, unclaimedCount } =
     useInsightsSyncOptIn();
   const participationEnabled = useLeaderboardParticipationStore((state) => state.enabled);

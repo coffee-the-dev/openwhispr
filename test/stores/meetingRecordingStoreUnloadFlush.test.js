@@ -120,7 +120,7 @@ const settle = async () => {
 test("a reload mid-recording writes the live transcript as the page unloads", async (t) => {
   const { api, listeners, writes } = createElectronAPI();
   const { store, unload } = await loadStore(t, api);
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   listeners.segment(final("said after the last save"));
   writes.length = 0;
 
@@ -147,9 +147,9 @@ test("the unload listener is registered once, at module load", async (t) => {
   const { store, unloadListeners } = await loadStore(t, api);
   assert.equal(unloadListeners().length, 1);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   await store.stopRecording();
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   await store.stopRecording();
 
   assert.equal(unloadListeners().length, 1, "sessions must not stack listeners");
@@ -162,12 +162,12 @@ test("an unload with nothing to save writes nothing", async (t) => {
   unload();
   assert.deepEqual(transcriptWrites(writes), [], "no recording");
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   unload();
   assert.deepEqual(transcriptWrites(writes), [], "no segments yet");
   await store.stopRecording();
 
-  assert.equal(await store.startRecording({ ...START_ARGS, noteId: null }), true);
+  await store.startRecording({ ...START_ARGS, noteId: null });
   listeners.segment(final("no note to hold this"));
   unload();
   assert.deepEqual(transcriptWrites(writes), [], "no note");
@@ -181,7 +181,7 @@ test("an unload during a stop neither duplicates nor overwrites its final write"
   });
   const { api, listeners, writes } = createElectronAPI({ stopResult: () => stopGate });
   const { store, unload } = await loadStore(t, api);
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   listeners.segment(final("closing words"));
   writes.length = 0;
 
@@ -199,7 +199,7 @@ test("an unload during a stop neither duplicates nor overwrites its final write"
 test("a note deleted mid-recording is not written back from its tombstone", async (t) => {
   const { api, listeners, writes } = createElectronAPI();
   const { store, unload } = await loadStore(t, api);
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   listeners.segment(final("said before the delete"));
 
   deleteNote(listeners, 12);
@@ -214,7 +214,7 @@ test("a note deleted mid-recording is not written back from its tombstone", asyn
   await store.stopRecording();
 
   // The guard belongs to that recording, not to every later one.
-  assert.equal(await store.startRecording({ ...START_ARGS, noteId: 12 }), true);
+  await store.startRecording({ ...START_ARGS, noteId: 12 });
   listeners.segment(final("a new meeting"));
   writes.length = 0;
   unload();
@@ -227,7 +227,7 @@ test("a note deleted mid-recording is not written back from its tombstone", asyn
 test("a recording note restored after a denied delete is saved again", async (t) => {
   const { api, listeners, writes } = createElectronAPI();
   const { store, unload } = await loadStore(t, api);
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   listeners.segment(final("said before the delete"));
   deleteNote(listeners, NOTE_ID);
 
@@ -254,7 +254,7 @@ test("a resumed recording's unload keeps the transcript it resumed from", async 
   const seedSegments = [
     { id: "seed-1", text: "from the first half", source: "mic", timestamp: 1 },
   ];
-  assert.equal(await store.startRecording({ ...START_ARGS, seedSegments }), true);
+  await store.startRecording({ ...START_ARGS, seedSegments });
   listeners.segment(final("from the second half"));
   writes.length = 0;
 
@@ -282,7 +282,7 @@ for (const [name, updateNote] of [
     const { store, vite } = await loadStore(t, api);
     const { default: logger } = await vite.ssrLoadModule("/utils/logger.ts");
     const logged = t.mock.method(logger, "error", () => {});
-    assert.equal(await store.startRecording(START_ARGS), true);
+    await store.startRecording(START_ARGS);
     listeners.segment(final("said as the save failed"));
 
     await assert.doesNotReject(store.persistLiveTranscript());

@@ -71,17 +71,12 @@ test("onboarding active bridge invokes only its allowlisted channel", async () =
   ]);
 });
 
-test("macOS accessibility readiness forwards an optional account scope", () => {
+test("macOS accessibility readiness signals the main process", () => {
   const { api, sends } = loadPreloadApi();
-  const expectedAccountScope = { accountId: "account-a", authGeneration: 3 };
 
   api.markMacAccessibilityFeaturesReady();
-  api.markMacAccessibilityFeaturesReady(expectedAccountScope);
 
-  assert.deepEqual(sends, [
-    ["mac-accessibility-features-ready"],
-    ["mac-accessibility-features-ready", expectedAccountScope],
-  ]);
+  assert.deepEqual(sends, [["mac-accessibility-features-ready"]]);
 });
 
 test("onboarding demo listener strips the Electron event and disposes cleanly", () => {

@@ -14,6 +14,7 @@ test("the Voice Assistant scope is seeded from Chat once for profiles that never
   });
   const load = async (seed) => {
     storage.clear();
+    storage.setItem("_localOnlyModesMigrated", "1");
     for (const [key, value] of Object.entries(seed)) storage.setItem(key, value);
     vite.moduleGraph.invalidateAll();
     const mod = await vite.ssrLoadModule("/stores/settingsStore.ts");
@@ -60,7 +61,7 @@ test("the Voice Assistant scope is seeded from Chat once for profiles that never
       dictationAgentProvider: "groq",
       dictationAgentModel: "openai/gpt-oss-20b",
     });
-    assert.equal(state.dictationAgentMode, "openwhispr");
+    assert.equal(state.dictationAgentMode, "local");
     assert.equal(state.dictationAgentProvider, "groq");
     assert.equal(state.dictationAgentModel, "openai/gpt-oss-20b");
   });
@@ -76,7 +77,7 @@ test("the Voice Assistant scope is seeded from Chat once for profiles that never
 
   await t.test("a seeded profile is not seeded again after Chat changes", async () => {
     const state = await load({ ...localChat, _dictationAgentSeeded: "1" });
-    assert.equal(state.dictationAgentMode, "openwhispr");
+    assert.equal(state.dictationAgentMode, "local", "the store default, not Chat's mode");
     assert.equal(storage.getItem("dictationAgentMode"), null);
   });
 });

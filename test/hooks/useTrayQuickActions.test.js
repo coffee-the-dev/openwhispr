@@ -9,8 +9,7 @@ const {
 
 // The resolver is pure and tested on its own; what this pins is the wiring.
 // App hands this hook its own state, and a forgotten or swapped input — the
-// assistant panel's mounted flag where the transcript's belongs, a dropped
-// policy input — would refuse or run at exactly the wrong moment with every
+// assistant panel's mounted flag where the transcript's belongs — would refuse or run at exactly the wrong moment with every
 // other test still green. SSR cannot run useEffect, so the hook is mounted for
 // real and the registered IPC callback is invoked like the tray would.
 async function mountTrayQuickActions(t, props) {
@@ -66,8 +65,6 @@ async function mountTrayQuickActions(t, props) {
 }
 
 const idle = {
-  agentAllowed: true,
-  policyResolved: true,
   isRecording: false,
   liveTranscriptMounted: false,
 };
@@ -106,28 +103,4 @@ test("the transcript panel's flag gates the assistant item", async (t) => {
 
   assert.deepEqual(calls.refusals, [TRAY_REFUSAL_KEYS.busy]);
   assert.equal(calls.assistantOpens, 0);
-});
-
-// Policy failing closed must not be reported as an org that restricted something.
-test("an unresolved policy refuses without blaming the organization", async (t) => {
-  const { listeners, calls, TRAY_REFUSAL_KEYS } = await mountTrayQuickActions(t, {
-    ...idle,
-    agentAllowed: false,
-    policyResolved: false,
-  });
-
-  await React.act(async () => listeners.assistant());
-
-  assert.deepEqual(calls.refusals, [TRAY_REFUSAL_KEYS.policyUnresolved]);
-});
-
-test("a resolved policy that really restricts the assistant says so", async (t) => {
-  const { listeners, calls, TRAY_REFUSAL_KEYS } = await mountTrayQuickActions(t, {
-    ...idle,
-    agentAllowed: false,
-  });
-
-  await React.act(async () => listeners.assistant());
-
-  assert.deepEqual(calls.refusals, [TRAY_REFUSAL_KEYS.agentRestricted]);
 });

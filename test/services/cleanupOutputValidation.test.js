@@ -16,8 +16,6 @@ test("cleanup validates completed provider output using the request's prompt set
   const service = (await vite.ssrLoadModule("/services/ReasoningService.ts")).default;
   t.after(() => service.destroy());
   const { useSettingsStore } = await vite.ssrLoadModule("/stores/settingsStore.ts");
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
-  usePolicyStore.setState({ status: "unmanaged", policy: null });
   const setCustomPrompt = (cleanup) => useSettingsStore.setState({ customPrompts: { cleanup } });
   setCustomPrompt("");
   window.electronAPI.processLocalReasoning = async () => ({ success: true, text: DUPLICATE });
@@ -153,8 +151,6 @@ test("cleanup validates completed provider output using the request's prompt set
       window,
       getSettings: settingsModule.getSettings,
       getManagedTranscriptionResolution: () => null,
-      isTranscriptionContextAllowed: () => true,
-      usePolicyStore,
       useCleanupModel: true,
       getAgentName: () => "OpenWhispr",
       hasTextContent: (text) => typeof text === "string" && text.trim().length > 0,

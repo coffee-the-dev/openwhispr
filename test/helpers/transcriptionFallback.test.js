@@ -1,9 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const {
-  createPolicyResponseError,
-  toPolicyFailure,
-} = require("../../src/helpers/policyResponseError");
+  createCloudResponseError,
+  toCloudFailure,
+} = require("../../src/helpers/cloudResponseError");
 
 const load = () => import("../../src/helpers/transcriptionFallback.js");
 
@@ -64,8 +64,8 @@ test("a disabled Orukeet rollout falls back to batch as feature_disabled", async
 
 test("a language exclusion keeps the feature_disabled batch fallback", async () => {
   // The start result the session route's 403 body becomes over IPC.
-  const result = toPolicyFailure(
-    createPolicyResponseError(
+  const result = toCloudFailure(
+    createCloudResponseError(
       403,
       {
         error: "Orukeet dictation is not enabled for this account",

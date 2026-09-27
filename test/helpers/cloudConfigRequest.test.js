@@ -2,14 +2,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const { createCloudConfigRequestHandler } = require("../../src/helpers/cloudConfigRequest");
-const { withPolicyRequestHeaders } = require("../../src/helpers/policyRequestHeaders");
 
-test("the config handler preserves policy and upgrade response metadata", async () => {
+test("the config handler preserves upgrade response metadata", async () => {
   const handler = createCloudConfigRequestHandler({
     getApiUrl: () => "https://api.openwhispr.test",
     getAuthHeader: async () => ({ Authorization: "Bearer token-a" }),
     proxyFetch: async (_url, options) => {
-      assert.equal(options.headers["x-openwhispr-policy-version"], "1");
       return new Response(
         JSON.stringify({
           error: "Update required",
@@ -19,7 +17,6 @@ test("the config handler preserves policy and upgrade response metadata", async 
         { status: 426 }
       );
     },
-    withPolicyHeaders: (headers) => ({ ...headers, "x-openwhispr-policy-version": "1" }),
     logger: { error() {} },
     configPath: "stt-config",
   });
@@ -43,7 +40,6 @@ test("the config handler keeps successful and legacy auth results compatible", a
     getApiUrl: () => "https://api.openwhispr.test",
     getAuthHeader: async () => ({ Authorization: "Bearer token-a" }),
     proxyFetch: async () => responses.shift(),
-    withPolicyHeaders: (headers) => headers,
     logger: { error() {} },
     configPath: "stt-config",
   });
@@ -60,17 +56,16 @@ test("the config handler keeps successful and legacy auth results compatible", a
   });
 });
 
-test("the note-recording-config handler applies policy headers to its route", async () => {
+test("the note-recording-config handler requests its route with the auth header", async () => {
   let requestedUrl = null;
   const handler = createCloudConfigRequestHandler({
     getApiUrl: () => "https://api.openwhispr.test",
     getAuthHeader: async () => ({ Authorization: "Bearer token-a" }),
     proxyFetch: async (url, options) => {
       requestedUrl = url;
-      assert.equal(options.headers["x-openwhispr-policy-version"], "1");
+      assert.equal(options.headers.Authorization, "Bearer token-a");
       return new Response(JSON.stringify({ providers: [] }), { status: 200 });
     },
-    withPolicyHeaders: (headers) => ({ ...headers, "x-openwhispr-policy-version": "1" }),
     logger: { error() {} },
     configPath: "note-recording-config",
   });
@@ -79,7 +74,7 @@ test("the note-recording-config handler applies policy headers to its route", as
   assert.equal(requestedUrl, "https://api.openwhispr.test/api/note-recording-config");
 });
 
-test("the note-recording-config handler returns a structured policy failure instead of null", async () => {
+test("the note-recording-config handler returns a structured failure instead of null", async () => {
   const handler = createCloudConfigRequestHandler({
     getApiUrl: () => "https://api.openwhispr.test",
     getAuthHeader: async () => ({ Authorization: "Bearer token-a" }),
@@ -88,7 +83,6 @@ test("the note-recording-config handler returns a structured policy failure inst
         JSON.stringify({ error: "Blocked by workspace policy", code: "POLICY_RESTRICTED" }),
         { status: 403 }
       ),
-    withPolicyHeaders: (headers) => headers,
     logger: { error() {} },
     configPath: "note-recording-config",
   });
@@ -100,17 +94,16 @@ test("the note-recording-config handler returns a structured policy failure inst
   assert.equal(result.error, "Blocked by workspace policy");
 });
 
-test("every config refetch bypasses the HTTP cache and declares the client capabilities", async () => {
+test("every config refetch bypasses the HTTP cache", async () => {
   const requests = [];
   for (const configPath of ["stt-config", "note-recording-config"]) {
     const handler = createCloudConfigRequestHandler({
       getApiUrl: () => "https://api.openwhispr.test",
       getAuthHeader: async () => ({ Authorization: "Bearer token-a" }),
       proxyFetch: async (url, options) => {
-        requests.push({ url, cache: options.cache, headers: options.headers });
+        requests.push({ url, cache: options.cache });
         return new Response("{}", { status: 200 });
       },
-      withPolicyHeaders: (headers) => withPolicyRequestHeaders(headers, "1.8.1"),
       logger: { error() {} },
       configPath,
     });
@@ -118,10 +111,10 @@ test("every config refetch bypasses the HTTP cache and declares the client capab
   }
 
   assert.deepEqual(
-    requests.map(({ url, cache, headers }) => [url, cache, headers["x-openwhispr-capabilities"]]),
+    requests.map(({ url, cache }) => [url, cache]),
     [
-      ["https://api.openwhispr.test/api/stt-config", "no-store", "orukeet"],
-      ["https://api.openwhispr.test/api/note-recording-config", "no-store", "orukeet"],
+      ["https://api.openwhispr.test/api/stt-config", "no-store"],
+      ["https://api.openwhispr.test/api/note-recording-config", "no-store"],
     ]
   );
 });

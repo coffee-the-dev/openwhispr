@@ -181,13 +181,8 @@
     "copied": "Copiado",
     "done": "Listo",
     "skip": "Pular",
-    "policyAiProcessingRestricted": "O processamento de IA está restrito pela sua organização.",
-    "policyAgentRestricted": "O uso do assistente de IA está restrito pela sua organização.",
-    "policyTranscriptionRestricted": "A transcrição está restrita pela sua organização.",
-    "policyUnresolved": "As configurações da sua organização ainda não foram carregadas. Tente novamente em instantes.",
     "managedConfigLoading": "Verificando a configuração gerenciada da sua organização. Tente novamente em instantes.",
-    "managedConfigUnavailable": "O acesso empresarial gerenciado está indisponível. Entre novamente ou entre em contato com o administrador.",
-    "managedPolicyConflict": "O acesso gerenciado está bloqueado pela política do seu espaço de trabalho. Entre em contato com o administrador."
+    "managedConfigUnavailable": "O acesso empresarial gerenciado está indisponível. Entre novamente ou entre em contato com o administrador."
   },
   "onboarding": {
     "rehaul": {
@@ -298,10 +293,6 @@
         "titleLineOne": "Escolha sua configuração",
         "titleLineTwo": "do OpenWhispr",
         "description": "Escolha a opção que combina com o seu jeito de trabalhar.",
-        "unavailable": {
-          "title": "Nenhuma opção de configuração disponível",
-          "description": "A política do seu espaço de trabalho não permite uma configuração completa de transcrição e IA. Entre em contato com o administrador."
-        },
         "cloud": {
           "title": "OpenWhispr Cloud",
           "description": "Receba 2.000 palavras grátis por semana. Suas configurações ficam sincronizadas entre dispositivos.",
@@ -546,17 +537,6 @@
         "step2": "Abra o console da Corti e crie credenciais de API",
         "step3": "Cole seu Client ID e Secret abaixo"
       }
-    },
-    "requiredModels": {
-      "title": "Instale os modelos exigidos",
-      "description": "{{organization}} exige estes modelos neste dispositivo antes que você possa começar a ditar.",
-      "genericOrganization": "Sua organização",
-      "installed": "Instalado",
-      "queued": "Na fila",
-      "failed": {
-        "title": "Um download não foi concluído",
-        "description": "Verifique sua conexão e o espaço livre em disco e tente novamente. Se continuar falhando, entre em contato com seu administrador."
-      }
     }
   },
   "streaming": {
@@ -573,10 +553,6 @@
     }
   },
   "controlPanel": {
-    "updateRequiredByOrg": {
-      "title": "Atualização obrigatória",
-      "description": "Sua organização exige o OpenWhispr {{version}} ou mais recente. Atualize o aplicativo."
-    },
     "update": {
       "readyTitle": "Atualização pronta para instalar",
       "readyDescription": "Clique em 'Instalar atualização' para reiniciar com a versão mais recente.",
@@ -678,11 +654,6 @@
       "dismissButton": "Agora não"
     },
     "backToNotes": "Voltar para notas",
-    "requiredModelsByOrg": {
-      "title": "Modelos exigidos ausentes",
-      "description": "Sua organização exige estes modelos neste dispositivo: {{models}}.",
-      "download": "Baixar"
-    },
     "cloudNudge": {
       "title": "Você entrou",
       "description": "O ditado continua usando sua própria configuração. Você pode mudar para o OpenWhispr Cloud a qualquer momento.",
@@ -1433,7 +1404,6 @@
     "defaultTestInputTranslate": "O tempo está lindo hoje, quer dar um passeio?"
   },
   "settingsModal": {
-    "managedByOrg": "Algumas configurações são gerenciadas pela sua organização.",
     "groups": {
       "account": "Conta",
       "app": "Aplicativo",
@@ -1762,9 +1732,7 @@
         "openwhisprDesc": "Resultados confiáveis. Sem configuração.",
         "providersDesc": "Use sua própria chave API.",
         "localDesc": "Modelos no dispositivo. Privado.",
-        "selfHostedDesc": "Seu servidor na sua rede.",
-        "enterprise": "Corporativo",
-        "enterpriseDesc": "Use a conta de nuvem da sua organização (AWS, Azure, GCP)."
+        "selfHostedDesc": "Seu servidor na sua rede."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Resultados confiáveis. Sem configuração.",
@@ -2182,9 +2150,7 @@
         "openwhisprDesc": "Resultados confiáveis. Sem configuração.",
         "providersDesc": "Use sua própria chave API.",
         "localDesc": "Modelos no dispositivo. Privado.",
-        "selfHostedDesc": "Seu servidor na sua rede.",
-        "enterprise": "Nuvem corporativa",
-        "enterpriseDesc": "O áudio vai para a nuvem da sua organização."
+        "selfHostedDesc": "Seu servidor na sua rede."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Resultados confiáveis. Sem configuração.",
@@ -2270,8 +2236,7 @@
             "info": "Áudio estendido de um segmento para o próximo, evitando cortes bruscos na concatenação."
           }
         }
-      },
-      "meetingEnterpriseOnly": "A sua organização só permite transcrição em nuvem corporativa, que ainda não abrange a gravação de reuniões."
+      }
     },
     "intelligence": {
       "gpuDevice": {
@@ -3094,7 +3059,6 @@
       "title": "Notas de reunião",
       "description": "Transcrições e resumos estruturados",
       "back": "Voltar",
-      "restrictedByOrg": "A transcrição de reuniões está restrita pela sua organização.",
       "unsupportedSelfHosted": "A gravação de notas ainda não pode usar um endpoint auto-hospedado. Abra as Configurações e escolha Local ou um provedor de streaming.",
       "unsupportedProvider": "A gravação de notas não pode usar {{provider}} para transcrição ao vivo. Abra as Configurações e escolha Local ou um provedor de streaming.",
       "noProviderSelected": "Nenhum provedor está selecionado para a gravação de notas. Abra as Configurações e escolha Local ou um provedor de streaming.",
@@ -3638,9 +3602,7 @@
       "local": "Local",
       "localDesc": "Rode um LLM local no seu dispositivo, totalmente privado.",
       "selfHosted": "Auto-hospedado",
-      "selfHostedDesc": "Aponte para um endpoint compatível com OpenAI auto-hospedado.",
-      "enterprise": "Corporativo",
-      "enterpriseDesc": "Use AWS Bedrock, Azure OpenAI ou Google Vertex."
+      "selfHostedDesc": "Aponte para um endpoint compatível com OpenAI auto-hospedado."
     },
     "prompt": {
       "title": "Prompt do assistente",
@@ -3660,9 +3622,7 @@
         "openwhisprDesc": "Resultados confiáveis. Sem configuração.",
         "providersDesc": "Traga sua própria chave API.",
         "localDesc": "Modelos no dispositivo. Totalmente privado.",
-        "selfHostedDesc": "Seu próprio servidor na sua rede.",
-        "enterprise": "Corporativo",
-        "enterpriseDesc": "Use a conta de nuvem da sua organização (AWS, Azure, GCP)."
+        "selfHostedDesc": "Seu próprio servidor na sua rede."
       }
     },
     "chat": {

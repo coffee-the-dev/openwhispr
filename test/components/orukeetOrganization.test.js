@@ -93,7 +93,7 @@ test("adding Orukeet preserves fresh-install transcription modes and existing ba
   const state = useSettingsStore.getState();
   for (const prefix of ["", "meeting", "upload"]) {
     const key = (name) => (prefix ? prefix + name[0].toUpperCase() + name.slice(1) : name);
-    assert.equal(state[key("useLocalWhisper")], false);
+    assert.equal(state[key("useLocalWhisper")], true, "fresh installs transcribe on-device");
     assert.equal(state[key("localTranscriptionProvider")], "whisper");
     assert.equal(state[key("parakeetModel")], "");
   }

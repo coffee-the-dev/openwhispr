@@ -7,7 +7,7 @@ function errorMessage(payload, fallback) {
   return fallback;
 }
 
-function createPolicyResponseError(status, payload, fallback) {
+function createCloudResponseError(status, payload, fallback) {
   const code = payload?.code ?? payload?.error?.code;
   const details = payload?.data;
   const minAppVersion =
@@ -21,12 +21,12 @@ function createPolicyResponseError(status, payload, fallback) {
   });
 }
 
-async function readPolicyResponseError(response, fallback) {
+async function readCloudResponseError(response, fallback) {
   const payload = await response.json().catch(() => null);
-  return createPolicyResponseError(response.status, payload, fallback);
+  return createCloudResponseError(response.status, payload, fallback);
 }
 
-function toPolicyFailure(error) {
+function toCloudFailure(error) {
   return {
     success: false,
     error: error?.message || String(error),
@@ -37,4 +37,4 @@ function toPolicyFailure(error) {
   };
 }
 
-module.exports = { createPolicyResponseError, readPolicyResponseError, toPolicyFailure };
+module.exports = { createCloudResponseError, readCloudResponseError, toCloudFailure };

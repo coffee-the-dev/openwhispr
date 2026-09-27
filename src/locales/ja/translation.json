@@ -202,13 +202,8 @@
     "copied": "コピーしました",
     "done": "完了",
     "skip": "スキップ",
-    "policyAiProcessingRestricted": "AI処理は組織によって制限されています。",
-    "policyAgentRestricted": "AIアシスタントの使用は組織によって制限されています。",
-    "policyTranscriptionRestricted": "文字起こしは組織によって制限されています。",
-    "policyUnresolved": "組織の設定がまだ読み込まれていません。しばらくしてからもう一度お試しください。",
     "managedConfigLoading": "組織のマネージド設定を確認しています。しばらくしてからもう一度お試しください。",
-    "managedConfigUnavailable": "マネージド エンタープライズ アクセスを利用できません。再度サインインするか、管理者にお問い合わせください。",
-    "managedPolicyConflict": "ワークスペースのポリシーによりマネージド アクセスがブロックされています。管理者にお問い合わせください。"
+    "managedConfigUnavailable": "マネージド エンタープライズ アクセスを利用できません。再度サインインするか、管理者にお問い合わせください。"
   },
   "onboarding": {
     "rehaul": {
@@ -319,10 +314,6 @@
         "titleLineOne": "OpenWhispr の",
         "titleLineTwo": "セットアップを選択",
         "description": "働き方に合った方法を選んでください。",
-        "unavailable": {
-          "title": "利用できるセットアップ方法がありません",
-          "description": "ワークスペースのポリシーでは、文字起こしと AI の完全なセットアップが許可されていません。管理者にお問い合わせください。"
-        },
         "cloud": {
           "title": "OpenWhispr Cloud",
           "description": "毎週 2,000 語を無料で利用できます。設定はデバイス間で同期されます。",
@@ -567,17 +558,6 @@
         "step2": "Corti コンソールで API 認証情報を作成",
         "step3": "Client ID と Secret を下に貼り付け"
       }
-    },
-    "requiredModels": {
-      "title": "必須モデルをインストール",
-      "description": "{{organization}}では、ディクテーションを開始する前にこれらのモデルをこのデバイスにインストールする必要があります。",
-      "genericOrganization": "所属組織",
-      "installed": "インストール済み",
-      "queued": "待機中",
-      "failed": {
-        "title": "ダウンロードが完了しませんでした",
-        "description": "接続とディスクの空き容量を確認して、再試行してください。それでも失敗する場合は、管理者にお問い合わせください。"
-      }
     }
   },
   "streaming": {
@@ -594,10 +574,6 @@
     }
   },
   "controlPanel": {
-    "updateRequiredByOrg": {
-      "title": "アップデートが必要です",
-      "description": "組織では OpenWhispr {{version}} 以降が必要です。アプリを更新してください。"
-    },
     "update": {
       "readyTitle": "アップデートの準備完了",
       "readyDescription": "「アップデートをインストール」をクリックして最新バージョンで再起動します。",
@@ -699,11 +675,6 @@
       "dismissButton": "後で"
     },
     "backToNotes": "ノートに戻る",
-    "requiredModelsByOrg": {
-      "title": "必須モデルがありません",
-      "description": "組織では、このデバイスにこれらのモデルが必要です：{{models}}。",
-      "download": "ダウンロード"
-    },
     "cloudNudge": {
       "title": "サインインしました",
       "description": "音声入力は引き続きご自身の設定で動作します。いつでも OpenWhispr Cloud に切り替えられます。",
@@ -1454,7 +1425,6 @@
     "defaultTestInputTranslate": "今日はいい天気ですね、散歩に行きませんか？"
   },
   "settingsModal": {
-    "managedByOrg": "一部の設定は組織によって管理されています。",
     "groups": {
       "account": "アカウント",
       "app": "アプリ",
@@ -1783,9 +1753,7 @@
         "openwhisprDesc": "信頼できる精度。設定不要。",
         "providersDesc": "自分のAPIキーを使用。",
         "localDesc": "端末上のモデル。完全プライベート。",
-        "selfHostedDesc": "自前サーバーをネットワーク上に。",
-        "enterprise": "エンタープライズ",
-        "enterpriseDesc": "組織のクラウドアカウントを使用 (AWS, Azure, GCP)。"
+        "selfHostedDesc": "自前サーバーをネットワーク上に。"
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "信頼できる精度。設定不要。",
@@ -2203,9 +2171,7 @@
         "openwhisprDesc": "信頼できる精度。設定不要。",
         "providersDesc": "自分のAPIキーを使用。",
         "localDesc": "端末上のモデル。完全プライベート。",
-        "selfHostedDesc": "自前サーバーをネットワーク上に。",
-        "enterprise": "エンタープライズクラウド",
-        "enterpriseDesc": "音声は組織自身のクラウドに送信されます。"
+        "selfHostedDesc": "自前サーバーをネットワーク上に。"
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "信頼できる精度。設定不要。",
@@ -2291,8 +2257,7 @@
             "info": "区間を連結するときに途切れないよう、次の区間に延長する音声の長さです。"
           }
         }
-      },
-      "meetingEnterpriseOnly": "組織はエンタープライズクラウドの文字起こしのみを許可しており、会議の録音にはまだ対応していません。"
+      }
     },
     "intelligence": {
       "gpuDevice": {
@@ -3089,7 +3054,6 @@
       "title": "議事録",
       "description": "文字起こしと構造化されたサマリー",
       "back": "戻る",
-      "restrictedByOrg": "会議の文字起こしは組織によって制限されています。",
       "unsupportedSelfHosted": "ノート録音はまだセルフホストのエンドポイントを利用できません。設定を開き、ローカルまたはストリーミング対応プロバイダーを選択してください。",
       "unsupportedProvider": "ノート録音ではライブ文字起こしに {{provider}} を利用できません。設定を開き、ローカルまたはストリーミング対応プロバイダーを選択してください。",
       "noProviderSelected": "ノート録音のプロバイダーが選択されていません。設定を開き、ローカルまたはストリーミング対応プロバイダーを選択してください。",
@@ -3638,9 +3602,7 @@
       "local": "ローカル",
       "localDesc": "端末上でローカル LLM を実行。完全プライベート。",
       "selfHosted": "セルフホスト",
-      "selfHostedDesc": "セルフホストの OpenAI 互換エンドポイントを指定します。",
-      "enterprise": "エンタープライズ",
-      "enterpriseDesc": "AWS Bedrock、Azure OpenAI、Google Vertex を使用します。"
+      "selfHostedDesc": "セルフホストの OpenAI 互換エンドポイントを指定します。"
     },
     "prompt": {
       "title": "アシスタントプロンプト",
@@ -3660,9 +3622,7 @@
         "openwhisprDesc": "信頼できる精度。設定不要。",
         "providersDesc": "独自のAPIキーを使用。",
         "localDesc": "デバイス上のモデル。完全プライベート。",
-        "selfHostedDesc": "ネットワーク上の自分のサーバー。",
-        "enterprise": "エンタープライズ",
-        "enterpriseDesc": "組織のクラウドアカウントを使用 (AWS, Azure, GCP)。"
+        "selfHostedDesc": "ネットワーク上の自分のサーバー。"
       }
     },
     "chat": {

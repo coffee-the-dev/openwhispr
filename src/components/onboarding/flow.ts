@@ -15,7 +15,6 @@ type OnboardingStorage = Pick<Storage, "setItem" | "removeItem">;
 
 export type OnboardingStepId =
   | "auth"
-  | "required-models"
   | "permissions"
   | "languages"
   | "use-cases"
@@ -95,14 +94,6 @@ export interface OnboardingSession {
 export interface OnboardingRouteContext {
   authPath: OnboardingAuthPath;
   setupMode: OnboardingSetupMode;
-  agentAllowed: boolean;
-  /**
-   * Org-required local models are missing on disk. Inserts the blocking
-   * "required-models" step right after auth — account path only, since guests
-   * never fetch a policy. Callers latch this once the step is entered so a
-   * mid-download policy refresh can't yank the step from under the user.
-   */
-  requiredModelsPending?: boolean;
   /** A confirmed Enterprise workspace is already provisioned outside onboarding. */
   skipSetupChoice?: boolean;
 }
@@ -129,7 +120,6 @@ const SETUP_ROUTES: Record<Exclude<OnboardingSetupMode, null | "cloud">, Onboard
 // it to clamp backwards instead of jumping to the end of the route.
 const STEP_ORDER: OnboardingStepId[] = [
   "auth",
-  "required-models",
   "permissions",
   "languages",
   "use-cases",
@@ -228,31 +218,17 @@ export function getOnboardingRoute(context: OnboardingRouteContext): OnboardingS
 
   const setupChoice = context.skipSetupChoice ? [] : (["setup-choice"] as OnboardingStepId[]);
 
-  const route =
+  const route: OnboardingStepId[] =
     context.authPath === "guest"
       ? // Guests still need the permission grants and a hotkey they have seen:
         // finalizeOnboarding registers dictationHotkey either way, and skipping
         // these steps shipped users who neither granted the mic nor knew their
         // trigger key.
         (["auth", "permissions", "dictation-hotkey", "setup-choice"] as OnboardingStepId[])
-      : [
-          ...ACCOUNT_ROUTE,
-          ...(context.agentAllowed
-            ? (["assistant-hotkey", "assistant-demo"] as OnboardingStepId[])
-            : []),
-          ...setupChoice,
-        ];
-
-  if (context.requiredModelsPending && context.authPath === "account") {
-    route.splice(route.indexOf("auth") + 1, 0, "required-models");
-  }
+      : [...ACCOUNT_ROUTE, "assistant-hotkey", "assistant-demo", ...setupChoice];
 
   if (context.setupMode && context.setupMode !== "cloud") {
-    route.push(
-      ...SETUP_ROUTES[context.setupMode].filter(
-        (stepId) => context.agentAllowed || !stepId.endsWith("assistant")
-      )
-    );
+    route.push(...SETUP_ROUTES[context.setupMode]);
   }
 
   return route;
@@ -447,17 +423,6 @@ export function parseOnboardingSession(value: string | null): OnboardingSession 
   }
 }
 
-/**
- * True while a persisted onboarding session sits on the blocking
- * required-models step. The background download tray uses this to keep its
- * hands off downloads that step owns: a tray row would duplicate the step's
- * own progress pill, and the tray's cancel cannot stick — the step
- * auto-restarts org-mandated downloads.
- */
-export function isRequiredModelsOnboardingStepActive(sessionValue: string | null): boolean {
-  return parseOnboardingSession(sessionValue)?.currentStepId === "required-models";
-}
-
 export function migrateLegacyOnboardingStep(value: string | null): OnboardingStepId {
   if (!value) return "auth";
   if (isOnboardingStepId(value)) return value;
@@ -469,13 +434,12 @@ export function migrateLegacyOnboardingStep(value: string | null): OnboardingSte
 
 /**
  * Map a step onto the caller's route, for when a saved session names a step the
- * current route no longer has (the assistant gets disallowed, setupMode changes, or a
- * dev jump asks for an off-route step).
+ * current route no longer has (setupMode changes, or a dev jump asks for an
+ * off-route step).
  *
  * Clamps to the route step nearest in the canonical order, ties going to the
  * earlier one so nothing gets skipped — falling back to the route's last step
- * would teleport past intermediate steps (with agentAllowed false, asking for an
- * assistant step must land on its neighbour, not on setup-choice).
+ * would teleport past intermediate steps.
  */
 export function reconcileStepWithRoute(
   stepId: OnboardingStepId,

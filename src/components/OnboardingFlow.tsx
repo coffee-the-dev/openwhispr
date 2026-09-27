@@ -13,7 +13,6 @@ import DemoStep from "./onboarding/DemoStep";
 import CalendarConnectionsStep from "./onboarding/CalendarConnectionsStep";
 import SetupChoiceStep from "./onboarding/SetupChoiceStep";
 import { ByokProviderStep, LocalModelSetupStep } from "./onboarding/ProviderSetupStep";
-import { RequiredModelDownloadStep } from "./onboarding/RequiredModelDownloadStep";
 import { AlertDialog } from "./ui/dialog";
 import { useAuth } from "../hooks/useAuth";
 import { usePermissions } from "../hooks/usePermissions";
@@ -25,9 +24,6 @@ import { useLocalStorage } from "../hooks/useLocalStorage";
 import { useHotkeyRegistration } from "../hooks/useHotkeyRegistration";
 import { useHotkeyModeInfo } from "../hooks/useHotkeyModeInfo";
 import { useWorkspace } from "../hooks/useWorkspace";
-import { useRequiredLocalModels } from "../hooks/useRequiredLocalModels";
-import { usePolicyStore } from "../stores/policyStore";
-import { isAgentAllowed, isScreenContextAllowed } from "../stores/policyRules";
 import { useSettingsStore } from "../stores/settingsStore";
 import { getDefaultHotkey, parseHotkeyList, serializeHotkeyList } from "../utils/hotkeys";
 import {
@@ -94,8 +90,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const { t } = useTranslation();
   const platform = getPlatform();
   const { isSignedIn } = useAuth();
-  const agentAllowed = usePolicyStore(isAgentAllowed);
-  const screenContextAllowed = usePolicyStore(isScreenContextAllowed);
   const settings = useSettings();
   const settingsStore = useSettingsStore();
   const {
@@ -286,45 +280,26 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   // but not the permission) counts as the opt-in too; Windows is permissionless
   // and keeps its explicit Enable.
   useEffect(() => {
-    if (!screenRecordingGranted || !agentAllowed || !screenContextAllowed) return;
+    if (!screenRecordingGranted) return;
     if (screenContextRequested || (isMacOS && !settingsStore.voiceAgentScreenContext)) {
       applyScreenContext();
     }
   }, [
-    agentAllowed,
     applyScreenContext,
     isMacOS,
-    screenContextAllowed,
     screenContextRequested,
     screenRecordingGranted,
     settingsStore.voiceAgentScreenContext,
   ]);
-
-  const requiredModels = useRequiredLocalModels();
-  // Latched for the session once the step is entered (or resumed at), so a
-  // mid-download policy refresh or the disk check settling can't rebuild the
-  // route out from under the user. Seeded from the persisted session because
-  // relaunching mid-download must resume on the step, not bounce off it while
-  // the disk check is still pending.
-  const requiredModelsLatchRef = useRef(session.currentStepId === "required-models");
-  const requiredModelsPending = requiredModelsLatchRef.current || requiredModels.missing.length > 0;
 
   const route = useMemo(
     () =>
       getOnboardingRoute({
         authPath: session.authPath,
         setupMode: session.setupMode,
-        agentAllowed,
-        requiredModelsPending,
         skipSetupChoice: skipSetupChoiceForEnterprise,
       }),
-    [
-      agentAllowed,
-      requiredModelsPending,
-      session.authPath,
-      session.setupMode,
-      skipSetupChoiceForEnterprise,
-    ]
+    [session.authPath, session.setupMode, skipSetupChoiceForEnterprise]
   );
   const currentStepId = reconcileStepWithRoute(session.currentStepId, route);
   const compact = COMPACT_STEPS.has(currentStepId);
@@ -334,8 +309,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   // Screen context only reaches the model once macOS has been relaunched after
   // the grant; until then the demo must not promise the assistant can see the card.
   const screenContextActive =
-    agentAllowed &&
-    screenContextAllowed &&
     settingsStore.voiceAgentScreenContext &&
     screenRecordingGranted &&
     !screenRecordingNeedsRelaunch;
@@ -372,10 +345,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     [currentStepId, setSession]
   );
 
-  useEffect(() => {
-    if (currentStepId === "required-models") requiredModelsLatchRef.current = true;
-  }, [currentStepId]);
-
   // New users default to hold-to-talk, but only where no mode was ever chosen
   // (the store's "tap" is a fallback) and once main has confirmed this desktop
   // supports it — the hook's placeholder says yes on every platform.
@@ -385,22 +354,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       setActivationMode("push");
     }
   }, [currentStepId, hotkeyModeLoaded, setActivationMode, supportsPushToTalk]);
-
-  // The auth step lands on "permissions" before the policy and disk checks
-  // settle (AppRouter's policy gate remounts this component mid-transition),
-  // so a persisted session can sit one step past the gate when the pending
-  // flag arrives. Pull the user back — only from permissions, the immediate
-  // post-auth screen, and only before the step was entered this session.
-  useEffect(() => {
-    if (
-      requiredModelsPending &&
-      currentStepId === "permissions" &&
-      !requiredModelsLatchRef.current &&
-      route.includes("required-models")
-    ) {
-      goTo("required-models");
-    }
-  }, [currentStepId, goTo, requiredModelsPending, route]);
 
   useEffect(() => {
     if (session.currentStepId !== currentStepId) {
@@ -651,34 +604,23 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           cloudTranscriptionMode: "openwhispr",
           cloudTranscriptionProvider: "openwhispr",
         });
-        if (agentAllowed) {
-          settingsStore.setCloudReasoningForAllScopes({
-            cleanupCloudMode: "openwhispr",
-            cleanupProvider: "openwhispr",
-          });
-        } else {
-          // The policy-shortened route has no assistant setup. Avoid persisting
-          // a reasoning provider the workspace disallows, and keep dictation
-          // from attempting cleanup through an unconfigured LLM.
-          settingsStore.updateCleanupSettings({ useCleanupModel: false });
-        }
+        settingsStore.setCloudReasoningForAllScopes({
+          cleanupCloudMode: "openwhispr",
+          cleanupProvider: "openwhispr",
+        });
         await finalizeOnboarding("cloud");
         return;
       }
       const nextRoute = getOnboardingRoute({
         authPath: session.authPath,
         setupMode: mode,
-        agentAllowed,
-        requiredModelsPending,
       });
       const next = getNextOnboardingStep("setup-choice", nextRoute);
       if (next) goTo(next);
     },
     [
-      agentAllowed,
       finalizeOnboarding,
       goTo,
-      requiredModelsPending,
       session.authPath,
       setSelfHostedRequested,
       setSetupMode,
@@ -725,21 +667,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         useLocalWhisper: false,
         cloudTranscriptionMode: "byok",
       });
-      // When policy disallows the assistant, its step is off-route and no
-      // LLM gets configured. Turn cleanup off so dictations do not route to a
-      // default provider with no credential behind it.
-      if (!route.includes("byok-assistant")) {
-        settingsStore.updateCleanupSettings({ useCleanupModel: false });
-      }
     } else if (currentStepId === "byok-assistant") {
       applyReasoningSelectionToAllScopes("byok");
     } else if (currentStepId === "local-dictation") {
       settingsStore.setCloudTranscriptionForAllScopes({ useLocalWhisper: true });
-      // Same policy-shortened-route case as BYOK: no local LLM was downloaded,
-      // so cleanup must not silently fall back to a cloud default.
-      if (!route.includes("local-assistant")) {
-        settingsStore.updateCleanupSettings({ useCleanupModel: false });
-      }
     } else if (currentStepId === "local-assistant") {
       applyReasoningSelectionToAllScopes("local");
     }
@@ -788,8 +719,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   const canContinue = (() => {
     switch (currentStepId) {
-      case "required-models":
-        return !requiredModels.loading && requiredModels.missing.length === 0;
       case "permissions":
         return areRequiredPermissionsMet(permissions.micPermissionGranted);
       case "languages":
@@ -843,42 +772,17 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           </div>
         );
 
-      case "required-models":
-        return (
-          <div className="h-full w-full pt-2">
-            <OnboardingStepHeader
-              title={t("onboarding.requiredModels.title")}
-              wideTitle
-              description={t("onboarding.requiredModels.description", {
-                organization:
-                  activeWorkspace?.name ?? t("onboarding.requiredModels.genericOrganization"),
-              })}
-            />
-            <RequiredModelDownloadStep
-              required={requiredModels.required}
-              missing={requiredModels.missing}
-              loading={requiredModels.loading}
-              refresh={requiredModels.refresh}
-              onProceed={() => void continueFromCurrentStep()}
-            />
-          </div>
-        );
-
       case "permissions":
         return (
           <CompactPermissionsStep
             permissions={permissions}
             systemAudio={systemAudio}
-            screenContext={
-              agentAllowed && screenContextAllowed
-                ? {
-                    enabled: settingsStore.voiceAgentScreenContext,
-                    granted: screenRecordingGranted,
-                    needsRelaunch: screenRecordingNeedsRelaunch,
-                    request: enableScreenContext,
-                  }
-                : undefined
-            }
+            screenContext={{
+              enabled: settingsStore.voiceAgentScreenContext,
+              granted: screenRecordingGranted,
+              needsRelaunch: screenRecordingNeedsRelaunch,
+              request: enableScreenContext,
+            }}
             onBack={
               session.history.length > 0
                 ? () => {
@@ -1127,7 +1031,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             />
             <SetupChoiceStep
               isSignedIn={isSignedIn}
-              agentAllowed={agentAllowed}
               onSelect={(mode, options) => void handleSetupSelection(mode, options)}
               onRequestAuthentication={() => {
                 setSetupMode("cloud");
@@ -1228,13 +1131,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         stepKey={currentStepId}
         // History is the only Back gate. This preserves the branch's provider
         // escape path and also lets users return from setup choice/languages.
-        // The required-models step is the exception: it is an org-mandated
-        // blocker, so backing out of it (to auth) is suppressed.
-        onBack={
-          hasShellNavigation && session.history.length > 0 && currentStepId !== "required-models"
-            ? goBack
-            : undefined
-        }
+        onBack={hasShellNavigation && session.history.length > 0 ? goBack : undefined}
         onContinue={showsContinue ? () => void continueFromCurrentStep() : undefined}
         // Demos are optional practice, and calendar connections on Notes are
         // optional setup. Both advance through the same persisted route.

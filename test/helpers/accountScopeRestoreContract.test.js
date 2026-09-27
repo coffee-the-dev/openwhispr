@@ -37,28 +37,17 @@ test("clearing the bearer token also clears the persisted scope binding", () => 
   assert.ok(subscription[1].includes("accountScopeBinding.clear()"));
 });
 
-test("boot restores the validated scope before any main-process consumer constructs", () => {
-  const source = read("main.js");
-  const bootWindow = source.match(
-    /databaseManager = new DatabaseManager\(\);([\s\S]*?)new IPCHandlers\(/
+test("the database always runs in the local scope", () => {
+  const main = read("main.js");
+  assert.ok(!main.includes("setActiveAccountId("), "boot never restores an account scope");
+  assert.ok(!main.includes("resolveBootAccountScope"));
+  const handler = read("src/helpers/ipcHandlers.js").match(
+    /ipcMain\.handle\("set-active-account-scope"([\s\S]*?)ipcMain\.handle\("delete-account-data"/
   );
-  assert.ok(bootWindow, "DatabaseManager constructs before IPCHandlers");
-  assert.ok(bootWindow[1].includes("resolveBootAccountScope"));
-  assert.ok(bootWindow[1].includes("databaseManager.setActiveAccountId(bootAccountId)"));
-});
-
-test("account-scoped accessibility readiness is revalidated before opening the sticky gate", () => {
-  const source = read("main.js");
-  const handler = source.match(
-    /ipcMain\.on\("mac-accessibility-features-ready"([\s\S]*?)\/\/ Listen for usage limit/
-  );
-  assert.ok(handler, "macOS accessibility readiness handler is present");
-  assert.ok(handler[1].includes("resolveActiveAccountScope"));
-  assert.ok(handler[1].includes("matchesActiveAccountScope"));
+  assert.ok(handler, "set-active-account-scope handler is present");
   assert.ok(
-    handler[1].indexOf("matchesActiveAccountScope") <
-      handler[1].indexOf("macAccessibilityFeaturesReady = true"),
-    "the current scope is checked before the readiness gate opens"
+    !handler[1].includes("setActiveAccountId(accountId)"),
+    "signing in never scopes the database to the account"
   );
 });
 

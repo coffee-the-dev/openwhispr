@@ -11,12 +11,6 @@ import type { ParakeetCheckResult } from "../../types/electron";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { normalizeBaseUrl } from "../../config/constants";
 import { withHttpsScheme } from "../../utils/urlUtils";
-import { usePolicySnapshot } from "../../hooks/usePolicy";
-import {
-  filterByokProviderOptionsByPolicy,
-  isModeAllowedByPolicy,
-  isProviderAllowedByPolicy,
-} from "../../stores/policyRules";
 import {
   getTranscriptionProviders,
   getParakeetModels,
@@ -327,20 +321,10 @@ export function ByokProviderStep({
 }) {
   const { t } = useTranslation();
   const store = useSettingsStore();
-  const policy = usePolicySnapshot();
   const assistant = stepId === "byok-assistant";
-  const scope = assistant ? "llm" : "transcription";
-  const selfHostedAllowed =
-    isModeAllowedByPolicy(policy, scope, "self-hosted") &&
-    isProviderAllowedByPolicy(policy, scope, "custom");
-  const providers = useMemo(
-    () =>
-      filterByokProviderOptionsByPolicy<HostedProvider>(
-        assistant ? modelRegistry.getCloudProviders() : getTranscriptionProviders(),
-        scope,
-        policy
-      ),
-    [assistant, policy, scope]
+  const providers = useMemo<HostedProvider[]>(
+    () => (assistant ? modelRegistry.getCloudProviders() : getTranscriptionProviders()),
+    [assistant]
   );
   // The session's draft wins; without one (onboarding was restarted, or an older build
   // left it blank) the step reopens on what the user already saved, the same order
@@ -357,7 +341,7 @@ export function ByokProviderStep({
     // card the session recorded for it.
     const selfHostedWanted =
       hasDraft || !saved ? selfHostedRequested : Boolean(saved.draft.baseUrl);
-    const selfHosted = selfHostedWanted && selfHostedAllowed;
+    const selfHosted = selfHostedWanted;
     return {
       provider: providerData?.id ?? "",
       model: providerData?.models?.some((model) => model.id === draft?.selectedModel)
@@ -428,17 +412,6 @@ export function ByokProviderStep({
 
   useEffect(() => flushByokDraft, [flushByokDraft]);
 
-  // A live policy update can remove self-hosting while this card is open. The hosted
-  // half of the form is kept, so it only needs its provider's key.
-  useEffect(() => {
-    if (!selfHosted || selfHostedAllowed) return;
-    setSelfHosted(false);
-    onSelfHostedChange(false);
-    setDraftApiKey(providerCredential(selectedProvider, useSettingsStore.getState()).value);
-    setConnected(false);
-    onConnectionChange(false);
-  }, [onConnectionChange, onSelfHostedChange, selectedProvider, selfHosted, selfHostedAllowed]);
-
   // Saved keys load asynchronously (initializeSettings), so an empty field takes its key
   // when it arrives; anything already in the field is kept.
   const savedKey = credentialFor(selfHosted, selectedProvider, draftBaseUrl);
@@ -505,8 +478,6 @@ export function ByokProviderStep({
   const testingKey = draftApiKey;
   const testingBaseUrl = selfHosted ? draftBaseUrl : undefined;
   const isCortiTranscription = !assistant && !selfHosted && selectedProvider === "corti";
-  // A provider counts only while policy still lists it: a policy that loads after mount
-  // can remove the one this card opened on.
   const fieldsReady = selfHosted
     ? Boolean(draftBaseUrl.trim() && draftCustomModel.trim())
     : isCortiTranscription
@@ -573,31 +544,29 @@ export function ByokProviderStep({
       <SetupStageStepper stepId={stepId} />
 
       <div className="mt-3 space-y-3">
-        {selfHostedAllowed && (
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={selfHosted}
-            onClick={toggleSelfHosted}
-            className="flex items-center gap-2 text-xs text-[var(--onboarding-text-primary)]"
-          >
-            {/* Matches the checkbox in LanguageSelectionStep, which was built from
+        <button
+          type="button"
+          role="checkbox"
+          aria-checked={selfHosted}
+          onClick={toggleSelfHosted}
+          className="flex items-center gap-2 text-xs text-[var(--onboarding-text-primary)]"
+        >
+          {/* Matches the checkbox in LanguageSelectionStep, which was built from
                 the spec: the light stroke stays on in both states, the fill is the
                 accent token rather than blue-500, and the tick is hairline. Kept at
                 size-5 because this card is the denser text-xs layout. */}
-            <span
-              className={`flex size-5 shrink-0 items-center justify-center rounded-[5.5px] border border-[var(--onboarding-control-border)] ${
-                selfHosted
-                  ? "bg-[var(--onboarding-accent)] text-[var(--onboarding-accent-foreground)]"
-                  : "bg-[var(--onboarding-surface)]"
-              }`}
-              aria-hidden="true"
-            >
-              {selfHosted && <Check className="size-3.5" strokeWidth={1.17} />}
-            </span>
-            {t("onboarding.rehaul.provider.selfHosted")}
-          </button>
-        )}
+          <span
+            className={`flex size-5 shrink-0 items-center justify-center rounded-[5.5px] border border-[var(--onboarding-control-border)] ${
+              selfHosted
+                ? "bg-[var(--onboarding-accent)] text-[var(--onboarding-accent-foreground)]"
+                : "bg-[var(--onboarding-surface)]"
+            }`}
+            aria-hidden="true"
+          >
+            {selfHosted && <Check className="size-3.5" strokeWidth={1.17} />}
+          </span>
+          {t("onboarding.rehaul.provider.selfHosted")}
+        </button>
 
         {selfHosted ? (
           <>

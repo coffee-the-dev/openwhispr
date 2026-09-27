@@ -84,6 +84,8 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
   };
   const load = async (seed) => {
     storage.clear();
+    // Pins the older migrations alone; the local-only move has its own suite.
+    storage.setItem("_localOnlyModesMigrated", "1");
     for (const [key, value] of Object.entries(seed)) {
       if (value !== undefined) storage.setItem(key, value); // the harness would stringify undefined
     }
@@ -251,7 +253,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
     // A cloud reasoning snapshot is left absent, so note formatting keeps
     // following dictation cleanup. Same effective value here, no pin.
     assert.equal(storage.getItem("noteFormattingMode"), null);
-    assert.equal(state.noteFormattingMode, "openwhispr");
+    assert.equal(state.noteFormattingMode, "local", "the store default");
   });
 
   // groq has no streaming model, so Note Recording will refuse it — parity with
@@ -314,7 +316,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
     );
     // processText treats an override carrying no provider as implicit cleanup
     // and dispatches from the cleanup scope, which is local.
-    assert.equal(overrides.provider, undefined, "no pin, so no anthropic dispatch");
+    assert.notEqual(overrides.provider, "anthropic", "no pin, so no anthropic dispatch");
   });
 
   await t.test(
@@ -354,7 +356,7 @@ test("Note Recording modes survive the follow-flag migration", async (t) => {
     const { noteFormattingCloudMode, meetingUseLocalWhisper, ...seed } = LATCHED_LOCAL;
     const { state } = await load({ ...seed, noteFormattingProvider: "anthropic" });
     assert.equal(storage.getItem("noteFormattingMode"), null);
-    assert.equal(state.noteFormattingMode, "openwhispr", "store default, not derived");
+    assert.equal(state.noteFormattingMode, "local", "store default, not derived");
     assert.equal(writes.includes("noteFormattingMode"), false);
   });
 

@@ -242,7 +242,7 @@ test("every interruption bumps the nonce so a repeat still notifies", async (t) 
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   assert.equal(store.useMeetingRecordingStore.getState().systemAudioInterrupted, null);
   assert.equal(typeof listeners.systemAudioInterrupted, "function");
 
@@ -280,7 +280,7 @@ test("a give-up report carries recovering false and its reason through to the st
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   listeners.systemAudioInterrupted({
     systemAudioStrategy: "native",
     reason: "gone_quiet",
@@ -312,7 +312,7 @@ test("an interruption arriving after stop is ignored without crashing", async (t
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   const lateCallback = listeners.systemAudioInterrupted;
   await store.stopRecording();
 
@@ -332,7 +332,7 @@ test("no interruption state when the session had no system audio", async (t) => 
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   assert.equal(store.useMeetingRecordingStore.getState().micCaptureStatus, "active");
 
   listeners.systemAudioInterrupted({

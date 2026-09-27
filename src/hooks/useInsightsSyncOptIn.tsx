@@ -8,8 +8,6 @@ import {
   requestInsightsConsent,
 } from "../helpers/insightsConsentCoordinator";
 import { getValidatedAuthGeneration } from "../lib/authRequestContext";
-import { canChangeCloudBackupPreference, isCloudBackupAllowed } from "../stores/policyRules";
-import { usePolicyStore } from "../stores/policyStore";
 import { syncService } from "../services/SyncService.js";
 import type { AnalyticsSyncContext } from "../types/electron";
 import { useAuth } from "./useAuth";
@@ -20,10 +18,6 @@ import { useSettings } from "./useSettings";
  * page. Dictations recorded before signing in stay
  * unattributed until the user says otherwise here — signing in never adopts
  * them on its own — so the prompt is the only path that claims them.
- *
- * These counters are user data leaving the device, so they ride on the same
- * managed-workspace permission as cloud backup: a policy that forbids backup
- * forbids the sync, and an already-on toggle stays switchable off.
  *
  * Declining the prompt declines the whole opt-in, exactly like dismissing it:
  * turning sync on while leaving those rows behind would swap the dashboard to
@@ -60,8 +54,9 @@ export function useInsightsSyncOptIn() {
   // narrower question that is left once sync is already on.
   const [promptKind, setPromptKind] = useState<"enable" | "claim" | null>(null);
   const promptAccountIdRef = useRef(userId);
-  const syncAllowedByPolicy = usePolicyStore(isCloudBackupAllowed);
-  const canToggleSync = canChangeCloudBackupPreference(syncAllowedByPolicy, insightsSyncEnabled);
+  // Cloud sync is removed in the next phase; nothing restricts the toggle meanwhile.
+  const syncAllowedByPolicy = true;
+  const canToggleSync = true;
 
   const reportActivationFailure = useCallback(
     (error: unknown) => {
@@ -145,7 +140,6 @@ export function useInsightsSyncOptIn() {
 
   const enableInsightsSync = useCallback(
     async (options: EnableInsightsSyncOptions = {}) => {
-      if (!syncAllowedByPolicy) return false;
       const requestedAccountId = userId;
       const requestedAuthGeneration = getValidatedAuthGeneration();
       if (!requestedAccountId || requestedAuthGeneration == null) return false;
@@ -183,14 +177,7 @@ export function useInsightsSyncOptIn() {
       if (!accepted) return false;
       return prepareInsightsSync(pending > 0, requestedAccountId, requestedAuthGeneration);
     },
-    [
-      insightsSyncEnabled,
-      prepareInsightsSync,
-      refreshCounts,
-      reportActivationFailure,
-      syncAllowedByPolicy,
-      userId,
-    ]
+    [insightsSyncEnabled, prepareInsightsSync, refreshCounts, reportActivationFailure, userId]
   );
 
   const claiming = promptKind === "claim";

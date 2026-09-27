@@ -3,7 +3,7 @@
 // no setInterval and no electronAPI, and not every environment defines a bare
 // `localStorage` global. Stores must survive being imported into such an
 // environment — module-scope wiring that assumes a full browser window broke CI
-// on 2026-08-25 when policyRules briefly pulled enterpriseIdentityStore into the
+// on 2026-08-25 when a store briefly pulled enterpriseIdentityStore into the
 // import graph of harness-based tests ("window.setInterval is not a function").
 
 const test = require("node:test");

@@ -160,8 +160,6 @@ test("a note request through the real ReasoningService survives the dictation de
   });
   const vite = await createRendererServer(t, { cachePrefix: "openwhispr-note-deadline-test-" });
   const reasoningService = (await vite.ssrLoadModule("/services/ReasoningService.ts")).default;
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
-  usePolicyStore.setState({ status: "unmanaged", appVersion: "1.10.1", policy: null });
   const { buildNoteFormattingOverrides } = await vite.ssrLoadModule(
     "/helpers/noteFormattingOverrides.js"
   );

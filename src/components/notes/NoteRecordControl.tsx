@@ -40,7 +40,6 @@ export function RecordingWave({ className }: { className?: string }) {
 interface NoteRecordControlProps {
   isRecording: boolean;
   isProcessing: boolean;
-  disabled?: boolean;
   onStart: () => void;
   onStop: () => void;
 }
@@ -49,7 +48,6 @@ interface NoteRecordControlProps {
 export default function NoteRecordControl({
   isRecording,
   isProcessing,
-  disabled = false,
   onStart,
   onStop,
 }: NoteRecordControlProps) {
@@ -108,15 +106,13 @@ export default function NoteRecordControl({
         <button
           type="button"
           onClick={onStart}
-          disabled={disabled || isProcessing}
+          disabled={isProcessing}
           aria-label={t("notes.editor.transcribe")}
-          title={disabled ? t("common.managedByOrg") : undefined}
           className={cn(
             "flex h-[30px] w-[30px] items-center justify-center rounded-full",
             GRADIENT_CIRCLE,
             "transition-[filter,transform] duration-150 hover:brightness-110 active:scale-95",
             "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/30",
-            disabled && "pointer-events-none opacity-40 saturate-0",
             isProcessing && "pointer-events-none"
           )}
         >

@@ -1,5 +1,5 @@
 const { captureAuthFence } = require("./cloudApiRequest");
-const { createPolicyResponseError } = require("./policyResponseError");
+const { createCloudResponseError } = require("./cloudResponseError");
 
 const ORUKEET_BASE_URL = "https://orukeet.gizmovoice.ai";
 const ORUKEET_SESSION_PATH = "/api/stt/orukeet/session";
@@ -23,13 +23,7 @@ function validateSession(data) {
 
 // Main process only. The account bearer goes to the existing Cloud backend;
 // only its single-use session token goes to the fixed Orukeet endpoint.
-async function connectManagedOrukeet({
-  streaming,
-  getApiUrl,
-  proxyFetch,
-  tokenStore,
-  withPolicyHeaders,
-}) {
+async function connectManagedOrukeet({ streaming, getApiUrl, proxyFetch, tokenStore }) {
   const apiUrl = getApiUrl();
   if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
   const fence = captureAuthFence(tokenStore, tokenStore.getState().generation);
@@ -58,7 +52,7 @@ async function connectManagedOrukeet({
     const response = await fence.awaitBound(() =>
       proxyFetch(`${apiUrl}${ORUKEET_SESSION_PATH}`, {
         method: "POST",
-        headers: withPolicyHeaders({ Authorization: fence.authorization }),
+        headers: { Authorization: fence.authorization },
         useSessionCookies: false,
         redirect: "error",
         cache: "no-store",
@@ -81,7 +75,7 @@ async function connectManagedOrukeet({
           details: { wordsUsed: payload.wordsUsed, limit: payload.limit },
         });
       }
-      throw createPolicyResponseError(
+      throw createCloudResponseError(
         response.status,
         payload,
         `Orukeet session unavailable (${response.status})`

@@ -215,6 +215,85 @@ class DatabaseManager {
     return true;
   }
 
+  // Moves every account-attributed or team-space folder, note, and chat into
+  // the private space with no account, then drops the emptied team spaces. A
+  // live folder whose name is already taken there merges into it when both are
+  // defaults (each account seeded its own "Personal"); otherwise it is renamed
+  // after its old space so no folder or note is lost.
+  _rehomeAccountScopedRowsToLocal() {
+    const privateSpace = this.db
+      .prepare("SELECT id FROM spaces WHERE kind = 'private' ORDER BY id LIMIT 1")
+      .get();
+    if (!privateSpace) return;
+    const privateId = privateSpace.id;
+
+    this.db.transaction(() => {
+      const folders = this.db
+        .prepare(
+          `SELECT folders.id, folders.name, folders.is_default, folders.deleted_at,
+                  spaces.name AS space_name
+           FROM folders LEFT JOIN spaces ON spaces.id = folders.space_id
+           WHERE folders.account_id IS NOT NULL
+              OR folders.space_id IS NULL OR folders.space_id != ?
+           ORDER BY folders.deleted_at IS NOT NULL, folders.is_default DESC, folders.id`
+        )
+        .all(privateId);
+      const findLocalFolder = this.db.prepare(
+        `SELECT id, is_default FROM folders
+         WHERE space_id = ? AND account_id IS NULL AND name = ? AND deleted_at IS NULL AND id != ?`
+      );
+      const rehomeFolder = this.db.prepare(
+        "UPDATE folders SET space_id = ?, account_id = NULL, name = ? WHERE id = ?"
+      );
+
+      for (const folder of folders) {
+        if (folder.deleted_at) {
+          rehomeFolder.run(privateId, folder.name, folder.id);
+          continue;
+        }
+        const existing = findLocalFolder.get(privateId, folder.name, folder.id);
+        if (existing && existing.is_default && folder.is_default) {
+          this.db
+            .prepare("UPDATE notes SET folder_id = ?, space_id = ? WHERE folder_id = ?")
+            .run(existing.id, privateId, folder.id);
+          this.db
+            .prepare(
+              "UPDATE agent_conversations SET folder_id = ?, space_id = ? WHERE folder_id = ?"
+            )
+            .run(existing.id, privateId, folder.id);
+          this.db
+            .prepare("DELETE FROM optimistic_folder_delete_rows WHERE folder_id = ?")
+            .run(folder.id);
+          this.db.prepare("DELETE FROM folders WHERE id = ?").run(folder.id);
+          continue;
+        }
+        let name = folder.name;
+        if (existing) {
+          const base = `${folder.name} (${folder.space_name || "Imported"})`;
+          name = base;
+          for (let n = 2; findLocalFolder.get(privateId, name, folder.id); n++) {
+            name = `${base} ${n}`;
+          }
+        }
+        rehomeFolder.run(privateId, name, folder.id);
+      }
+
+      this.db
+        .prepare(
+          `UPDATE notes SET space_id = ?, account_id = NULL
+           WHERE account_id IS NOT NULL OR space_id IS NULL OR space_id != ?`
+        )
+        .run(privateId, privateId);
+      this.db
+        .prepare(
+          "UPDATE agent_conversations SET space_id = ? WHERE space_id IS NOT NULL AND space_id != ?"
+        )
+        .run(privateId, privateId);
+      this.db.exec("DELETE FROM space_accounts");
+      this.db.prepare("DELETE FROM spaces WHERE kind = 'team'").run();
+    })();
+  }
+
   initDatabase() {
     try {
       const dbFileName =
@@ -1282,6 +1361,14 @@ class DatabaseManager {
         )
       `);
       this._initVectorChangeJournal();
+
+      // One-time re-home (user_version 3): the app always runs in the local
+      // scope, so rows a signed-in account or a team space owned move into the
+      // private space before the account scoping hides them.
+      if (this.db.pragma("user_version", { simple: true }) < 3) {
+        this._rehomeAccountScopedRowsToLocal();
+        this.db.pragma("user_version = 3");
+      }
 
       return true;
     } catch (error) {

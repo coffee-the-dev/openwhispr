@@ -22,8 +22,6 @@ test("invalid completed cleanup keeps raw text across dictation routes", async (
   const service = (await vite.ssrLoadModule("/services/ReasoningService.ts")).default;
   t.after(() => service.destroy());
   const { useSettingsStore } = await vite.ssrLoadModule("/stores/settingsStore.ts");
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
-  usePolicyStore.setState({ status: "unmanaged", policy: null });
   useSettingsStore.setState({
     isSignedIn: true,
     useCleanupModel: true,

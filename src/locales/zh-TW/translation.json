@@ -202,13 +202,8 @@
     "copied": "已複製",
     "done": "完成",
     "skip": "略過",
-    "policyAiProcessingRestricted": "AI 處理已被您的組織限制。",
-    "policyAgentRestricted": "AI 助理的使用已被您的組織限制。",
-    "policyTranscriptionRestricted": "轉錄已被您的組織限制。",
-    "policyUnresolved": "貴組織的設定尚未載入完成。請稍後再試。",
     "managedConfigLoading": "正在檢查您組織的託管設定。請稍候再試。",
-    "managedConfigUnavailable": "託管企業存取無法使用。請重新登入或聯絡管理員。",
-    "managedPolicyConflict": "託管存取已被您工作區的政策封鎖。請聯絡管理員。"
+    "managedConfigUnavailable": "託管企業存取無法使用。請重新登入或聯絡管理員。"
   },
   "onboarding": {
     "rehaul": {
@@ -319,10 +314,6 @@
         "titleLineOne": "選擇你的",
         "titleLineTwo": "OpenWhispr 設定",
         "description": "選擇最符合你工作方式的方案。",
-        "unavailable": {
-          "title": "沒有可用的設定選項",
-          "description": "你的工作區政策不允許完整設定轉錄與 AI。請聯絡管理員。"
-        },
         "cloud": {
           "title": "OpenWhispr Cloud",
           "description": "每週獲得 2,000 個免費字數。你的設定會在各裝置間保持同步。",
@@ -567,17 +558,6 @@
         "step2": "開啟 Corti 控制台並建立 API 憑證",
         "step3": "在下方貼上 Client ID 和 Secret"
       }
-    },
-    "requiredModels": {
-      "title": "安裝必要的模型",
-      "description": "{{organization}}要求在此裝置上安裝這些模型後才能開始聽寫。",
-      "genericOrganization": "您的組織",
-      "installed": "已安裝",
-      "queued": "排隊中",
-      "failed": {
-        "title": "有一項下載未完成",
-        "description": "請檢查網路連線與磁碟剩餘空間，然後重試。如果仍然失敗，請聯絡您的管理員。"
-      }
     }
   },
   "streaming": {
@@ -594,10 +574,6 @@
     }
   },
   "controlPanel": {
-    "updateRequiredByOrg": {
-      "title": "需要更新",
-      "description": "您的組織要求使用 OpenWhispr {{version}} 或更新版本。請更新應用程式。"
-    },
     "update": {
       "readyTitle": "更新已準備就緒",
       "readyDescription": "點擊「安裝更新」以重新啟動並套用最新版本。",
@@ -699,11 +675,6 @@
       "dismissButton": "暫時不要"
     },
     "backToNotes": "返回筆記",
-    "requiredModelsByOrg": {
-      "title": "缺少必要的模型",
-      "description": "您的組織要求在此裝置上安裝這些模型：{{models}}。",
-      "download": "下載"
-    },
     "cloudNudge": {
       "title": "你已登入",
       "description": "聽寫仍在使用你自己的設定。你可以隨時切換至 OpenWhispr Cloud。",
@@ -1454,7 +1425,6 @@
     "defaultTestInputTranslate": "今天天氣真好，要不要出去走走？"
   },
   "settingsModal": {
-    "managedByOrg": "部分設定由您的組織管理。",
     "groups": {
       "account": "帳戶",
       "app": "應用程式",
@@ -1783,9 +1753,7 @@
         "openwhisprDesc": "準確可靠，無需設定。",
         "providersDesc": "使用你自己的 API Key。",
         "localDesc": "裝置端模型，完全私密。",
-        "selfHostedDesc": "你的伺服器，在你的網路上。",
-        "enterprise": "企業級",
-        "enterpriseDesc": "使用你組織的雲端帳號（AWS、Azure、GCP）。"
+        "selfHostedDesc": "你的伺服器，在你的網路上。"
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "準確可靠，無需設定。",
@@ -2203,9 +2171,7 @@
         "openwhisprDesc": "準確可靠，無需設定。",
         "providersDesc": "使用你自己的 API Key。",
         "localDesc": "裝置端模型，完全私密。",
-        "selfHostedDesc": "你的伺服器，在你的網路上。",
-        "enterprise": "企業雲端",
-        "enterpriseDesc": "音訊會傳送到貴組織自己的雲端。"
+        "selfHostedDesc": "你的伺服器，在你的網路上。"
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "準確可靠，無需設定。",
@@ -2291,8 +2257,7 @@
             "info": "將每個片段延伸到下一個片段的音訊量，避免拼接時出現突兀截斷。"
           }
         }
-      },
-      "meetingEnterpriseOnly": "貴組織僅允許企業雲端轉錄，尚不支援會議錄音。"
+      }
     },
     "intelligence": {
       "gpuDevice": {
@@ -3094,7 +3059,6 @@
       "title": "會議筆記",
       "description": "轉錄與結構化摘要",
       "back": "返回",
-      "restrictedByOrg": "會議轉錄已被您的組織限制。",
       "unsupportedSelfHosted": "筆記錄音尚不支援自架端點。請開啟設定，選擇本機或支援串流的服務商。",
       "unsupportedProvider": "筆記錄音無法使用 {{provider}} 進行即時轉錄。請開啟設定，選擇本機或支援串流的服務商。",
       "noProviderSelected": "尚未為筆記錄音選擇服務商。請開啟設定，選擇本機或支援串流的服務商。",
@@ -3638,9 +3602,7 @@
       "local": "本機",
       "localDesc": "在你的裝置上執行本機 LLM，完全私密。",
       "selfHosted": "自架主機",
-      "selfHostedDesc": "指向自架的 OpenAI 相容端點。",
-      "enterprise": "企業級",
-      "enterpriseDesc": "使用 AWS Bedrock、Azure OpenAI 或 Google Vertex。"
+      "selfHostedDesc": "指向自架的 OpenAI 相容端點。"
     },
     "prompt": {
       "title": "助理提示詞",
@@ -3660,9 +3622,7 @@
         "openwhisprDesc": "準確可靠，無需設定。",
         "providersDesc": "使用自己的 API 金鑰。",
         "localDesc": "裝置端模型，完全私密。",
-        "selfHostedDesc": "你自己網路上的伺服器。",
-        "enterprise": "企業級",
-        "enterpriseDesc": "使用你組織的雲端帳號（AWS、Azure、GCP）。"
+        "selfHostedDesc": "你自己網路上的伺服器。"
       }
     },
     "chat": {

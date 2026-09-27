@@ -91,17 +91,6 @@ test("analytics uploads depend on Sync consent, not leaderboard participation", 
         export const subscribeIsSubscribed = () => () => {};
       `,
       "/lib/noteConflictRegistry": "export const readNoteConflictIds = () => [];",
-      "/stores/policyRules": `
-        export const cloudBackupResumed = () => false;
-        export const effectiveLocalHistoryEnabled = (_state, enabled) => enabled;
-        export const isCloudBackupAllowed = () => true;
-      `,
-      "/stores/policyStore": `
-        export const usePolicyStore = {
-          getState: () => ({}),
-          subscribe: () => () => {}
-        };
-      `,
     },
   });
   const { SyncService } = await vite.ssrLoadModule("/services/SyncService.ts");

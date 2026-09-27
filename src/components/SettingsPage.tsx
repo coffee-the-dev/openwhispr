@@ -123,27 +123,10 @@ import {
 } from "../stores/noteStore.js";
 import { syncService } from "../services/SyncService.js";
 import { formatBytes } from "../utils/formatBytes";
-import {
-  clearMissingLocalModelSelections,
-  TRANSCRIPTION_ENTERPRISE_POLICY_PROVIDER_IDS,
-  TRANSCRIPTION_POLICY_PROVIDER_IDS,
-  useSettingsStore,
-} from "../stores/settingsStore";
+import { clearMissingLocalModelSelections, useSettingsStore } from "../stores/settingsStore";
 import { useWorkspaceStore } from "../stores/workspaceStore";
 import { highestPlan } from "../lib/usageStore";
 import { decideProPlanCardCta } from "../lib/upsell";
-import {
-  canChangeCloudBackupPreference,
-  effectiveAudioRetentionDays,
-  effectiveLocalHistoryEnabled,
-  isAgentAllowed,
-  isCloudBackupAllowed,
-  isEnterpriseTranscriptionOfferable,
-  lockedLocalHistoryValue,
-  maxAudioRetentionDays,
-} from "../stores/policyRules";
-import { usePolicyModeOptions, usePolicySnapshot } from "../hooks/usePolicy";
-import { usePolicyStore } from "../stores/policyStore";
 import { stopRecording } from "../stores/meetingRecordingStore";
 import { requestSignIn } from "../utils/requestSignIn";
 import { canManageSystemAudioInApp } from "../utils/systemAudioAccess";
@@ -553,7 +536,6 @@ function TranscriptionSection({
   toast,
 }: TranscriptionSectionProps) {
   const { t } = useTranslation();
-  const policySnapshot = usePolicySnapshot();
   const enterpriseTranscriptionSetupMode = useSettingsStore(
     (s) => s.enterpriseTranscriptionSetupMode
   );
@@ -562,58 +544,36 @@ function TranscriptionSection({
   );
   const managed = useManagedScopeResolution("transcription", enterpriseTranscriptionSetupMode);
   const managedAvailable = useManagedScopeResolution("transcription", "managed");
-  const {
-    modes: transcriptionModes,
-    effectiveMode: effectiveTranscriptionMode,
-    isModeAllowed,
-  } = usePolicyModeOptions<InferenceModeOption>(
-    [
-      {
-        id: "openwhispr",
-        label: t("settingsPage.transcription.modes.openwhispr"),
-        description: t("settingsPage.transcription.modes.openwhisprDesc"),
-        icon: <Cloud className="w-4 h-4" />,
-        disabled: !isSignedIn,
-        badge: !isSignedIn ? t("common.freeAccountRequired") : undefined,
-      },
-      {
-        id: "providers",
-        label: t("settingsPage.transcription.modes.providers"),
-        description: t("settingsPage.transcription.modes.providersDesc"),
-        icon: <Key className="w-4 h-4" />,
-      },
-      {
-        id: "local",
-        label: t("settingsPage.transcription.modes.local"),
-        description: t("settingsPage.transcription.modes.localDesc"),
-        icon: <Cpu className="w-4 h-4" />,
-      },
-      {
-        id: "self-hosted",
-        label: t("settingsPage.transcription.modes.selfHosted"),
-        description: t("settingsPage.transcription.modes.selfHostedDesc"),
-        icon: <Network className="w-4 h-4" />,
-      },
-      ...(isEnterpriseTranscriptionOfferable(policySnapshot)
-        ? [
-            {
-              id: "enterprise" as const,
-              label: t("settingsPage.transcription.modes.enterprise"),
-              description: t("settingsPage.transcription.modes.enterpriseDesc"),
-              icon: <ShieldCheck className="w-4 h-4" />,
-            },
-          ]
-        : []),
-    ],
-    "transcription",
-    transcriptionMode,
+  const transcriptionModes: InferenceModeOption[] = [
     {
-      byokProviders: TRANSCRIPTION_POLICY_PROVIDER_IDS,
-      enterpriseProviders: TRANSCRIPTION_ENTERPRISE_POLICY_PROVIDER_IDS,
-    }
-  );
+      id: "openwhispr",
+      label: t("settingsPage.transcription.modes.openwhispr"),
+      description: t("settingsPage.transcription.modes.openwhisprDesc"),
+      icon: <Cloud className="w-4 h-4" />,
+      disabled: !isSignedIn,
+      badge: !isSignedIn ? t("common.freeAccountRequired") : undefined,
+    },
+    {
+      id: "providers",
+      label: t("settingsPage.transcription.modes.providers"),
+      description: t("settingsPage.transcription.modes.providersDesc"),
+      icon: <Key className="w-4 h-4" />,
+    },
+    {
+      id: "local",
+      label: t("settingsPage.transcription.modes.local"),
+      description: t("settingsPage.transcription.modes.localDesc"),
+      icon: <Cpu className="w-4 h-4" />,
+    },
+    {
+      id: "self-hosted",
+      label: t("settingsPage.transcription.modes.selfHosted"),
+      description: t("settingsPage.transcription.modes.selfHostedDesc"),
+      icon: <Network className="w-4 h-4" />,
+    },
+  ];
+  const effectiveTranscriptionMode = transcriptionMode;
   const handleTranscriptionModeSelect = (mode: InferenceMode) => {
-    if (!isModeAllowed(mode)) return;
     if (mode === "openwhispr" && !isSignedIn) {
       requestSignIn();
       return;
@@ -915,7 +875,6 @@ const LLM_TABS: LlmTab[] = [
   "noteFormatting",
   "chatIntelligence",
 ];
-const AGENT_LLM_TABS = new Set<LlmTab>(["dictationAgent", "chatIntelligence"]);
 
 function useSubTab<T extends string>(storageKey: string, options: readonly T[], initial?: T) {
   const [tab, setTab] = useLocalStorage<T>(storageKey, initial ?? options[0]);
@@ -1054,11 +1013,7 @@ function LlmsTabs({
   renderChatIntelligence: () => React.ReactNode;
 }) {
   const { t } = useTranslation();
-  const agentAllowed = usePolicyStore(isAgentAllowed);
-  const visibleTabIds = agentAllowed
-    ? LLM_TABS
-    : LLM_TABS.filter((tabId) => !AGENT_LLM_TABS.has(tabId));
-  const [tab, setTab] = useSubTab<LlmTab>("settings.llmsTab", visibleTabIds, initialTab);
+  const [tab, setTab] = useSubTab<LlmTab>("settings.llmsTab", LLM_TABS, initialTab);
 
   const subTabs = [
     { id: "dictationCleanup", name: t("settingsPage.llms.tabs.dictationCleanup") },
@@ -1066,7 +1021,7 @@ function LlmsTabs({
     { id: "dictationTranslation", name: t("settingsPage.llms.tabs.dictationTranslation") },
     { id: "noteFormatting", name: t("settingsPage.llms.tabs.noteFormatting") },
     { id: "chatIntelligence", name: t("settingsPage.llms.tabs.chatIntelligence") },
-  ].filter((item) => visibleTabIds.includes(item.id as LlmTab));
+  ];
 
   return (
     <div className="space-y-4">
@@ -1087,14 +1042,10 @@ function LlmsTabs({
         }}
       />
       <TabPanel active={tab === "dictationCleanup"}>{renderDictationCleanup()}</TabPanel>
-      {agentAllowed && (
-        <TabPanel active={tab === "dictationAgent"}>{renderDictationAgent()}</TabPanel>
-      )}
+      <TabPanel active={tab === "dictationAgent"}>{renderDictationAgent()}</TabPanel>
       <TabPanel active={tab === "dictationTranslation"}>{renderDictationTranslation()}</TabPanel>
       <TabPanel active={tab === "noteFormatting"}>{renderNoteFormatting()}</TabPanel>
-      {agentAllowed && (
-        <TabPanel active={tab === "chatIntelligence"}>{renderChatIntelligence()}</TabPanel>
-      )}
+      <TabPanel active={tab === "chatIntelligence"}>{renderChatIntelligence()}</TabPanel>
     </div>
   );
 }
@@ -1295,20 +1246,6 @@ export default function SettingsPage({
   const setVoiceAgentKey = useSettingsStore((s) => s.setVoiceAgentKey);
   const translationKey = useSettingsStore((s) => s.translationKey);
   const setTranslationKey = useSettingsStore((s) => s.setTranslationKey);
-
-  const settingsPolicyState = usePolicySnapshot();
-  const agentAllowedByPolicy = isAgentAllowed(settingsPolicyState);
-  const historyLockedByPolicy = lockedLocalHistoryValue(settingsPolicyState) !== null;
-  const effectiveDataRetentionEnabled = effectiveLocalHistoryEnabled(
-    settingsPolicyState,
-    dataRetentionEnabled
-  );
-  const cloudBackupPolicyAllowed = isCloudBackupAllowed(settingsPolicyState);
-  const audioRetentionCap = maxAudioRetentionDays(settingsPolicyState);
-  const enforcedAudioRetentionDays = effectiveAudioRetentionDays(
-    settingsPolicyState,
-    audioRetentionDays
-  );
 
   const { t, i18n } = useTranslation();
   const { toast } = useToast();
@@ -1833,7 +1770,7 @@ export default function SettingsPage({
       try {
         if (enabled) {
           if (
-            !effectiveDataRetentionEnabled ||
+            !dataRetentionEnabled ||
             !insightsSyncAllowedByPolicy ||
             (!insightsSyncEnabled && !(await enableInsightsSync({ confirmWhenEmpty: true })))
           )
@@ -1855,7 +1792,7 @@ export default function SettingsPage({
       }
     },
     [
-      effectiveDataRetentionEnabled,
+      dataRetentionEnabled,
       enableInsightsSync,
       insightsSyncAllowedByPolicy,
       insightsSyncEnabled,
@@ -4054,26 +3991,24 @@ EOF`,
             </div>
 
             {/* Voice Agent Hotkey */}
-            {agentAllowedByPolicy && (
-              <div>
-                <SectionHeader
-                  title={t("settingsPage.general.voiceAgentHotkey.title")}
-                  description={t("settingsPage.general.voiceAgentHotkey.description")}
-                />
-                <SettingsPanel>
-                  <SettingsPanelRow>
-                    <HotkeyListInput
-                      value={voiceAgentKey}
-                      onChange={(list) => commitAgentHotkey(setVoiceAgentKey, list)}
-                      onClear={() => commitAgentHotkey(setVoiceAgentKey, "")}
-                      validate={validateVoiceAgentHotkey}
-                      disabled={isAgentHotkeyCommitting}
-                      maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
-                    />
-                  </SettingsPanelRow>
-                </SettingsPanel>
-              </div>
-            )}
+            <div>
+              <SectionHeader
+                title={t("settingsPage.general.voiceAgentHotkey.title")}
+                description={t("settingsPage.general.voiceAgentHotkey.description")}
+              />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <HotkeyListInput
+                    value={voiceAgentKey}
+                    onChange={(list) => commitAgentHotkey(setVoiceAgentKey, list)}
+                    onClear={() => commitAgentHotkey(setVoiceAgentKey, "")}
+                    validate={validateVoiceAgentHotkey}
+                    disabled={isAgentHotkeyCommitting}
+                    maxHotkeys={isUsingNativeShortcut ? 1 : undefined}
+                  />
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
 
             {/* Translation Hotkey */}
             <div>
@@ -4179,20 +4114,10 @@ EOF`,
                     <SettingsPanelRow>
                       <SettingsRow
                         label={t("settingsPage.privacy.cloudBackup")}
-                        description={
-                          cloudBackupPolicyAllowed
-                            ? t("settingsPage.privacy.cloudBackupDescription")
-                            : t("common.managedByOrg")
-                        }
+                        description={t("settingsPage.privacy.cloudBackupDescription")}
                       >
                         <Toggle
                           checked={cloudBackupEnabled}
-                          disabled={
-                            !canChangeCloudBackupPreference(
-                              cloudBackupPolicyAllowed,
-                              cloudBackupEnabled
-                            )
-                          }
                           onChange={(v) => {
                             setCloudBackupEnabled(v);
                             if (v) {
@@ -4273,7 +4198,7 @@ EOF`,
                         ? t("settingsPage.privacy.insightsSyncRequiresAccount")
                         : !insightsSyncAllowedByPolicy
                           ? t("common.managedByOrg")
-                          : effectiveDataRetentionEnabled
+                          : dataRetentionEnabled
                             ? t("settingsPage.privacy.insightsSyncDescription")
                             : t("settingsPage.privacy.insightsSyncRequiresHistory")
                     }
@@ -4289,7 +4214,7 @@ EOF`,
                       disabled={
                         !isSignedIn ||
                         !canToggleInsightsSync ||
-                        (!effectiveDataRetentionEnabled && !insightsSyncEnabled)
+                        (!dataRetentionEnabled && !insightsSyncEnabled)
                       }
                       onChange={(enabled) => {
                         if (enabled) void enableInsightsSync();
@@ -4310,7 +4235,7 @@ EOF`,
                             ? t("insights.leaderboard.leavePending")
                             : !insightsSyncAllowedByPolicy
                               ? t("common.managedByOrg")
-                              : !effectiveDataRetentionEnabled
+                              : !dataRetentionEnabled
                                 ? t("settingsPage.privacy.leaderboardRequiresHistory")
                                 : t("settingsPage.privacy.leaderboardDescription")
                     }
@@ -4324,7 +4249,7 @@ EOF`,
                         leaderboardParticipationUpdating ||
                         leaderboardParticipationError === "read" ||
                         (!leaderboardParticipationEnabled &&
-                          (!effectiveDataRetentionEnabled ||
+                          (!dataRetentionEnabled ||
                             !insightsSyncAllowedByPolicy ||
                             (!insightsSyncEnabled && !canToggleInsightsSync)))
                       }
@@ -4357,29 +4282,23 @@ EOF`,
                     description={t("settingsPage.privacy.audioRetentionDescription")}
                   >
                     <select
-                      value={enforcedAudioRetentionDays}
+                      value={audioRetentionDays}
                       onChange={(e) => {
-                        const days = parseInt(e.target.value, 10);
-                        if (audioRetentionCap !== null && days > audioRetentionCap) return;
-                        setAudioRetentionDays(days);
+                        setAudioRetentionDays(parseInt(e.target.value, 10));
                       }}
                       className={RETENTION_SELECT_CLASS}
                     >
                       <option value={0}>{t("settingsPage.privacy.audioRetentionDisabled")}</option>
-                      {enforcedAudioRetentionDays > 0 &&
-                        !RETENTION_DAY_OPTIONS.includes(enforcedAudioRetentionDays) && (
-                          <option value={enforcedAudioRetentionDays}>
+                      {audioRetentionDays > 0 &&
+                        !RETENTION_DAY_OPTIONS.includes(audioRetentionDays) && (
+                          <option value={audioRetentionDays}>
                             {t("settingsPage.privacy.retentionDays", {
-                              count: enforcedAudioRetentionDays,
+                              count: audioRetentionDays,
                             })}
                           </option>
                         )}
                       {RETENTION_DAY_OPTIONS.map((days) => (
-                        <option
-                          key={days}
-                          value={days}
-                          disabled={audioRetentionCap !== null && days > audioRetentionCap}
-                        >
+                        <option key={days} value={days}>
                           {t("settingsPage.privacy.retentionDays", { count: days })}
                         </option>
                       ))}
@@ -4418,17 +4337,9 @@ EOF`,
                 <SettingsPanelRow>
                   <SettingsRow
                     label={t("settingsPage.privacy.dataRetention")}
-                    description={
-                      historyLockedByPolicy
-                        ? t("common.managedByOrg")
-                        : t("settingsPage.privacy.dataRetentionDescription")
-                    }
+                    description={t("settingsPage.privacy.dataRetentionDescription")}
                   >
-                    <Toggle
-                      checked={effectiveDataRetentionEnabled}
-                      disabled={historyLockedByPolicy}
-                      onChange={setDataRetentionEnabled}
-                    />
+                    <Toggle checked={dataRetentionEnabled} onChange={setDataRetentionEnabled} />
                   </SettingsRow>
                 </SettingsPanelRow>
                 <SettingsPanelRow>
@@ -4438,7 +4349,7 @@ EOF`,
                   >
                     <select
                       value={transcriptRetentionDays}
-                      disabled={!effectiveDataRetentionEnabled}
+                      disabled={!dataRetentionEnabled}
                       onChange={(e) => setTranscriptRetentionDays(parseInt(e.target.value, 10))}
                       className={RETENTION_SELECT_CLASS}
                     >
@@ -4460,7 +4371,7 @@ EOF`,
                   >
                     <Toggle
                       checked={saveDiscardedTranscriptions}
-                      disabled={!effectiveDataRetentionEnabled || enforcedAudioRetentionDays === 0}
+                      disabled={!dataRetentionEnabled || audioRetentionDays === 0}
                       onChange={setSaveDiscardedTranscriptions}
                     />
                   </SettingsRow>

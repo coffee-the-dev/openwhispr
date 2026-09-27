@@ -18,7 +18,6 @@ import { DETAILED_NOTES_KEY } from "../../helpers/builtinActions";
 import {
   useSettingsStore,
   selectIsCloudNoteFormattingMode,
-  selectPolicyEffectiveSettings,
   selectResolvedNoteFormatting,
 } from "../../stores/settingsStore";
 import { cn } from "../lib/utils";
@@ -65,12 +64,10 @@ import { useNotesOnboarding } from "../../hooks/useNotesOnboarding";
 import { startRecordingForNote, useCreateNote } from "../../hooks/useCreateNote";
 import { useTeamSpacesCapability } from "../../hooks/useTeamSpacesCapability";
 import { useAuth } from "../../hooks/useAuth";
-import { usePolicySnapshot, useTranscriptionContextAllowed } from "../../hooks/usePolicy";
 import NotesOnboarding from "./NotesOnboarding";
 import { defaultFolderDisplayName, notesEmptyTitleKey } from "./shared";
 import { isRegenerableNoteTitle } from "../../helpers/regenerableNoteTitle";
 import { isMeetingAutoEndEligible } from "../../helpers/meetingRecordingSession";
-import { handleMeetingRecordingRequest } from "../../helpers/meetingRecordingRequest";
 import { markIntroSeen, NOTES_STRUCTURE_INTRO, shouldShowIntro } from "../../lib/versionedIntro";
 import {
   applyNoteDraftMutation,
@@ -219,10 +216,9 @@ export default function PersonalNotesView({
     [commitDraft, persistPendingWrites, takePendingSnapshots]
   );
   const { toast } = useToast();
-  const policyState = usePolicySnapshot();
   const noteFormatting = useSettingsStore(
     useShallow((settings) => {
-      const effectiveSettings = selectPolicyEffectiveSettings(settings, policyState);
+      const effectiveSettings = settings;
       return {
         isCloudMode: selectIsCloudNoteFormattingMode(effectiveSettings),
         modelId: selectResolvedNoteFormatting(effectiveSettings).model,
@@ -246,7 +242,6 @@ export default function PersonalNotesView({
   const sessionDiarizationEnabled = useMeetingRecordingStore((s) => s.sessionDiarizationEnabled);
   const sessionExpectedCount = useMeetingRecordingStore((s) => s.sessionExpectedCount);
   const userTouchedStepper = useMeetingRecordingStore((s) => s.userTouchedStepper);
-  const meetingRecordingAllowed = useTranscriptionContextAllowed("meeting");
   const actions = useActions();
 
   const spaces = useSpaces();
@@ -617,32 +612,26 @@ export default function PersonalNotesView({
     if (!meetingRecordingRequest || activeNoteId !== meetingRecordingRequest.noteId) return;
     const note = activeNote?.id === meetingRecordingRequest.noteId ? activeNote : null;
     const seedSegments = note?.transcript ? parseTranscriptSegments(note.transcript) : [];
-    void handleMeetingRecordingRequest({
-      args: {
-        noteId: meetingRecordingRequest.noteId,
-        noteTitle: note?.title ?? null,
-        folderId: note?.folder_id ?? meetingRecordingRequest.folderId ?? null,
-        seedSegments,
-        diarizationEnabled:
-          note?.diarization_enabled == null ? null : note.diarization_enabled === 1,
-        expectedCount: resolveExpectedSpeakerCount(note),
-        expectedCountIsExplicit: isExplicitSpeakerCount(note?.expected_speaker_count),
-        // Requests come from meeting detection, so a note that hasn't loaded
-        // yet is still a meeting note.
-        autoEndEligible: note ? isMeetingAutoEndEligible(note) : true,
-      },
-      startRecording: storeStartRecording,
-      restoreFromMeetingMode: async () => {
-        await window.electronAPI?.restoreFromMeetingMode?.();
-      },
-      onHandled: () => onMeetingRecordingRequestHandled?.(),
-    }).catch((error) => {
-      logger.warn(
-        "Failed to handle automatic meeting recording request",
-        { error: (error as Error).message },
-        "meeting"
-      );
-    });
+    void storeStartRecording({
+      noteId: meetingRecordingRequest.noteId,
+      noteTitle: note?.title ?? null,
+      folderId: note?.folder_id ?? meetingRecordingRequest.folderId ?? null,
+      seedSegments,
+      diarizationEnabled: note?.diarization_enabled == null ? null : note.diarization_enabled === 1,
+      expectedCount: resolveExpectedSpeakerCount(note),
+      expectedCountIsExplicit: isExplicitSpeakerCount(note?.expected_speaker_count),
+      // Requests come from meeting detection, so a note that hasn't loaded
+      // yet is still a meeting note.
+      autoEndEligible: note ? isMeetingAutoEndEligible(note) : true,
+    })
+      .catch((error) => {
+        logger.warn(
+          "Failed to handle automatic meeting recording request",
+          { error: (error as Error).message },
+          "meeting"
+        );
+      })
+      .finally(() => onMeetingRecordingRequestHandled?.());
   }, [meetingRecordingRequest, activeNoteId, activeNote, onMeetingRecordingRequestHandled]);
 
   // Final and periodic transcript persistence live in MeetingRecordingMount /
@@ -773,7 +762,6 @@ export default function PersonalNotesView({
               isSaving={isSaving}
               isRecording={isActiveNoteRecording}
               isProcessing={false}
-              recordingAllowed={meetingRecordingAllowed}
               onStartRecording={startRecording}
               onStopRecording={stopRecording}
               onExportNote={handleExportNote}

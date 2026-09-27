@@ -14,14 +14,6 @@ import type {
   SelfHostedType,
 } from "../types/electron";
 import type { Snippet } from "../utils/snippets";
-import {
-  effectiveAudioRetentionDays,
-  effectiveLocalHistoryEnabled,
-  isLocalHistoryPolicyResolved,
-  isPolicySettled,
-} from "../stores/policyRules";
-import { usePolicyStore } from "../stores/policyStore";
-import { usePolicySnapshot } from "./usePolicy";
 
 export interface TranscriptionSettings {
   uiLanguage: string;
@@ -196,31 +188,17 @@ function useSettingsInternal() {
   }, []);
 
   // Retention periods are enforced by the main process cleanup sweep
+  // The history switch is sent alongside the periods because the main process
+  // reconstructs Insights history from stored transcripts, and that must answer
+  // to the same switch.
   const { audioRetentionDays, transcriptRetentionDays, dataRetentionEnabled } = store;
-  const enforcedAudioRetentionDays = usePolicyStore((policyState) =>
-    effectiveAudioRetentionDays(policyState, audioRetentionDays)
-  );
-  // Sent alongside the periods because the main process reconstructs Insights
-  // history from stored transcripts, and that must answer to the same switch.
-  const enforcedDataRetentionEnabled = usePolicyStore((policyState) =>
-    effectiveLocalHistoryEnabled(policyState, dataRetentionEnabled)
-  );
-  // Reported alongside the value because history reconstruction reads that
-  // switch as consent, and until the policy settles it is only a default.
-  const localHistoryPolicyResolved = usePolicyStore(isLocalHistoryPolicyResolved);
   useEffect(() => {
     window.electronAPI?.syncRetentionSettings?.({
-      audioRetentionDays: enforcedAudioRetentionDays,
+      audioRetentionDays,
       transcriptRetentionDays,
-      dataRetentionEnabled: enforcedDataRetentionEnabled,
-      localHistoryPolicyResolved,
+      dataRetentionEnabled,
     });
-  }, [
-    enforcedAudioRetentionDays,
-    transcriptRetentionDays,
-    enforcedDataRetentionEnabled,
-    localHistoryPolicyResolved,
-  ]);
+  }, [audioRetentionDays, transcriptRetentionDays, dataRetentionEnabled]);
 
   // Sync startup pre-warming preferences to main process
   const {
@@ -233,21 +211,7 @@ function useSettingsInternal() {
   } = store;
   // Every window runs this sync, and the main process stops the shared
   // llama-server from it, so it must see every scope's resolved local model.
-  const policySnapshot = usePolicySnapshot();
-  const localServerPrefs = useSettingsStore(
-    useShallow((state) => selectLocalServerPrefs(state, policySnapshot))
-  );
-  const policySettled = isPolicySettled(policySnapshot);
-  // A sign-out before the policy fetch starts leaves the policy idle, so only
-  // the cleared account scope says this window's deferred sync can now apply.
-  const [signOuts, setSignOuts] = useState(0);
-  useEffect(
-    () =>
-      window.electronAPI?.onActiveAccountScopeChanged?.((scope) => {
-        if (!scope) setSignOuts((count) => count + 1);
-      }),
-    []
-  );
+  const localServerPrefs = useSettingsStore(useShallow(selectLocalServerPrefs));
 
   useEffect(() => {
     if (typeof window === "undefined" || !window.electronAPI?.syncStartupPreferences) return;
@@ -265,7 +229,6 @@ function useSettingsInternal() {
         model: model || undefined,
         language: preferredLanguage || undefined,
         ...localServerPrefs,
-        policySettled,
       })
       .catch((err) =>
         logger.warn(
@@ -282,8 +245,6 @@ function useSettingsInternal() {
     cohereModel,
     preferredLanguage,
     localServerPrefs,
-    policySettled,
-    signOuts,
   ]);
 
   return {

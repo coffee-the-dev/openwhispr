@@ -21,7 +21,6 @@ interface ToolRegistrySettings {
   cloudBackupEnabled: boolean;
   /** Pins search_notes to a container (overview chat); the LLM cannot widen it. */
   searchScope?: ContainerScope;
-  webSearchEnabled: boolean;
   /** Live dictionary and snippet access; enables the vocabulary tools. */
   vocabulary?: DictionaryActions & SnippetActions;
 }
@@ -44,7 +43,7 @@ export function createToolRegistry(settings: ToolRegistrySettings): ToolRegistry
     registry.register(createUpdateSnippetsTool(settings.vocabulary));
   }
 
-  if (settings.isSignedIn && settings.webSearchEnabled) {
+  if (settings.isSignedIn) {
     registry.register(webSearchTool);
   }
 

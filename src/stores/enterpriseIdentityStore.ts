@@ -14,8 +14,6 @@ import {
   resolveManagedEnterpriseScope,
   managedScopesForConfig,
 } from "../helpers/enterpriseManagedConfig.mjs";
-import { isLlmSelectionAllowed, isTranscriptionSelectionAllowed } from "./policyRules";
-import { usePolicyStore } from "./policyStore";
 
 interface EnterpriseIdentityState {
   accountId: string | null;
@@ -206,8 +204,7 @@ function refreshCurrentManagedIdentity(): void {
 
 // Bound on first refresh() rather than at module load: the listeners no-op
 // until an identity is resolved, and test harnesses import this store with
-// partial window stubs that lack setInterval (same pattern as
-// ensurePolicyLifecycleListeners in policyStore).
+// partial window stubs that lack setInterval.
 function ensureLifecycleListeners(): void {
   if (lifecycleListenersReady || typeof window === "undefined") return;
   lifecycleListenersReady = true;
@@ -262,17 +259,6 @@ const MANAGED_SCOPE_ALIASES: Partial<Record<ManagedEnterpriseScope, ManagedEnter
   dictationAgentVision: "dictationAgent",
 };
 
-function isManagedSelectionAllowedByPolicy(
-  scope: ManagedEnterpriseScope,
-  provider: string
-): boolean {
-  const policy = usePolicyStore.getState();
-  const selection = { mode: "enterprise" as const, provider };
-  return scope === "transcription"
-    ? isTranscriptionSelectionAllowed(policy, selection)
-    : isLlmSelectionAllowed(policy, selection);
-}
-
 function resolveScope(
   config: ManagedEnterpriseConfig | null,
   requestedScope: ManagedEnterpriseScope,
@@ -296,32 +282,11 @@ function resolveScope(
           messageKey: "common.managedConfigUnavailable",
         };
   }
-  const resolution = resolveManagedEnterpriseScope(
+  return resolveManagedEnterpriseScope(
     config,
     scope,
     setupMode
   ) as ManagedEnterpriseScopeResolution;
-  if (
-    resolution.kind === "managed" &&
-    !isManagedSelectionAllowedByPolicy(scope, resolution.provider)
-  ) {
-    const required = resolution.mode === "managed_required" || !resolution.allowManualSetup;
-    logger.warn("Managed enterprise provider is blocked by workspace policy", {
-      provider: resolution.provider,
-      scope,
-      required,
-    });
-    return required
-      ? {
-          kind: "error",
-          code: "PROVIDER_POLICY_CONFLICT",
-          message:
-            "Managed access is blocked by your workspace policy. Contact your IT administrator.",
-          messageKey: "common.managedPolicyConflict",
-        }
-      : { kind: "manual" };
-  }
-  return resolution;
 }
 
 /**

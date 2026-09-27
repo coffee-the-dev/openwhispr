@@ -61,36 +61,12 @@ const azureSttRequired = {
     },
   ],
 };
-const policy = {
-  version: 1,
-  transcription: {
-    allowedModes: ["enterprise", "local"],
-    allowedByokProviders: [],
-    allowedEnterpriseProviders: ["azure"],
-  },
-  llm: {
-    allowedModes: ["enterprise", "local"],
-    allowedByokProviders: [],
-    allowedEnterpriseProviders: ["bedrock"],
-  },
-  features: { agentEnabled: true, webSearchEnabled: false },
-  sharing: { externalLinkSharing: "disabled" },
-  dataRetention: {
-    audioRetentionMaxDays: null,
-    localHistoryMode: "user_choice",
-    cloudBackupAllowed: false,
-  },
-  minAppVersion: null,
-};
-
 async function boot(t, { electronAPI = {}, initialStorage = {} } = {}) {
   installBrowserGlobals(t, { initialStorage, window: { electronAPI } });
   const vite = await createRendererServer(t, { cachePrefix: "openwhispr-identity-enforcement-" });
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
   const { useEnterpriseIdentityStore, getManagedScopeResolution } = await vite.ssrLoadModule(
     "/stores/enterpriseIdentityStore.ts"
   );
-  usePolicyStore.setState({ status: "managed", appVersion: "1.10.0", policy });
   return { useEnterpriseIdentityStore, getManagedScopeResolution };
 }
 
@@ -242,7 +218,6 @@ test("a retry after an error holds the scopes carried in memory even with no per
 test("the transcription opt-out is independent of the LLM setup mode", async (t) => {
   installBrowserGlobals(t, { initialStorage: { enterpriseSetupMode: "manual" } });
   const vite = await createRendererServer(t, { cachePrefix: "openwhispr-stt-setup-mode-" });
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
   const { useSettingsStore } = await vite.ssrLoadModule("/stores/settingsStore.ts");
   const { useEnterpriseIdentityStore } = await vite.ssrLoadModule(
     "/stores/enterpriseIdentityStore.ts"
@@ -250,7 +225,6 @@ test("the transcription opt-out is independent of the LLM setup mode", async (t)
   const { getManagedTranscriptionResolution } = await vite.ssrLoadModule(
     "/services/managedTranscription.ts"
   );
-  usePolicyStore.setState({ status: "managed", appVersion: "1.10.0", policy });
   const sttDefault = structuredClone(azureSttRequired);
   sttDefault.providers[0].mode = "managed_default";
   sttDefault.providers[0].allowManualSetup = true;

@@ -54,31 +54,11 @@ const rejectFetch = (message) => () => {
   throw new Error(message);
 };
 
-function buildManagedPolicy(allowedTranscriptionModes) {
-  return {
-    version: 1,
-    transcription: {
-      allowedModes: allowedTranscriptionModes,
-      allowedByokProviders: ["openai"],
-    },
-    llm: { allowedModes: [], allowedByokProviders: [], allowedEnterpriseProviders: [] },
-    features: { agentEnabled: false, webSearchEnabled: false },
-    sharing: { externalLinkSharing: "disabled" },
-    dataRetention: {
-      audioRetentionMaxDays: null,
-      localHistoryMode: "user_choice",
-      cloudBackupAllowed: false,
-    },
-    minAppVersion: null,
-  };
-}
-
-test("cloud->local fallback under org policy", async (t) => {
-  const { window, vite, setSettings, createManager } = await loadAudioManager(t, {
+test("cloud->local fallback transcribes locally when the cloud request fails", async (t) => {
+  const { window, setSettings, createManager } = await loadAudioManager(t, {
     cachePrefix: "openwhispr-cloud-fallback-test-",
     settingsKey: "__cloudFallbackSettings",
   });
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
 
   const audioBlob = {
     type: "audio/webm",
@@ -98,96 +78,15 @@ test("cloud->local fallback under org policy", async (t) => {
     return { success: true, text: "local text" };
   };
 
-  const failingCloudManager = () =>
-    createManager({
-      getAPIKey: async () => {
-        throw new Error("cloud transcription unavailable");
-      },
-    });
-
-  const setManagedPolicy = (allowedTranscriptionModes) => {
-    usePolicyStore.setState({
-      accountId: "org-user",
-      authGeneration: 1,
-      revision: 1,
-      status: "managed",
-      managed: true,
-      policy: buildManagedPolicy(allowedTranscriptionModes),
-      appVersion: "1.8.1",
-    });
-  };
-
-  await t.test(
-    "policy-blocked fallback surfaces the cloud failure, not a policy error",
-    async () => {
-      setManagedPolicy(["providers"]);
-      localWhisperCalls = 0;
-
-      await assert.rejects(failingCloudManager().processWithOpenAIAPI(audioBlob, {}), (error) => {
-        assert.notEqual(error.code, "POLICY_RESTRICTED");
-        assert.match(error.message, /cloud transcription unavailable/);
-        return true;
-      });
-      assert.equal(localWhisperCalls, 0, "blocked fallback must not run local transcription");
-    }
-  );
-
-  await t.test("policy-allowed fallback still transcribes locally", async () => {
-    setManagedPolicy(["providers", "local"]);
-    localWhisperCalls = 0;
-
-    const result = await failingCloudManager().processWithOpenAIAPI(audioBlob, {});
-    assert.equal(result.success, true);
-    assert.equal(result.text, "local text");
-    assert.equal(result.source, "local-fallback");
-    assert.equal(localWhisperCalls, 1);
-  });
-});
-
-test("managed custom transcription never falls through to OpenAI", async (t) => {
-  const { vite, setSettings, createManager } = await loadAudioManager(t, {
-    cachePrefix: "openwhispr-managed-custom-endpoint-test-",
-    settingsKey: "__managedCustomSettings",
-  });
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
-  const fetched = captureFetch(t, rejectFetch("fetch must not run"));
-
-  usePolicyStore.setState({
-    accountId: "org-user",
-    authGeneration: 1,
-    revision: 1,
-    status: "managed",
-    managed: true,
-    policy: {
-      ...buildManagedPolicy(["providers"]),
-      transcription: {
-        allowedModes: ["providers"],
-        allowedByokProviders: ["custom"],
-      },
+  const result = await createManager({
+    getAPIKey: async () => {
+      throw new Error("cloud transcription unavailable");
     },
-    appVersion: "1.8.1",
-  });
-
-  const manager = createManager({ getAPIKey: async () => "should-not-leak" });
-
-  const audioBlob = new Blob([new Uint8Array([1, 2, 3])], { type: "audio/webm" });
-  for (const baseUrl of ["", "http://public.example.com/v1", "ftp://192.168.1.20/v1"]) {
-    setSettings({
-      allowLocalFallback: false,
-      cloudTranscriptionBaseUrl: baseUrl,
-      cloudTranscriptionProvider: "custom",
-      transcriptionMode: "providers",
-      useLocalWhisper: false,
-    });
-
-    await assert.rejects(manager.processWithOpenAIAPI(audioBlob), (error) => {
-      assert.equal(error.code, "POLICY_RESTRICTED");
-      assert.equal(error.messageKey, "common.policyTranscriptionRestricted");
-      return true;
-    });
-  }
-
-  assert.equal(fetched.length, 0);
+  }).processWithOpenAIAPI(audioBlob, {});
+  assert.equal(result.success, true);
+  assert.equal(result.text, "local text");
+  assert.equal(result.source, "local-fallback");
+  assert.equal(localWhisperCalls, 1);
 });
 
 test("unmanaged custom transcription fails closed instead of defaulting to OpenAI", async (t) => {

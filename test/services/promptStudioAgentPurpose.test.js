@@ -17,7 +17,7 @@ function findRunButton(node) {
   return findRunButton(node.props?.children);
 }
 
-test("Prompt Studio labels dictation-agent runs for policy enforcement", async (t) => {
+test("Prompt Studio labels dictation-agent runs as agent requests", async (t) => {
   const calls = [];
   globalThis.__promptStudioReasoningCalls = calls;
 
@@ -33,7 +33,7 @@ test("Prompt Studio labels dictation-agent runs for policy enforcement", async (
     ssr: { noExternal: true },
     plugins: [
       {
-        name: "prompt-studio-agent-policy-dependencies",
+        name: "prompt-studio-agent-dependencies",
         enforce: "pre",
         resolveId(source) {
           const modules = {
@@ -49,7 +49,6 @@ test("Prompt Studio labels dictation-agent runs for policy enforcement", async (
           };
           if (modules[source]) return `\0prompt-studio-${modules[source]}`;
           if (source.endsWith("/hooks/useDialogs")) return "\0prompt-studio-dialogs";
-          if (source.endsWith("/hooks/usePolicy")) return "\0prompt-studio-policy";
           if (source.endsWith("/utils/agentName")) return "\0prompt-studio-agent-name";
           if (source.endsWith("/services/ReasoningService")) return "\0prompt-studio-reasoning";
           if (source.endsWith("/models/ModelRegistry")) return "\0prompt-studio-models";
@@ -118,13 +117,6 @@ test("Prompt Studio labels dictation-agent runs for policy enforcement", async (
               }
             `;
           }
-          if (id === "\0prompt-studio-policy") {
-            return `
-              export function usePolicySnapshot() {
-                return { status: "unmanaged", policy: null, appVersion: "1.8.1" };
-              }
-            `;
-          }
           if (id === "\0prompt-studio-agent-name") {
             return `export function useAgentName() { return { agentName: "Whisper" }; }`;
           }
@@ -176,7 +168,6 @@ test("Prompt Studio labels dictation-agent runs for policy enforcement", async (
               };
               export function useSettingsStore(selector) { return selector(state); }
               useSettingsStore.getState = () => state;
-              export function selectPolicyEffectiveSettings(settings) { return settings; }
               export const selectIsCloudCleanupMode = () => true;
               export const selectIsCloudDictationAgentMode = () => true;
               export const selectIsCloudTranslationMode = () => true;

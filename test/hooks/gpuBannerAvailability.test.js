@@ -46,7 +46,6 @@ test("closing settings refreshes a stale transcription GPU offer", async (t) => 
   };
   let props = {
     settings,
-    agentAllowedByPolicy: true,
     dismissed: false,
     settingsOpen: false,
     platform: "win32",

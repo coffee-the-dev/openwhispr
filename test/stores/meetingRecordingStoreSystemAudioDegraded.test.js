@@ -91,7 +91,7 @@ test("degrade event starts renderer loopback once for a native Windows session",
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   // Main owns the helper, so the renderer captures nothing up front.
   assert.equal(calls.getDisplayMedia, 0);
   assert.equal(typeof listeners.systemAudioDegraded, "function");
@@ -116,7 +116,7 @@ test("degrade event is ignored once the recording has stopped", async (t) => {
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   const degraded = listeners.systemAudioDegraded;
   await store.stopRecording();
 
@@ -133,7 +133,7 @@ test("a renderer-loopback session never registers the takeover listener", async 
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   // The renderer already owns capture here; there is nothing to take over.
   assert.equal(listeners.systemAudioDegraded, null);
 

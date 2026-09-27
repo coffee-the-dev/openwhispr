@@ -57,55 +57,11 @@ test("tinfoil default model follows the glm-5-3 replacement", async (t) => {
 // Tinfoil's catalog is fetched live and cached, so its order is Tinfoil's, not
 // ours. Anything that resolves a default from list position lands on whatever
 // the enclave happens to serve first — deepseek-v4-1-flash today.
-test("a cached catalog does not displace the named Tinfoil default", async (t) => {
-  installBrowserGlobals(t, {
-    initialStorage: {
-      _llmScopeKeysMigrated: "1",
-      tinfoilModels: JSON.stringify({ models: LIVE_CATALOG, fetchedAt: Date.now() }),
-      cleanupMode: "providers",
-      cleanupProvider: "openai",
-      cleanupModel: "gpt-5-mini",
-    },
-  });
-  const vite = await createRendererServer(t, {
-    cachePrefix: "openwhispr-tinfoil-cached-default-test-",
-  });
-  // Loading the registry applies the cached list, exactly as app startup does.
-  await vite.ssrLoadModule("/models/ModelRegistry.ts");
-  const { useSettingsStore, selectPolicyEffectiveSettings } = await vite.ssrLoadModule(
-    "/stores/settingsStore.ts"
-  );
-
-  const effective = selectPolicyEffectiveSettings(useSettingsStore.getState(), {
-    status: "managed",
-    appVersion: "1.9.2",
-    policy: {
-      version: 1,
-      transcription: { allowedModes: ["local"], allowedByokProviders: [] },
-      llm: {
-        allowedModes: ["providers"],
-        allowedByokProviders: ["tinfoil"],
-        allowedEnterpriseProviders: [],
-      },
-      features: { agentEnabled: true, webSearchEnabled: true },
-      sharing: { externalLinkSharing: "allowed" },
-      dataRetention: {
-        audioRetentionMaxDays: null,
-        localHistoryMode: "user_choice",
-        cloudBackupAllowed: true,
-      },
-      minAppVersion: null,
-    },
-  });
-
-  assert.equal(effective.cleanupProvider, "tinfoil");
-  assert.equal(effective.cleanupModel, "glm-5-3");
-});
-
 test("a persisted glm-5-2 selection is repointed before any request", async (t) => {
   installBrowserGlobals(t, {
     initialStorage: {
       _llmScopeKeysMigrated: "1",
+      _localOnlyModesMigrated: "1",
       cleanupMode: "providers",
       cleanupProvider: "tinfoil",
       cleanupModel: "glm-5-2",
@@ -128,6 +84,7 @@ test("a deepseek-v4-flash selection is repointed where the first sweep already r
   installBrowserGlobals(t, {
     initialStorage: {
       _llmScopeKeysMigrated: "1",
+      _localOnlyModesMigrated: "1",
       _retiredTinfoilModelsMigrated: "1",
       cleanupMode: "providers",
       cleanupProvider: "tinfoil",
@@ -149,6 +106,7 @@ test("the retirement notice fires when the startup sweep is what moved the user"
   installBrowserGlobals(t, {
     initialStorage: {
       _llmScopeKeysMigrated: "1",
+      _localOnlyModesMigrated: "1",
       // The user's own cached catalog is the only place the retired model's
       // display name still exists; the replacement's comes from the seed.
       tinfoilModels: JSON.stringify({
@@ -179,6 +137,7 @@ test("a Groq remap is not announced as a Tinfoil retirement", async (t) => {
   installBrowserGlobals(t, {
     initialStorage: {
       _llmScopeKeysMigrated: "1",
+      _localOnlyModesMigrated: "1",
       cleanupMode: "providers",
       cleanupProvider: "groq",
       cleanupModel: "llama-3.3-70b-versatile",
@@ -232,6 +191,7 @@ test("a replacement with no curated name is still announced, by id", async (t) =
   installBrowserGlobals(t, {
     initialStorage: {
       _llmScopeKeysMigrated: "1",
+      _localOnlyModesMigrated: "1",
       tinfoilModels: JSON.stringify({
         models: [{ id: "kimi-k2-6", name: "Kimi K2.6", description: "", supportsThinking: true }],
         fetchedAt: Date.now(),

@@ -102,13 +102,6 @@ test("Insights Sync opt-in changes only device analytics consent", async (t) => 
           requestSyncAll: () => { globalThis.__insightsSyncRequests += 1; }
         };
       `,
-      "/stores/policyRules": `
-        export const canChangeCloudBackupPreference = () => true;
-        export const isCloudBackupAllowed = () => true;
-      `,
-      "/stores/policyStore": `
-        export const usePolicyStore = (selector) => selector({});
-      `,
       "react-i18next": `
         const t = (key) => key;
         export const useTranslation = () => ({ t });

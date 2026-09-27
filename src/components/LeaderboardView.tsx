@@ -6,8 +6,6 @@ import type { EnableInsightsSyncOptions } from "../hooks/useInsightsSyncOptIn";
 import { useSettings } from "../hooks/useSettings";
 import { signInWithSSO } from "../lib/auth";
 import { getValidatedAuthGeneration } from "../lib/authRequestContext";
-import { effectiveLocalHistoryEnabled } from "../stores/policyRules";
-import { usePolicyStore } from "../stores/policyStore";
 import LeaderboardSection from "./LeaderboardSection";
 
 interface LeaderboardViewProps {
@@ -29,7 +27,7 @@ export default function LeaderboardView({
   const [oauthProtocolRegistered, setOauthProtocolRegistered] = useState<boolean | null>(null);
   const [ssoStarting, setSsoStarting] = useState(false);
   const [ssoError, setSsoError] = useState<string | null>(null);
-  const { dataRetentionEnabled: personalDataRetentionEnabled } = useSettings();
+  const { dataRetentionEnabled } = useSettings();
   const {
     enabled: participationEnabled,
     error: participationError,
@@ -40,9 +38,6 @@ export default function LeaderboardView({
     refresh: refreshParticipation,
     updating: participationUpdating,
   } = useLeaderboardParticipation();
-  const dataRetentionEnabled = usePolicyStore((policyState) =>
-    effectiveLocalHistoryEnabled(policyState, personalDataRetentionEnabled)
-  );
   useEffect(() => {
     window.electronAPI
       ?.getOAuthProtocolRegistered?.()

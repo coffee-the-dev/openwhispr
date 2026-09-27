@@ -202,13 +202,8 @@
     "copied": "Copied",
     "done": "Done",
     "skip": "Skip",
-    "policyAiProcessingRestricted": "AI processing is restricted by your organization.",
-    "policyAgentRestricted": "AI assistant use is restricted by your organization.",
-    "policyTranscriptionRestricted": "Transcription is restricted by your organization.",
-    "policyUnresolved": "Your organization's settings haven't loaded yet. Try again in a moment.",
     "managedConfigLoading": "Checking your organization's managed setup. Try again in a moment.",
-    "managedConfigUnavailable": "Managed enterprise access is unavailable. Sign in again or contact your administrator.",
-    "managedPolicyConflict": "Managed access is blocked by your workspace policy. Contact your administrator."
+    "managedConfigUnavailable": "Managed enterprise access is unavailable. Sign in again or contact your administrator."
   },
   "onboarding": {
     "rehaul": {
@@ -319,10 +314,6 @@
         "titleLineOne": "Choose your",
         "titleLineTwo": "OpenWhispr setup",
         "description": "Pick the option that fits how you work.",
-        "unavailable": {
-          "title": "No setup option is available",
-          "description": "Your workspace policy does not allow a complete transcription and AI setup. Contact your administrator."
-        },
         "cloud": {
           "title": "OpenWhispr Cloud",
           "description": "Get 2,000 free words each week. Your settings stay synced across devices.",
@@ -567,17 +558,6 @@
         "step2": "Open the Corti console and create API credentials",
         "step3": "Paste your Client ID and Secret below"
       }
-    },
-    "requiredModels": {
-      "title": "Install required models",
-      "description": "{{organization}} requires these models on this device before you can start dictating.",
-      "genericOrganization": "Your organization",
-      "installed": "Installed",
-      "queued": "Queued",
-      "failed": {
-        "title": "A download didn't finish",
-        "description": "Check your connection and free disk space, then retry. If it keeps failing, contact your administrator."
-      }
     }
   },
   "streaming": {
@@ -594,10 +574,6 @@
     }
   },
   "controlPanel": {
-    "updateRequiredByOrg": {
-      "title": "Update required",
-      "description": "Your organization requires OpenWhispr {{version}} or newer. Please update the app."
-    },
     "update": {
       "readyTitle": "Update ready to install",
       "readyDescription": "Click 'Install Update' to restart with the latest version.",
@@ -699,11 +675,6 @@
       "dismissButton": "Not now"
     },
     "backToNotes": "Back to notes",
-    "requiredModelsByOrg": {
-      "title": "Required models missing",
-      "description": "Your organization requires these models on this device: {{models}}.",
-      "download": "Download"
-    },
     "cloudNudge": {
       "title": "You're signed in",
       "description": "Dictation still runs on your own setup. You can switch to OpenWhispr Cloud anytime.",
@@ -1547,7 +1518,6 @@
     "defaultTestInputTranslate": "The weather is beautiful today, want to go for a walk?"
   },
   "settingsModal": {
-    "managedByOrg": "Some settings are managed by your organization.",
     "groups": {
       "account": "Account",
       "app": "App",
@@ -2073,12 +2043,10 @@
         "providers": "Cloud Providers",
         "local": "Local",
         "selfHosted": "Self-Hosted",
-        "enterprise": "Enterprise",
         "openwhisprDesc": "Reliable accuracy. No setup needed.",
         "providersDesc": "Bring your own API key.",
         "localDesc": "On-device models. Fully private.",
-        "selfHostedDesc": "Your own server on your network.",
-        "enterpriseDesc": "Use your organization's cloud account (AWS, Azure, GCP)."
+        "selfHostedDesc": "Your own server on your network."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Reliable accuracy. No setup needed.",
@@ -2496,9 +2464,7 @@
         "openwhisprDesc": "Reliable accuracy. No setup needed.",
         "providersDesc": "Bring your own API key.",
         "localDesc": "On-device models. Fully private.",
-        "selfHostedDesc": "Your own server on your network.",
-        "enterprise": "Enterprise cloud",
-        "enterpriseDesc": "Audio goes to your organization's own cloud."
+        "selfHostedDesc": "Your own server on your network."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Reliable accuracy. No setup needed.",
@@ -2584,8 +2550,7 @@
             "info": "Audio carried from each segment into the next to avoid abrupt cuts when concatenating."
           }
         }
-      },
-      "meetingEnterpriseOnly": "Your organization only allows enterprise cloud transcription, which does not cover meeting recording yet."
+      }
     },
     "intelligence": {
       "gpuDevice": {
@@ -3437,7 +3402,6 @@
       "title": "Meeting Notes",
       "description": "Transcriptions & structured summaries",
       "back": "Back",
-      "restrictedByOrg": "Meeting transcription is restricted by your organization.",
       "unsupportedSelfHosted": "Note Recording can't use a self-hosted endpoint yet. Open Settings and choose Local or a streaming provider.",
       "unsupportedProvider": "Note Recording can't use {{provider}} for live transcription. Open Settings and choose Local or a streaming provider.",
       "noProviderSelected": "No provider is selected for Note Recording. Open Settings and choose Local or a streaming provider.",
@@ -3807,9 +3771,7 @@
       "local": "Local",
       "localDesc": "Run a local LLM on your device — fully private.",
       "selfHosted": "Self-hosted",
-      "selfHostedDesc": "Point at a self-hosted OpenAI-compatible endpoint.",
-      "enterprise": "Enterprise",
-      "enterpriseDesc": "Use AWS Bedrock, Azure OpenAI, or Google Vertex."
+      "selfHostedDesc": "Point at a self-hosted OpenAI-compatible endpoint."
     },
     "prompt": {
       "title": "Assistant prompt",
@@ -3826,12 +3788,10 @@
         "providers": "Cloud Providers",
         "local": "Local",
         "selfHosted": "Self-Hosted",
-        "enterprise": "Enterprise",
         "openwhisprDesc": "Reliable accuracy. No setup needed.",
         "providersDesc": "Bring your own API key.",
         "localDesc": "On-device models. Fully private.",
-        "selfHostedDesc": "Your own server on your network.",
-        "enterpriseDesc": "Use your organization's cloud account (AWS, Azure, GCP)."
+        "selfHostedDesc": "Your own server on your network."
       }
     },
     "chat": {

@@ -4,11 +4,9 @@ import { useShallow } from "zustand/react/shallow";
 import { Button } from "./ui/button";
 import { PAGE_CONTENT_WIDTH_CLASS } from "./ui/pageWidth";
 import { cn } from "./lib/utils";
-import { BIDI_VALUE_TOKEN, BidiInterpolatedText } from "./ui/BidiInterpolatedText";
 import { Download, RefreshCw, Loader2, AlertTriangle, Zap } from "./icons";
 import UpgradePrompt from "./UpgradePrompt";
 import PostMigrationOnboarding from "./PostMigrationOnboarding";
-import { RequiredModelsBanner } from "./RequiredModelsBanner";
 import { ConfirmDialog, AlertDialog } from "./ui/dialog";
 import { useDialogs } from "../hooks/useDialogs";
 import { useHotkey } from "../hooks/useHotkey";
@@ -30,20 +28,7 @@ import {
   updateTranscription as updateInStore,
   clearTranscriptions as clearStore,
 } from "../stores/transcriptionStore";
-import {
-  getSettings,
-  selectPolicyEffectiveSettings,
-  useSettingsStore,
-} from "../stores/settingsStore";
-import { usePolicyStore } from "../stores/policyStore";
-import { usePolicySnapshot } from "../hooks/usePolicy";
-import {
-  isAgentAllowed,
-  isControlPanelViewAllowed,
-  isPolicyActionAllowed,
-  isTranscriptionContextAllowed,
-  isUpdateRequiredByOrg,
-} from "../stores/policyRules";
+import { getSettings, useSettingsStore } from "../stores/settingsStore";
 import { getManagedTranscriptionResolution } from "../services/managedTranscription";
 import {
   useIsMeetingMode,
@@ -61,7 +46,6 @@ import { getCachedPlatform } from "../utils/platform";
 import { isAccessibilitySkipped } from "../utils/permissions";
 import { useGpuBannerAvailability } from "../hooks/useGpuBannerAvailability";
 import { useCreateNote } from "../hooks/useCreateNote";
-import { useSignInCloudNudge } from "../hooks/useSignInCloudNudge";
 import {
   setActiveNoteId,
   setActiveFolderId,
@@ -195,47 +179,24 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
     installUpdate,
   } = useUpdater();
 
-  const openTranscriptionSettings = useCallback(() => {
-    setSettingsSection("transcription");
-    setShowSettings(true);
-  }, []);
-  useSignInCloudNudge(isSignedIn, openTranscriptionSettings);
-
-  const agentAllowedByPolicy = usePolicyStore(isAgentAllowed);
   const { createNote } = useCreateNote();
   // The note is created before the view switches so Notes mounts with it already open.
   const handleNewNote = useCallback(async () => {
     await createNote();
     setActiveView("personal-notes");
   }, [createNote]);
-  const policyActionsAllowed = usePolicyStore((state) => isPolicyActionAllowed(state));
-  useEffect(() => {
-    if (!isControlPanelViewAllowed(activeView, agentAllowedByPolicy, policyActionsAllowed)) {
-      setActiveView("home");
-    }
-  }, [activeView, agentAllowedByPolicy, policyActionsAllowed]);
-  const updateRequiredByOrg = usePolicyStore(isUpdateRequiredByOrg);
-  const policyMinAppVersion = usePolicyStore((s) => s.policy?.minAppVersion ?? null);
-
-  // Policy-effective, because the settings pane the GPU banner links to renders
-  // the clamped mode — see eligibleGpuOffers.
-  const policySnapshot = usePolicySnapshot();
   const gpuBannerSettings = useSettingsStore(
-    useShallow((settings) => {
-      const effective = selectPolicyEffectiveSettings(settings, policySnapshot);
-      return {
-        useLocalWhisper: effective.useLocalWhisper,
-        localTranscriptionProvider: effective.localTranscriptionProvider,
-        useCleanupModel: effective.useCleanupModel,
-        cleanupMode: effective.cleanupMode,
-        useDictationAgent: effective.useDictationAgent,
-        dictationAgentMode: effective.dictationAgentMode,
-      };
-    })
+    useShallow((settings) => ({
+      useLocalWhisper: settings.useLocalWhisper,
+      localTranscriptionProvider: settings.localTranscriptionProvider,
+      useCleanupModel: settings.useCleanupModel,
+      cleanupMode: settings.cleanupMode,
+      useDictationAgent: settings.useDictationAgent,
+      dictationAgentMode: settings.dictationAgentMode,
+    }))
   );
   const gpuAccelAvailable = useGpuBannerAvailability({
     settings: gpuBannerSettings,
-    agentAllowedByPolicy,
     dismissed: gpuBannerDismissed,
     settingsOpen: showSettings,
     platform,
@@ -577,10 +538,6 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
             title: managed.messageKey ? t(managed.messageKey) : managed.message,
             variant: "destructive",
           });
-          return;
-        }
-        if (!managed && !isTranscriptionContextAllowed(usePolicyStore.getState(), s, "dictation")) {
-          toast({ title: t("common.managedByOrg"), variant: "default" });
           return;
         }
         const result = await window.electronAPI.retryTranscription(id, {
@@ -1040,38 +997,10 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
               isSidePanelLayout={isSidePanelLayout}
               onExitSidePanel={handleExitSidePanel}
               actions={
-                <NewNoteMenu
-                  onNewNote={handleNewNote}
-                  onNewChat={agentAllowedByPolicy ? () => setActiveView("chat") : undefined}
-                />
+                <NewNoteMenu onNewNote={handleNewNote} onNewChat={() => setActiveView("chat")} />
               }
             />
             <div className="scrollbar-hidden flex-1 overflow-y-auto">
-              {updateRequiredByOrg && (
-                <div className={cn(PAGE_CONTENT_WIDTH_CLASS, "px-6 mb-3")}>
-                  <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 p-3">
-                    <div className="flex items-start gap-3">
-                      <div className="shrink-0 w-8 h-8 rounded-md bg-amber-100 dark:bg-amber-900/50 flex items-center justify-center">
-                        <AlertTriangle size={16} className="text-amber-600 dark:text-amber-400" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-xs font-medium text-amber-900 dark:text-amber-200 mb-0.5">
-                          {t("controlPanel.updateRequiredByOrg.title")}
-                        </p>
-                        <p className="text-xs text-amber-700 dark:text-amber-300/80">
-                          <BidiInterpolatedText
-                            text={t("controlPanel.updateRequiredByOrg.description", {
-                              version: BIDI_VALUE_TOKEN,
-                            })}
-                            value={policyMinAppVersion}
-                          />
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
-              <RequiredModelsBanner />
               {usage?.isPastDue && activeView === "home" && (
                 <div className={cn(PAGE_CONTENT_WIDTH_CLASS, "px-6 mb-3")}>
                   <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/50 p-3">
@@ -1185,7 +1114,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
                   />
                 </Suspense>
               )}
-              {activeView === "chat" && agentAllowedByPolicy && (
+              {activeView === "chat" && (
                 <Suspense fallback={null}>
                   <ChatView />
                 </Suspense>
@@ -1209,7 +1138,7 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
                   <DictionaryView />
                 </Suspense>
               )}
-              {activeView === "upload" && policyActionsAllowed && (
+              {activeView === "upload" && (
                 <Suspense fallback={null}>
                   <UploadAudioView
                     onNoteCreated={(noteId, folderId) => {

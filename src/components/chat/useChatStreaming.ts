@@ -7,12 +7,6 @@ import { getSettings, useSettingsStore } from "../../stores/settingsStore";
 import { resolveChatStreamingInference } from "../../helpers/dictationAgentInference.js";
 import logger from "../../utils/logger";
 import {
-  isAgentAllowed,
-  isLlmSelectionAllowed,
-  isWebSearchAllowed,
-} from "../../stores/policyRules";
-import { usePolicyStore } from "../../stores/policyStore";
-import {
   appendDictionarySuffix,
   appendPlainTextResponseSuffix,
   appendScreenContextSuffix,
@@ -247,29 +241,6 @@ export function useChatStreaming({
       });
       const requestedAttachment = attachScreenContext ? (options?.attachment ?? null) : null;
       const llmMode = llmConfig.mode || "openwhispr";
-      const policyState = usePolicyStore.getState();
-      const policyProvider =
-        llmMode === "openwhispr"
-          ? "openwhispr"
-          : llmMode === "local"
-            ? "local"
-            : llmConfig.provider;
-      if (
-        !isAgentAllowed(policyState) ||
-        !isLlmSelectionAllowed(policyState, { mode: llmMode, provider: policyProvider })
-      ) {
-        // The user message is already appended; answer it instead of dead-ending silently.
-        const restriction = !isAgentAllowed(policyState)
-          ? t("common.policyAgentRestricted")
-          : t("common.policyAiProcessingRestricted");
-        announceResponse();
-        setMessages((prev) => [
-          ...prev,
-          { id: crypto.randomUUID(), role: "assistant", content: restriction, isStreaming: false },
-        ]);
-        return;
-      }
-
       setAgentState("thinking");
       const isCloudAgent = llmMode === "openwhispr" && settings.isSignedIn;
       const isLanAgent = llmMode === "self-hosted" && !!llmConfig.remoteUrl;
@@ -298,10 +269,9 @@ export function useChatStreaming({
         // so any connected provider enables it.
         const calendarConnected =
           settings.gcalConnected || settings.mcalConnected || settings.appleCalendarConnected;
-        const webSearchEnabled = isWebSearchAllowed(usePolicyStore.getState());
         // Triggers ride in the tool description, so a snippet edit rebuilds the registry.
         const snippetKey = settings.snippets.map((s) => s.trigger).join("|");
-        const cacheKey = `${settings.isSignedIn}-${calendarConnected}-${settings.cloudBackupEnabled}-${scopeKey}-${webSearchEnabled}-${snippetKey}`;
+        const cacheKey = `${settings.isSignedIn}-${calendarConnected}-${settings.cloudBackupEnabled}-${scopeKey}-${snippetKey}`;
         if (toolRegistryRef.current?.key === cacheKey) {
           registry = toolRegistryRef.current.registry;
         } else {
@@ -310,7 +280,6 @@ export function useChatStreaming({
             calendarConnected,
             cloudBackupEnabled: settings.cloudBackupEnabled,
             searchScope: scope,
-            webSearchEnabled,
             vocabulary: {
               getDictionary: () => getSettings().customDictionary,
               updateDictionary: (changes) =>

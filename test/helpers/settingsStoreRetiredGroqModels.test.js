@@ -28,6 +28,7 @@ test("retired groq model selections migrate to served replacements", async (t) =
 
   await t.test("groq scopes remap, other providers keep their model", async () => {
     storage.clear();
+    storage.setItem("_localOnlyModesMigrated", "1");
     storage.setItem("cleanupProvider", "groq");
     storage.setItem("cleanupModel", "llama-3.3-70b-versatile");
     storage.setItem("dictationAgentProvider", "groq");
@@ -45,6 +46,7 @@ test("retired groq model selections migrate to served replacements", async (t) =
 
   await t.test("migration is one-shot", async () => {
     storage.clear();
+    storage.setItem("_localOnlyModesMigrated", "1");
     storage.setItem("_retiredGroqModelsMigrated", "1");
     storage.setItem("cleanupProvider", "groq");
     storage.setItem("cleanupModel", "llama-3.3-70b-versatile");

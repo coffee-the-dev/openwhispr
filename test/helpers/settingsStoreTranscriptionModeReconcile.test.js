@@ -8,7 +8,7 @@ const { createRendererServer, installBrowserGlobals } = require("../lib/renderer
 // `_providerSettingsMigrated: "1"` must be seeded: migrateProviderSettings() runs
 // first and would otherwise re-derive `transcriptionMode` from the very flag
 // under test.
-const MIGRATED = { _providerSettingsMigrated: "1" };
+const MIGRATED = { _providerSettingsMigrated: "1", _localOnlyModesMigrated: "1" };
 // The meeting and upload one-shot copies mirror the dictation keys once and then
 // latch, so seed them done except where a case is about that copy.
 const COPIES_DONE = { meetingFollowsTranscription: "false", uploadTranscriptionMigrated: "true" };

@@ -1,6 +1,5 @@
 import React, { useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { usePolicyStore } from "../stores/policyStore";
 import {
   Sliders,
   Mic,
@@ -10,7 +9,6 @@ import {
   Keyboard,
   CreditCard,
   Shield,
-  ShieldCheck,
   Users,
 } from "./icons";
 import SidebarModal, { type SidebarItem } from "./ui/SidebarModal";
@@ -60,7 +58,6 @@ interface SettingsModalProps {
 export default function SettingsModal({ open, onOpenChange, initialSection }: SettingsModalProps) {
   const { t } = useTranslation();
   const { isSignedIn, user } = useAuth();
-  const policyManaged = usePolicyStore((s) => s.managed);
   const sidebarItems: SidebarItem<SettingsSectionType>[] = useMemo(() => {
     const items: SidebarItem<SettingsSectionType>[] = [
       {
@@ -178,14 +175,6 @@ export default function SettingsModal({ open, onOpenChange, initialSection }: Se
               </p>
             </div>
           </div>
-        ) : undefined
-      }
-      notice={
-        policyManaged ? (
-          <>
-            <ShieldCheck className="h-4 w-4 shrink-0" />
-            {t("settingsModal.managedByOrg")}
-          </>
         ) : undefined
       }
     >

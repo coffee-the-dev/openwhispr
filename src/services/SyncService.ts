@@ -32,12 +32,6 @@ import { readIsSubscribed, subscribeIsSubscribed } from "../lib/subscriptionFlag
 import { readNoteConflictIds } from "../lib/noteConflictRegistry";
 import { pendingLeaderboardLeaveDeservesPriority } from "../lib/pendingLeaderboardLeave";
 import {
-  cloudBackupResumed,
-  effectiveLocalHistoryEnabled,
-  isCloudBackupAllowed,
-} from "../stores/policyRules";
-import { usePolicyStore } from "../stores/policyStore";
-import {
   buildNoteCreatePayload,
   buildNoteUpdatePayload,
   isCloudEntryNewer,
@@ -263,17 +257,12 @@ export class SyncService {
   private analyticsPassMovedWork = false;
 
   private consent(): SyncConsent {
-    const policyState = usePolicyStore.getState();
     return resolveSyncConsent({
       authValidated: hasValidatedAuthContext(),
       signedIn: localStorage.getItem("isSignedIn") === "true",
       backupEnabled: localStorage.getItem("cloudBackupEnabled") === "true",
       subscribed: readIsSubscribed(),
-      backupAllowedByPolicy: isCloudBackupAllowed(policyState),
-      dataRetentionEnabled: effectiveLocalHistoryEnabled(
-        policyState,
-        localStorage.getItem("dataRetentionEnabled") !== "false"
-      ),
+      dataRetentionEnabled: localStorage.getItem("dataRetentionEnabled") !== "false",
       insightsSyncEnabled: localStorage.getItem("insightsSyncEnabled") === "true",
     });
   }
@@ -438,9 +427,6 @@ export class SyncService {
     // subscription flag itself (post-checkout refetch, invite acceptance)
     // kicks a pass through the reactive flag instead.
     subscribeIsSubscribed(() => this.requestSyncAll("start"));
-    usePolicyStore.subscribe((policyState, previousPolicyState) => {
-      if (cloudBackupResumed(previousPolicyState, policyState)) this.requestSyncAll("start");
-    });
     setInterval(() => this.requestSyncAll("interval"), AUTO_SYNC_INTERVAL_MS);
   }
 

@@ -90,8 +90,6 @@ async function renderChatStreaming(
   }
 
   const { useSettingsStore } = await vite.ssrLoadModule("/stores/settingsStore.ts");
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
-  usePolicyStore.setState({ status: "unmanaged", appVersion: "1.8.3", policy: null });
   // The 4B model enables tool handling for both the SSE and controlled streams.
   useSettingsStore.setState({
     chatAgentMode: "self-hosted",

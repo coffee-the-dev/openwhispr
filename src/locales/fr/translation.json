@@ -202,13 +202,8 @@
     "copied": "Copié",
     "done": "Terminé",
     "skip": "Passer",
-    "policyAiProcessingRestricted": "Le traitement par IA est restreint par votre organisation.",
-    "policyAgentRestricted": "L’utilisation de l’assistant IA est restreinte par votre organisation.",
-    "policyTranscriptionRestricted": "La transcription est restreinte par votre organisation.",
-    "policyUnresolved": "Les paramètres de votre organisation ne sont pas encore chargés. Réessayez dans un instant.",
     "managedConfigLoading": "Vérification de la configuration gérée de votre organisation en cours. Réessayez dans un instant.",
-    "managedConfigUnavailable": "L'accès d'entreprise géré est indisponible. Reconnectez-vous ou contactez votre administrateur.",
-    "managedPolicyConflict": "L'accès géré est bloqué par la politique de votre espace de travail. Contactez votre administrateur."
+    "managedConfigUnavailable": "L'accès d'entreprise géré est indisponible. Reconnectez-vous ou contactez votre administrateur."
   },
   "onboarding": {
     "rehaul": {
@@ -319,10 +314,6 @@
         "titleLineOne": "Choisissez votre",
         "titleLineTwo": "configuration OpenWhispr",
         "description": "Choisissez l’option qui correspond à votre façon de travailler.",
-        "unavailable": {
-          "title": "Aucune option de configuration disponible",
-          "description": "La politique de votre espace de travail n’autorise pas une configuration complète de la transcription et de l’IA. Contactez votre administrateur."
-        },
         "cloud": {
           "title": "OpenWhispr Cloud",
           "description": "Bénéficiez de 2 000 mots gratuits par semaine. Vos réglages restent synchronisés entre vos appareils.",
@@ -567,17 +558,6 @@
         "step2": "Ouvrez la console Corti et créez des identifiants API",
         "step3": "Collez votre Client ID et votre Secret ci-dessous"
       }
-    },
-    "requiredModels": {
-      "title": "Installez les modèles requis",
-      "description": "{{organization}} exige ces modèles sur cet appareil avant que vous puissiez commencer la dictée.",
-      "genericOrganization": "Votre organisation",
-      "installed": "Installé",
-      "queued": "En attente",
-      "failed": {
-        "title": "Un téléchargement ne s'est pas terminé",
-        "description": "Vérifiez votre connexion et l'espace disque disponible, puis réessayez. Si le problème persiste, contactez votre administrateur."
-      }
     }
   },
   "streaming": {
@@ -594,10 +574,6 @@
     }
   },
   "controlPanel": {
-    "updateRequiredByOrg": {
-      "title": "Mise à jour requise",
-      "description": "Votre organisation exige OpenWhispr {{version}} ou une version plus récente. Veuillez mettre à jour l'application."
-    },
     "update": {
       "readyTitle": "Mise à jour prête à installer",
       "readyDescription": "Cliquez sur « Installer la mise à jour » pour redémarrer avec la dernière version.",
@@ -699,11 +675,6 @@
       "dismissButton": "Pas maintenant"
     },
     "backToNotes": "Retour aux notes",
-    "requiredModelsByOrg": {
-      "title": "Modèles requis manquants",
-      "description": "Votre organisation exige ces modèles sur cet appareil : {{models}}.",
-      "download": "Télécharger"
-    },
     "cloudNudge": {
       "title": "Vous êtes connecté",
       "description": "La dictée utilise toujours votre propre configuration. Vous pouvez passer à OpenWhispr Cloud à tout moment.",
@@ -1547,7 +1518,6 @@
     "defaultTestInputTranslate": "Il fait très beau aujourd'hui, ça te dit d'aller te promener ?"
   },
   "settingsModal": {
-    "managedByOrg": "Certains paramètres sont gérés par votre organisation.",
     "groups": {
       "account": "Compte",
       "app": "Application",
@@ -2073,12 +2043,10 @@
         "providers": "Fournisseurs cloud",
         "local": "Local",
         "selfHosted": "Auto-hébergé",
-        "enterprise": "Enterprise",
         "openwhisprDesc": "Résultats fiables. Aucune configuration requise.",
         "providersDesc": "Utilisez votre propre clé API.",
         "localDesc": "Modèles sur l'appareil. 100 % privé.",
-        "selfHostedDesc": "Votre serveur sur votre réseau.",
-        "enterpriseDesc": "Utilisez le compte cloud de votre organisation (AWS, Azure, GCP)."
+        "selfHostedDesc": "Votre serveur sur votre réseau."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Résultats fiables. Aucune configuration requise.",
@@ -2496,9 +2464,7 @@
         "openwhisprDesc": "Résultats fiables. Aucune configuration requise.",
         "providersDesc": "Utilisez votre propre clé API.",
         "localDesc": "Modèles sur l'appareil. 100 % privé.",
-        "selfHostedDesc": "Votre serveur sur votre réseau.",
-        "enterprise": "Cloud d'entreprise",
-        "enterpriseDesc": "L'audio est envoyé vers le cloud de votre organisation."
+        "selfHostedDesc": "Votre serveur sur votre réseau."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "Résultats fiables. Aucune configuration requise.",
@@ -2584,8 +2550,7 @@
             "info": "Audio prolongé d'un segment au suivant pour éviter les coupures brusques lors de la concaténation."
           }
         }
-      },
-      "meetingEnterpriseOnly": "Votre organisation n'autorise que la transcription cloud d'entreprise, qui ne couvre pas encore l'enregistrement des réunions."
+      }
     },
     "intelligence": {
       "gpuDevice": {
@@ -3437,7 +3402,6 @@
       "title": "Notes de réunion",
       "description": "Transcriptions et résumés structurés",
       "back": "Retour",
-      "restrictedByOrg": "La transcription des réunions est restreinte par votre organisation.",
       "unsupportedSelfHosted": "L'enregistrement de notes ne peut pas encore utiliser un serveur auto-hébergé. Ouvrez les Réglages et choisissez Local ou un fournisseur en streaming.",
       "unsupportedProvider": "L'enregistrement de notes ne peut pas utiliser {{provider}} pour la transcription en direct. Ouvrez les Réglages et choisissez Local ou un fournisseur en streaming.",
       "noProviderSelected": "Aucun fournisseur n'est sélectionné pour l'enregistrement de notes. Ouvrez les Réglages et choisissez Local ou un fournisseur en streaming.",
@@ -3807,9 +3771,7 @@
       "local": "Local",
       "localDesc": "Exécutez un LLM local sur votre appareil, 100 % privé.",
       "selfHosted": "Auto-hébergé",
-      "selfHostedDesc": "Pointez vers un point de terminaison auto-hébergé compatible OpenAI.",
-      "enterprise": "Enterprise",
-      "enterpriseDesc": "Utilisez AWS Bedrock, Azure OpenAI ou Google Vertex."
+      "selfHostedDesc": "Pointez vers un point de terminaison auto-hébergé compatible OpenAI."
     },
     "prompt": {
       "title": "Invite de l'assistant",
@@ -3826,12 +3788,10 @@
         "providers": "Fournisseurs Cloud",
         "local": "Local",
         "selfHosted": "Auto-hébergé",
-        "enterprise": "Enterprise",
         "openwhisprDesc": "Résultats fiables. Aucune configuration requise.",
         "providersDesc": "Apportez votre propre clé API.",
         "localDesc": "Modèles sur l'appareil. Entièrement privé.",
-        "selfHostedDesc": "Votre propre serveur sur votre réseau.",
-        "enterpriseDesc": "Utilisez le compte cloud de votre organisation (AWS, Azure, GCP)."
+        "selfHostedDesc": "Votre propre serveur sur votre réseau."
       }
     },
     "chat": {

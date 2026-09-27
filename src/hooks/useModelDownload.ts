@@ -13,17 +13,6 @@ import "../types/electron";
 
 const PROGRESS_THROTTLE_MS = 100;
 
-/**
- * Fired on this window whenever a local model lands on or leaves the disk
- * (download complete, model deleted), so surfaces that mirror disk truth
- * without owning the download — e.g. useRequiredLocalModels — can re-check.
- */
-export const LOCAL_MODELS_CHANGED_EVENT = "openwhispr-local-models-changed";
-
-function notifyLocalModelsChanged(): void {
-  window.dispatchEvent(new Event(LOCAL_MODELS_CHANGED_EVENT));
-}
-
 export interface DownloadProgress {
   percentage: number;
   downloadedBytes: number;
@@ -189,7 +178,6 @@ export function useModelDownload({
         ownedRequestsRef.current.set(modelId, { type, error, code, sequence });
         return;
       }
-      if (type === "complete") notifyLocalModelsChanged();
       if (type === "error" && !isCancellation(error, code)) {
         const message = getDownloadErrorMessage(
           t,
@@ -335,7 +323,6 @@ export function useModelDownload({
               : await window.electronAPI?.modelDownload?.(modelId);
 
         if (result?.success) {
-          notifyLocalModelsChanged();
           onSelectAfterDownload?.(modelId);
         } else if (result?.code === "DOWNLOAD_IN_PROGRESS") {
           isDuplicateRequest = true;
@@ -441,7 +428,6 @@ export function useModelDownload({
             description: t("hooks.modelDownload.modelDeleted.description"),
           });
         }
-        notifyLocalModelsChanged();
         onComplete?.();
       } catch (error: unknown) {
         const errorMessage = error instanceof Error ? error.message : String(error);

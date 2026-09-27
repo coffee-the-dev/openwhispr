@@ -12,7 +12,6 @@ const offersWith = async (overrides) => {
     cleanupMode: "openwhispr",
     useDictationAgent: false,
     dictationAgentMode: "openwhispr",
-    agentAllowedByPolicy: true,
     ...overrides,
   });
 };
@@ -72,16 +71,6 @@ test("a disabled or cloud-mode dictation agent is not eligible", async () => {
     const cloud = await offersWith({ useDictationAgent: true, dictationAgentMode });
     assert.equal(cloud.intelligence, null, `dictationAgentMode=${dictationAgentMode}`);
   }
-});
-
-test("a policy-blocked agent gets no offer — its settings tab is hidden", async () => {
-  const offers = await offersWith({
-    useDictationAgent: true,
-    dictationAgentMode: "local",
-    agentAllowedByPolicy: false,
-  });
-
-  assert.equal(offers.intelligence, null);
 });
 
 test("local whisper transcription is eligible for the transcription GPU offer", async () => {

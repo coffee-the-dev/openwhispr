@@ -33,23 +33,6 @@ const sttDefault = {
     },
   ],
 };
-const policy = {
-  version: 1,
-  transcription: {
-    allowedModes: ["enterprise", "openwhispr", "local"],
-    allowedByokProviders: [],
-    allowedEnterpriseProviders: ["azure"],
-  },
-  llm: { allowedModes: ["openwhispr"], allowedByokProviders: [], allowedEnterpriseProviders: [] },
-  features: { agentEnabled: true, webSearchEnabled: false },
-  sharing: { externalLinkSharing: "disabled" },
-  dataRetention: {
-    audioRetentionMaxDays: null,
-    localHistoryMode: "user_choice",
-    cloudBackupAllowed: false,
-  },
-  minAppVersion: null,
-};
 const cfg = (overrides) => ({
   useLocalWhisper: false,
   localTranscriptionProvider: "whisper",
@@ -72,12 +55,10 @@ test("managed transcription outranks OpenWhispr Cloud and local Whisper on the u
     cachePrefix: "openwhispr-file-managed-",
     mockModules: { "/lib/auth": "export const withSessionRefresh = (fn) => fn();" },
   });
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
   const { useEnterpriseIdentityStore } = await vite.ssrLoadModule(
     "/stores/enterpriseIdentityStore.ts"
   );
   const { transcribeFile } = await vite.ssrLoadModule("/services/fileTranscription.ts");
-  usePolicyStore.setState({ status: "managed", appVersion: "1.10.0", policy });
   useEnterpriseIdentityStore.setState({
     accountId: "account-a",
     workspaceId: "workspace-a",

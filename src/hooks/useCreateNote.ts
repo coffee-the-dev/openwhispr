@@ -8,13 +8,12 @@ import {
   useActiveContext,
 } from "../stores/noteStore";
 import { startRecording, useMeetingRecordingStore } from "../stores/meetingRecordingStore";
-import { useTranscriptionContextAllowed } from "./usePolicy";
 import { parseTranscriptSegments } from "../utils/parseTranscriptSegments";
 import { isExplicitSpeakerCount, resolveExpectedSpeakerCount } from "../utils/participants";
 import { isMeetingAutoEndEligible } from "../helpers/meetingRecordingSession";
 
 /** Start a meeting recording seeded with the note's transcript and speaker setup. */
-export function startRecordingForNote(note: NoteItem | null): Promise<boolean> {
+export function startRecordingForNote(note: NoteItem | null): Promise<void> {
   return startRecording({
     noteId: note?.id ?? null,
     noteTitle: note?.title ?? null,
@@ -35,7 +34,6 @@ export function useCreateNote() {
   const { t } = useTranslation();
   const activeContext = useActiveContext();
   const isRecording = useMeetingRecordingStore((s) => s.isRecording);
-  const recordingAllowed = useTranscriptionContextAllowed("meeting");
 
   const createNoteIn = useCallback(
     async (spaceId: number | null, folderId: number | null) => {
@@ -53,9 +51,9 @@ export function useCreateNote() {
       revealContainer(result.note.space_id, result.note.folder_id);
       setActiveNoteId(result.note.id);
       // A new note is a recording waiting to happen: start it unless one is already live.
-      if (recordingAllowed && !isRecording) void startRecordingForNote(result.note);
+      if (!isRecording) void startRecordingForNote(result.note);
     },
-    [t, recordingAllowed, isRecording]
+    [t, isRecording]
   );
 
   const createNote = useCallback(

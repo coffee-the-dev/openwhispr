@@ -13,7 +13,6 @@ const SIGNED_IN = {
   signedIn: true,
   backupEnabled: true,
   subscribed: true,
-  backupAllowedByPolicy: true,
   dataRetentionEnabled: true,
   insightsSyncEnabled: true,
 };
@@ -36,10 +35,10 @@ test("consent: sharing survives the cloud-backup toggle being off", async () => 
   assert.deepEqual(consent, { shared: true, backup: false, analytics: true });
 });
 
-test("consent: backup needs the plan, the toggle, and org policy together", async () => {
+test("consent: backup needs the plan and the toggle together", async () => {
   const { resolveSyncConsent } = await load();
   assert.equal(resolveSyncConsent(SIGNED_IN).backup, true);
-  for (const off of ["backupEnabled", "subscribed", "backupAllowedByPolicy"]) {
+  for (const off of ["backupEnabled", "subscribed"]) {
     assert.equal(
       resolveSyncConsent({ ...SIGNED_IN, [off]: false }).backup,
       false,
@@ -65,7 +64,7 @@ test("consent: Insights counters answer to their own opt-in, not the plan", asyn
     resolveSyncConsent({ ...SIGNED_IN, backupEnabled: false, subscribed: false }).analytics,
     true
   );
-  for (const off of ["insightsSyncEnabled", "backupAllowedByPolicy"]) {
+  for (const off of ["insightsSyncEnabled"]) {
     assert.equal(
       resolveSyncConsent({ ...SIGNED_IN, [off]: false }).analytics,
       false,

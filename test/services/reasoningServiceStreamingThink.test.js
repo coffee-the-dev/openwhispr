@@ -53,8 +53,6 @@ async function loadReasoningService(t, cachePrefix, { window = {} } = {}) {
   installBrowserGlobals(t, { window });
   const vite = await createRendererServer(t, { cachePrefix });
   const reasoningService = (await vite.ssrLoadModule("/services/ReasoningService.ts")).default;
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
-  usePolicyStore.setState({ status: "unmanaged", appVersion: "1.8.3", policy: null });
   t.after(() => reasoningService.destroy());
   return { reasoningService, vite };
 }
@@ -810,7 +808,9 @@ test("a provider error part rejects the agent stream instead of ending it silent
   // closes the stream. The generator must surface that as a rejection.
   globalThis.fetch = async () =>
     new Response(
-      JSON.stringify({ error: { message: "Incorrect API key provided", type: "invalid_request_error" } }),
+      JSON.stringify({
+        error: { message: "Incorrect API key provided", type: "invalid_request_error" },
+      }),
       { status: 401, headers: { "content-type": "application/json" } }
     );
 
@@ -818,7 +818,11 @@ test("a provider error part rejects the agent stream instead of ending it silent
     [{ role: "user", content: "hello" }],
     "qwen3-4b-q4_k_m",
     "lan",
-    { systemPrompt: "Answer the user.", lanUrl: "http://127.0.0.1:11434/v1", disableThinking: true },
+    {
+      systemPrompt: "Answer the user.",
+      lanUrl: "http://127.0.0.1:11434/v1",
+      disableThinking: true,
+    },
     registry.toAISDKFormat()
   );
 

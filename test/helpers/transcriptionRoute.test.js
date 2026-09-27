@@ -8,24 +8,6 @@ const resolve = async (settings, extra = {}) => {
   return resolveTranscriptionRoute({ settings, ...extra });
 };
 
-const MANAGED_OPENAI_ONLY = {
-  status: "managed",
-  appVersion: "1.8.2",
-  policy: {
-    version: 1,
-    transcription: { allowedModes: ["providers"], allowedByokProviders: ["openai"] },
-    llm: { allowedModes: [], allowedByokProviders: [], allowedEnterpriseProviders: [] },
-    features: { agentEnabled: false, webSearchEnabled: false },
-    sharing: { externalLinkSharing: "disabled" },
-    dataRetention: {
-      audioRetentionMaxDays: null,
-      localHistoryMode: "user_choice",
-      cloudBackupAllowed: false,
-    },
-    minAppVersion: null,
-  },
-};
-
 test("self-hosted routes to the configured server and wins over stale flags", async () => {
   const route = await resolve({
     transcriptionMode: "self-hosted",
@@ -312,41 +294,6 @@ test("openai and groq route to fixed endpoints with provider-validated models", 
   assert.deepEqual(groqStale.auth, { scheme: "bearer", keyRef: "groq" });
 });
 
-test("managed policy is a fail-closed floor", async () => {
-  const blocked = await resolve(
-    { transcriptionMode: "providers", cloudTranscriptionProvider: "groq" },
-    { policy: MANAGED_OPENAI_ONLY }
-  );
-  assert.equal(blocked.transport, "error");
-  assert.equal(blocked.code, "POLICY_RESTRICTED");
-
-  const allowed = await resolve(
-    { transcriptionMode: "providers", cloudTranscriptionProvider: "openai" },
-    { policy: MANAGED_OPENAI_ONLY }
-  );
-  assert.equal(allowed.transport, "http-batch");
-
-  // Managed orgs see the policy message for a broken custom endpoint, never
-  // the config hint (pins the Phase 1 precedence).
-  const managedCustom = await resolve(
-    {
-      transcriptionMode: "providers",
-      cloudTranscriptionProvider: "custom",
-      cloudTranscriptionBaseUrl: "",
-    },
-    {
-      policy: {
-        ...MANAGED_OPENAI_ONLY,
-        policy: {
-          ...MANAGED_OPENAI_ONLY.policy,
-          transcription: { allowedModes: ["providers"], allowedByokProviders: ["custom"] },
-        },
-      },
-    }
-  );
-  assert.equal(managedCustom.code, "POLICY_RESTRICTED");
-});
-
 test("request overrides win: explicit model and effective language", async () => {
   const route = await resolve(
     { cloudTranscriptionProvider: "groq", preferredLanguage: "de-DE" },
@@ -391,25 +338,6 @@ test("a managed resolution outranks every personal setting", async () => {
   assert.equal(route.language, "de");
   // Routes never carry secrets — the context is identity metadata only.
   assert.equal("auth" in route, false);
-});
-
-test("a managed resolution bypasses the personal-selection policy floor", async () => {
-  const enterpriseOnly = structuredClone(MANAGED_OPENAI_ONLY);
-  enterpriseOnly.policy.transcription.allowedModes = ["enterprise"];
-  enterpriseOnly.policy.transcription.allowedByokProviders = [];
-  enterpriseOnly.policy.transcription.allowedEnterpriseProviders = ["azure"];
-  const route = await resolve(
-    { cloudTranscriptionProvider: "openai" },
-    { policy: enterpriseOnly, managed: MANAGED_STT }
-  );
-  assert.equal(route.transport, "managed");
-  // Without the managed resolution the same settings fail closed.
-  const blocked = await resolve(
-    { cloudTranscriptionProvider: "openai" },
-    { policy: enterpriseOnly }
-  );
-  assert.equal(blocked.transport, "error");
-  assert.equal(blocked.code, "POLICY_RESTRICTED");
 });
 
 test("a managed resolution error becomes an error route", async () => {

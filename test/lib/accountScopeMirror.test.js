@@ -36,24 +36,6 @@ const azureSttRequired = {
     },
   ],
 };
-const policy = {
-  version: 1,
-  transcription: {
-    allowedModes: ["enterprise", "local"],
-    allowedByokProviders: [],
-    allowedEnterpriseProviders: ["azure"],
-  },
-  llm: { allowedModes: ["openwhispr"], allowedByokProviders: [], allowedEnterpriseProviders: [] },
-  features: { agentEnabled: true, webSearchEnabled: false },
-  sharing: { externalLinkSharing: "disabled" },
-  dataRetention: {
-    audioRetentionMaxDays: null,
-    localHistoryMode: "user_choice",
-    cloudBackupAllowed: false,
-  },
-  minAppVersion: null,
-};
-
 function windowEvents() {
   const listeners = new Map();
   return {
@@ -81,26 +63,14 @@ async function boot(t, { scope = null, activeWorkspaceId = null, readScope } = {
   let stop = () => {};
   t.after(() => stop());
   const events = windowEvents();
-  const calls = { policy: [], config: [] };
+  const calls = { config: [] };
   let onScopeChanged = null;
   const electronAPI = {
-    getAppVersion: async () => ({ version: "1.10.0" }),
     getActiveAccountScope: readScope ?? (async () => scope),
     onActiveAccountScopeChanged: (callback) => {
       onScopeChanged = callback;
       return () => {
         onScopeChanged = null;
-      };
-    },
-    getWorkspacePolicy: async (accountId, authGeneration) => {
-      calls.policy.push([accountId, authGeneration]);
-      return {
-        success: true,
-        revision: calls.policy.length,
-        accountId,
-        authGeneration,
-        managed: true,
-        policy,
       };
     },
     getManagedEnterpriseConfig: async (accountId, workspaceId, authGeneration) => {
@@ -123,14 +93,12 @@ async function boot(t, { scope = null, activeWorkspaceId = null, readScope } = {
   const vite = await createRendererServer(t, { cachePrefix: "openwhispr-account-scope-mirror-" });
   const { mirrorActiveAccountScope } = await vite.ssrLoadModule("/lib/accountScopeMirror.ts");
   const managed = await vite.ssrLoadModule("/services/managedTranscription.ts");
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
   const { useEnterpriseIdentityStore } = await vite.ssrLoadModule(
     "/stores/enterpriseIdentityStore.ts"
   );
   stop = mirrorActiveAccountScope();
   return {
     managed,
-    usePolicyStore,
     useEnterpriseIdentityStore,
     calls,
     events,
@@ -146,7 +114,7 @@ async function boot(t, { scope = null, activeWorkspaceId = null, readScope } = {
 }
 
 test("a window without a session hydrates managed transcription from the main process scope", async (t) => {
-  const { managed, calls, broadcast, usePolicyStore, useEnterpriseIdentityStore } = await boot(t, {
+  const { managed, calls, broadcast, useEnterpriseIdentityStore } = await boot(t, {
     scope: { accountId: "account-a", authGeneration: 1 },
     activeWorkspaceId: "workspace-a",
   });
@@ -163,16 +131,14 @@ test("a window without a session hydrates managed transcription from the main pr
     ],
     ["account-a", "workspace-a", 1]
   );
-  assert.deepEqual(calls.policy, [["account-a", 1]]);
   assert.deepEqual(calls.config, [["account-a", "workspace-a", 1]]);
 
-  await t.test("a new credential generation re-resolves policy and identity", async () => {
+  await t.test("a new credential generation re-resolves the identity", async () => {
     broadcast({ accountId: "account-a", authGeneration: 2 });
     await waitFor(
       () => managed.getManagedTranscriptionResolution()?.context?.authGeneration === 2,
       "generation 2"
     );
-    assert.deepEqual(calls.policy.at(-1), ["account-a", 2]);
     assert.deepEqual(calls.config.at(-1), ["account-a", "workspace-a", 2]);
     assert.equal(managed.isManagedTranscriptionActive(), true);
   });
@@ -181,20 +147,18 @@ test("a window without a session hydrates managed transcription from the main pr
     broadcast(null);
     assert.equal(managed.isManagedTranscriptionActive(), false);
     assert.equal(managed.getManagedTranscriptionResolution(), undefined);
-    assert.equal(usePolicyStore.getState().status, "idle");
     assert.equal(useEnterpriseIdentityStore.getState().status, "idle");
     assert.equal(useEnterpriseIdentityStore.getState().accountId, null);
   });
 });
 
 test("a scope validated after boot arrives by broadcast and the workspace by storage", async (t) => {
-  const { managed, calls, broadcast, setActiveWorkspace, usePolicyStore } = await boot(t);
+  const { managed, calls, broadcast, setActiveWorkspace } = await boot(t);
   await new Promise((resolve) => setTimeout(resolve, 20));
   assert.equal(managed.isManagedTranscriptionActive(), false);
-  assert.deepEqual(calls.policy, []);
 
   broadcast({ accountId: "account-a", authGeneration: 1 });
-  await waitFor(() => usePolicyStore.getState().status === "managed", "policy");
+  await new Promise((resolve) => setTimeout(resolve, 20));
   // No active workspace is known yet, so nothing can be managed.
   assert.equal(managed.isManagedTranscriptionActive(), false);
   assert.deepEqual(calls.config, []);

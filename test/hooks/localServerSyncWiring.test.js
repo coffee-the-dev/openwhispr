@@ -8,9 +8,9 @@ const {
 } = require("../lib/rendererTestHarness");
 
 // The main process decides the shared llama-server from what each window
-// syncs, so this pins the renderer half: the policy-settled flag it sends and
-// the resync after a sign-out that leaves the policy idle. SSR cannot run
-// useEffect, so the settings provider is mounted for real.
+// syncs, so this pins the renderer half: every scope's resolved local model
+// rides on the sync, and a change to one resyncs. SSR cannot run useEffect, so
+// the settings provider is mounted for real.
 async function mountSettings(t) {
   // Registered before the browser globals so it runs before their teardown.
   const rootRef = { current: null };
@@ -19,7 +19,6 @@ async function mountSettings(t) {
   });
 
   const syncs = [];
-  const listeners = {};
   const known = {
     syncStartupPreferences: async (prefs) => {
       syncs.push(prefs);
@@ -27,12 +26,6 @@ async function mountSettings(t) {
     // Startup seeds the agent name into the dictionary. Left pending, the write
     // never reaches its cloud push, which imports a module after teardown.
     applyDictionaryChanges: () => new Promise(() => {}),
-    onActiveAccountScopeChanged: (callback) => {
-      listeners.scope = callback;
-      return () => {
-        delete listeners.scope;
-      };
-    },
   };
   // Every other bridge call the provider makes is irrelevant here.
   const electronAPI = new Proxy(known, {
@@ -49,9 +42,9 @@ async function mountSettings(t) {
   const vite = await createRendererServer(t, {
     cachePrefix: "openwhispr-local-server-sync-wiring-test-",
   });
-  const [{ SettingsProvider }, { usePolicyStore }] = await Promise.all([
+  const [{ SettingsProvider }, { useSettingsStore }] = await Promise.all([
     vite.ssrLoadModule("/hooks/useSettings.ts"),
-    vite.ssrLoadModule("/stores/policyStore.ts"),
+    vite.ssrLoadModule("/stores/settingsStore.ts"),
   ]);
 
   const { createRoot } = require("react-dom/client");
@@ -59,25 +52,18 @@ async function mountSettings(t) {
   await React.act(async () => root.render(React.createElement(SettingsProvider, null, null)));
   rootRef.current = root;
 
-  return { syncs, listeners, usePolicyStore };
+  return { syncs, useSettingsStore };
 }
 
-test("a window reports its policy as unsettled until the fetch lands", async (t) => {
-  const { syncs, usePolicyStore } = await mountSettings(t);
+test("a window syncs its scopes' local models and resyncs when one changes", async (t) => {
+  const { syncs, useSettingsStore } = await mountSettings(t);
 
-  assert.equal(syncs.at(-1).policySettled, false, "idle is not settled");
+  assert.ok(syncs.length > 0, "the window syncs on mount");
+  assert.equal("policySettled" in syncs.at(-1), false);
 
-  await React.act(async () => usePolicyStore.setState({ status: "unmanaged" }));
-  assert.equal(syncs.at(-1).policySettled, true);
-});
-
-test("a sign-out resyncs even though the policy stays idle", async (t) => {
-  const { syncs, listeners } = await mountSettings(t);
-  const before = syncs.length;
-
-  await React.act(async () => listeners.scope({ accountId: "a", authGeneration: 1 }));
-  assert.equal(syncs.length, before, "a sign-in waits for its policy instead");
-
-  await React.act(async () => listeners.scope(null));
-  assert.equal(syncs.length, before + 1);
+  await React.act(async () =>
+    useSettingsStore.setState({ chatAgentMode: "local", chatAgentModel: "qwen3.5-9b-q4_k_m" })
+  );
+  assert.equal(syncs.at(-1).chatAgentMode, "local");
+  assert.equal(syncs.at(-1).chatAgentModel, "qwen3.5-9b-q4_k_m");
 });

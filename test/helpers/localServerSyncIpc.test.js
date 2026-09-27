@@ -79,11 +79,10 @@ test.before(() => {
   delete require.cache[handlersModulePath];
   const IPCHandlers = require(handlersModulePath);
   const Ctor = IPCHandlers.default || IPCHandlers;
-  target = { signedIn: false, envKeys: [] };
+  target = { envKeys: [] };
   target._syncStartupEnv = (setVars, clearVars) => {
     target.envKeys = [...Object.keys(setVars), ...clearVars];
   };
-  target._hasActiveAccountScope = () => target.signedIn;
   Ctor.prototype.setupHandlers.call(
     new Proxy(target, {
       get: (value, property) => (property in value ? value[property] : anything()),
@@ -96,10 +95,9 @@ test.after(() => {
   Module._load = originalLoad;
 });
 
-function sync({ loaded, signedIn = false, policySettled = true, ...scopes }) {
+function sync({ loaded, ...scopes }) {
   modelManager.currentServerModelId = loaded;
   modelManager.stops = 0;
-  target.signedIn = signedIn;
   return handlers.get("sync-startup-preferences")(
     {},
     {
@@ -112,7 +110,6 @@ function sync({ loaded, signedIn = false, policySettled = true, ...scopes }) {
       chatAgentMode: "openwhispr",
       useDictationTranslation: false,
       translationMode: "openwhispr",
-      policySettled,
       ...scopes,
     }
   );
@@ -125,19 +122,5 @@ test("a window sync keeps the server while another scope still needs its model",
 
 test("a window sync stops the server once no scope needs its model", async () => {
   await sync({ loaded: MODEL, chatAgentMode: "local", chatAgentModel: "gemma-4-e2b" });
-  assert.equal(modelManager.stops, 1);
-});
-
-test("a signed-in window waits for its workspace policy before touching the server", async () => {
-  await sync({ loaded: MODEL, signedIn: true, policySettled: false });
-  assert.equal(modelManager.stops, 0);
-  assert.equal(target.envKeys.includes("CLEANUP_PROVIDER"), false, "no pre-warm change either");
-
-  await sync({ loaded: MODEL, signedIn: true, policySettled: true });
-  assert.equal(modelManager.stops, 1);
-});
-
-test("signed out, the policy never loads, so an unresolved policy does not block the stop", async () => {
-  await sync({ loaded: MODEL, signedIn: false, policySettled: false });
   assert.equal(modelManager.stops, 1);
 });

@@ -481,10 +481,6 @@
     }
   },
   "controlPanel": {
-    "updateRequiredByOrg": {
-      "title": "التحديث مطلوب",
-      "description": "تتطلب مؤسستك إصدار OpenWhispr {{version}} أو أحدث. يرجى تحديث التطبيق."
-    },
     "update": {
       "readyTitle": "التحديث جاهز للتثبيت",
       "readyDescription": "انقر فوق «تثبيت التحديث» لإعادة التشغيل باستخدام أحدث إصدار.",
@@ -586,11 +582,6 @@
       "dismissButton": "ليس الآن"
     },
     "backToNotes": "العودة إلى الملاحظات",
-    "requiredModelsByOrg": {
-      "title": "النماذج المطلوبة مفقودة",
-      "description": "تتطلب مؤسستك هذه النماذج على هذا الجهاز: {{models}}.",
-      "download": "تنزيل"
-    },
     "cloudNudge": {
       "title": "تم تسجيل دخولك",
       "description": "لا يزال الإملاء يعمل على إعدادك الخاص. يمكنك التبديل إلى OpenWhispr Cloud في أي وقت.",
@@ -1207,9 +1198,7 @@
       "local": "محلي",
       "localDesc": "قم بتشغيل LLM محلي على جهازك — خاص بالكامل.",
       "selfHosted": "مستضاف ذاتيًا",
-      "selfHostedDesc": "اتصل بنقطة نهاية مستضافة ذاتيًا ومتوافقة مع OpenAI.",
-      "enterprise": "للمؤسسات",
-      "enterpriseDesc": "استخدم AWS Bedrock أو Azure OpenAI أو Google Vertex."
+      "selfHostedDesc": "اتصل بنقطة نهاية مستضافة ذاتيًا ومتوافقة مع OpenAI."
     },
     "prompt": {
       "title": "مطالبة المساعد",
@@ -1226,12 +1215,10 @@
         "providers": "مزودو الخدمات السحابية",
         "local": "محلي",
         "selfHosted": "مستضاف ذاتيًا",
-        "enterprise": "للمؤسسات",
         "openwhisprDesc": "دقة موثوقة. لا يتطلب أي إعداد.",
         "providersDesc": "أحضر مفتاح API الخاص بك.",
         "localDesc": "نماذج على الجهاز. خاصة بالكامل.",
-        "selfHostedDesc": "الخادم الخاص بك على شبكتك.",
-        "enterpriseDesc": "استخدم الحساب السحابي لمؤسستك (AWS، Azure، GCP)."
+        "selfHostedDesc": "الخادم الخاص بك على شبكتك."
       }
     },
     "chat": {
@@ -1773,7 +1760,6 @@
       "title": "ملاحظات الاجتماع",
       "description": "نصوص مفرَّغة وملخصات مهيكلة",
       "back": "رجوع",
-      "restrictedByOrg": "تفريغ الاجتماعات مقيد بواسطة مؤسستك.",
       "systemAudioSilent": {
         "title": "لم يتم اكتشاف صوت الاجتماع بعد",
         "description": "لم يلتقط الصوت حتى الآن سوى ميكروفونك. هل أنت في مكالمة فيديو؟ تحقق من أن صوت الاجتماع يُشغَّل على هذا الكمبيوتر وأنه غير مكتوم. هل تسجّل اجتماعًا حضوريًا؟ يمكنك تجاهل هذا — فالميكروفون يلتقط صوت الغرفة."
@@ -2100,10 +2086,6 @@
         "titleLineOne": "اختر إعداد",
         "titleLineTwo": "OpenWhispr الخاص بك",
         "description": "اختر الخيار الذي يناسب طريقة عملك.",
-        "unavailable": {
-          "title": "لا يتوفر أي خيار إعداد",
-          "description": "سياسة مساحة العمل الخاصة بك لا تسمح بإعداد كامل للتفريغ والذكاء الاصطناعي. اتصل بالمسؤول."
-        },
         "cloud": {
           "title": "OpenWhispr Cloud",
           "description": "احصل على 2,000 كلمة مجانية كل أسبوع. تظل إعداداتك متزامنة عبر الأجهزة.",
@@ -2347,17 +2329,6 @@
         "step1": "سجل في corti.ai",
         "step2": "افتح وحدة تحكم Corti وأنشئ بيانات اعتماد API",
         "step3": "الصق معرف العميل وسر العميل أدناه"
-      }
-    },
-    "requiredModels": {
-      "title": "تثبيت النماذج المطلوبة",
-      "description": "تتطلب {{organization}} هذه النماذج على هذا الجهاز قبل أن تتمكن من بدء الإملاء.",
-      "genericOrganization": "مؤسستك",
-      "installed": "مُثبَّت",
-      "queued": "في قائمة الانتظار",
-      "failed": {
-        "title": "لم يكتمل التنزيل",
-        "description": "تحقق من اتصالك والمساحة الخالية على القرص، ثم أعد المحاولة. إذا استمر الفشل، فاتصل بالمسؤول."
       }
     }
   },
@@ -2870,12 +2841,10 @@
         "providers": "مزودو الخدمات السحابية",
         "local": "محلي",
         "selfHosted": "مستضاف ذاتيًا",
-        "enterprise": "مؤسسي",
         "openwhisprDesc": "دقة موثوقة. لا حاجة للإعداد.",
         "providersDesc": "أحضر مفتاح API الخاص بك.",
         "localDesc": "نماذج على الجهاز. خاصة بالكامل.",
-        "selfHostedDesc": "خادمك الخاص على شبكتك.",
-        "enterpriseDesc": "استخدم الحساب السحابي لمؤسستك (AWS، Azure، GCP)."
+        "selfHostedDesc": "خادمك الخاص على شبكتك."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "دقة موثوقة. لا حاجة للإعداد.",
@@ -3315,9 +3284,7 @@
         "openwhisprDesc": "دقة موثوقة. لا حاجة للإعداد.",
         "providersDesc": "أحضر مفتاح API الخاص بك.",
         "localDesc": "نماذج على الجهاز. خاصة بالكامل.",
-        "selfHostedDesc": "خادمك الخاص على شبكتك.",
-        "enterprise": "السحابة المؤسسية",
-        "enterpriseDesc": "يُرسَل الصوت إلى السحابة الخاصة بمؤسستك."
+        "selfHostedDesc": "خادمك الخاص على شبكتك."
       },
       "openwhisprCloud": "OpenWhispr Cloud",
       "openwhisprCloudDescription": "دقة موثوقة. لا حاجة للإعداد.",
@@ -3403,8 +3370,7 @@
             "info": "الصوت المنقول من كل مقطع إلى المقطع التالي لتجنب الانقطاعات المفاجئة عند الدمج."
           }
         }
-      },
-      "meetingEnterpriseOnly": "لا تسمح مؤسستك إلا بالتفريغ عبر السحابة المؤسسية، وهو لا يشمل تسجيل الاجتماعات بعد."
+      }
     },
     "intelligence": {
       "gpuDevice": {
@@ -3652,14 +3618,9 @@
     "copied": "تم النسخ",
     "done": "تم",
     "skip": "تخطي",
-    "policyAiProcessingRestricted": "معالجة الذكاء الاصطناعي مقيدة من قبل مؤسستك.",
-    "policyAgentRestricted": "استخدام مساعد الذكاء الاصطناعي مقيد من قبل مؤسستك.",
-    "policyTranscriptionRestricted": "التفريغ الصوتي مقيد من قبل مؤسستك.",
-    "policyUnresolved": "لم يتم تحميل إعدادات مؤسستك بعد. حاول مرة أخرى بعد قليل.",
     "logout": "تسجيل الخروج",
     "managedConfigLoading": "جارٍ التحقق من الإعداد المُدار لمؤسستك. أعد المحاولة بعد لحظات.",
-    "managedConfigUnavailable": "الوصول المُدار للمؤسسة غير متاح. سجّل الدخول مرة أخرى أو اتصل بالمسؤول.",
-    "managedPolicyConflict": "الوصول المُدار محظور بموجب سياسة مساحة العمل الخاصة بك. اتصل بالمسؤول."
+    "managedConfigUnavailable": "الوصول المُدار للمؤسسة غير متاح. سجّل الدخول مرة أخرى أو اتصل بالمسؤول."
   },
   "streaming": {
     "errors": {
@@ -3872,7 +3833,6 @@
     "xwaylandAppsOnly": "اللصق التلقائي يعمل مع تطبيقات XWayland فقط"
   },
   "settingsModal": {
-    "managedByOrg": "تتم إدارة بعض الإعدادات بواسطة مؤسستك.",
     "groups": {
       "account": "الحساب",
       "app": "التطبيق",

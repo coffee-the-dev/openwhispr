@@ -44,8 +44,6 @@ import { createStreamingThinkFilter } from "./ai/streamingThinkFilter";
 import { extractApiErrorMessage } from "./ai/apiErrorMessage";
 import { clearTinfoilClientCache } from "./ai/tinfoilClient";
 import { resolveChatRoute } from "../helpers/chatRouting";
-import { assertAgentAllowedByPolicy, assertReasoningAllowedByPolicy } from "./reasoningPolicy";
-import type { InferenceMode } from "../types/electron";
 
 export type ToolMetadata = Record<string, unknown> | Array<Record<string, unknown>>;
 
@@ -86,22 +84,6 @@ export type AgentStreamChunk =
       metadata?: ToolMetadata;
     }
   | { type: "done"; finishReason?: string };
-
-function resolveLlmDispatchMode(
-  provider: string,
-  config: Pick<ReasoningConfig, "lanUrl">
-): InferenceMode {
-  if (config.lanUrl || provider === "lan") return "self-hosted";
-  if (provider === "openwhispr") return "openwhispr";
-  if (provider === "local") return "local";
-  if (isEnterpriseProvider(provider)) return "enterprise";
-  return "providers";
-}
-
-function assertAgentSessionAllowedByPolicy(provider: string, mode: InferenceMode): void {
-  assertAgentAllowedByPolicy();
-  assertReasoningAllowedByPolicy(provider, mode);
-}
 
 function logParamFallback(logEvent: string) {
   return (details: { status: number; stripped: string[] }) =>
@@ -494,8 +476,6 @@ class ReasoningService extends BaseReasoningService {
     if (!providerId) {
       throw new Error("No reasoning provider selected");
     }
-    if (dispatchConfig.requiresAgent) assertAgentAllowedByPolicy();
-    assertReasoningAllowedByPolicy(providerId, resolveLlmDispatchMode(providerId, dispatchConfig));
 
     if (!trimmedModel && providerId !== "openwhispr" && providerId !== "lan") {
       throw new Error("No reasoning model selected");
@@ -573,9 +553,6 @@ class ReasoningService extends BaseReasoningService {
       lanUrl: config.lanUrl,
       customApiKey: config.customApiKey,
     });
-    const mode: InferenceMode =
-      route.kind === "self-hosted" ? "self-hosted" : route.kind === "local" ? "local" : "providers";
-    assertAgentSessionAllowedByPolicy(provider, mode);
     const isLocalProvider = route.kind === "local";
     const isLanChat = route.kind === "self-hosted";
 
@@ -775,15 +752,6 @@ class ReasoningService extends BaseReasoningService {
       customApiKey: config.customApiKey,
       isEnterpriseProvider: isEnterpriseProvider(provider),
     });
-    const mode: InferenceMode =
-      route.kind === "self-hosted"
-        ? "self-hosted"
-        : route.kind === "enterprise"
-          ? "enterprise"
-          : route.kind === "local"
-            ? "local"
-            : "providers";
-    assertAgentSessionAllowedByPolicy(provider, mode);
     // Both streaming transports share this owner so cancellation survives
     // asynchronous server, key, and model setup.
     const abortController = new AbortController();
@@ -1123,7 +1091,6 @@ class ReasoningService extends BaseReasoningService {
     },
     operationGeneration: number
   ): AsyncGenerator<AgentStreamChunk, void, unknown> {
-    assertAgentSessionAllowedByPolicy("openwhispr", "openwhispr");
     const operationWasCancelled = (): boolean =>
       operationGeneration !== this.cloudOperationGeneration;
     const maxSteps = config.tools?.length ? ReasoningService.MAX_TOOL_STEPS : 1;

@@ -52,15 +52,6 @@ const SETTINGS_STORE_SOURCE = `
 export const getSettings = () => globalThis.__forceStopSettings;
 `;
 
-const POLICY_STORE_SOURCE = `
-export const usePolicyStore = {
-  // An unknown status fails closed at the policy gate, which would make the
-  // second dictation bail before it reaches AudioManager at all.
-  getState: () => ({ status: "unmanaged" }),
-  subscribe: () => () => {},
-};
-`;
-
 const LOGGER_SOURCE = `
 const noop = () => {};
 export default {
@@ -132,7 +123,6 @@ async function mountHarness(t, { settings, writeClipboard } = {}) {
     mockModules: {
       "/helpers/audioManager": FAKE_AUDIO_MANAGER_SOURCE,
       "/stores/settingsStore": SETTINGS_STORE_SOURCE,
-      "/stores/policyStore": POLICY_STORE_SOURCE,
       "/utils/logger": LOGGER_SOURCE,
       "react-i18next": TRANSLATION_SOURCE,
     },

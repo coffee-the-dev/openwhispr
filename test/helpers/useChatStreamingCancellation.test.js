@@ -74,8 +74,6 @@ async function renderChatStreaming(
   }
 
   const { useSettingsStore } = await vite.ssrLoadModule("/stores/settingsStore.ts");
-  const { usePolicyStore } = await vite.ssrLoadModule("/stores/policyStore.ts");
-  usePolicyStore.setState({ status: "unmanaged", appVersion: "1.8.3", policy: null });
   // A self-hosted (LAN) chat agent with no tools in play: 4B+ in the model
   // name makes it tool-eligible by the size heuristic, but the fixture
   // fetch never emits a tool call, so it stays on the plain-content path.

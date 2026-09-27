@@ -68,7 +68,7 @@ test("silence event latches the warning once during a system-audio session", asy
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   assert.equal(store.useMeetingRecordingStore.getState().isRecording, true);
   assert.equal(store.useMeetingRecordingStore.getState().systemAudioSilentWarning, false);
   assert.equal(typeof listeners.systemAudioSilent, "function");
@@ -98,7 +98,7 @@ test("a silence event arriving after stop is ignored without crashing", async (t
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   const lateCallback = listeners.systemAudioSilent;
   await store.stopRecording();
 
@@ -114,7 +114,7 @@ test("no warning when the session had no system audio", async (t) => {
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   assert.equal(store.useMeetingRecordingStore.getState().isRecording, true);
   assert.equal(store.useMeetingRecordingStore.getState().micCaptureStatus, "active");
 

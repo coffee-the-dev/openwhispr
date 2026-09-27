@@ -1,7 +1,6 @@
 const assert = require("node:assert/strict");
 const test = require("node:test");
 const React = require("react");
-const { managedPolicy } = require("../helpers/harness/policyFixtures");
 const { mountByokStep } = require("../lib/byokStepHarness");
 
 // Restarting onboarding (#2128) drops the session draft, so these steps mount with no
@@ -67,18 +66,6 @@ async function uploadRoute(step) {
       remoteTranscriptionModel: state.remoteTranscriptionModel,
     },
   });
-}
-
-// A workspace policy arriving while the card is open, as policyStore applies it.
-async function applyTranscriptionPolicy(step, transcription) {
-  const { usePolicyStore } = await step.vite.ssrLoadModule("/stores/policyStore.ts");
-  await React.act(async () =>
-    usePolicyStore.setState({
-      status: "managed",
-      appVersion: "1.10.0",
-      policy: managedPolicy({ transcription }),
-    })
-  );
 }
 
 test("a first run opens blank", async (t) => {
@@ -485,49 +472,6 @@ test("a key that loads after mount fills an empty field but never replaces typed
     await step.setStore({ customTranscriptionApiKey: "sk-late-key" });
     assert.equal(step.value(PLACEHOLDER.selfHostedKey), "sk-typed-key");
   });
-});
-
-test("policy removing self-hosting mid-step keeps the hosted half and loads its key", async (t) => {
-  const step = await mountByokStep(t, {
-    settings: HOSTED_GROQ,
-    secrets: { groqApiKey: "gsk-saved-key", customTranscriptionApiKey: "sk-custom-key" },
-  });
-  await step.toggleSelfHosted();
-  assert.equal(step.value(PLACEHOLDER.selfHostedKey), "");
-
-  await applyTranscriptionPolicy(step, {
-    allowedModes: ["providers"],
-    allowedByokProviders: ["groq"],
-  });
-  assert.deepEqual(step.selectValues(), ["groq", "whisper-large-v3-turbo"]);
-  assert.equal(step.value(PLACEHOLDER.hostedKey), "gsk-saved-key");
-});
-
-test("a seeded provider that policy removes after mount cannot be saved", async (t) => {
-  for (const [name, settings, secrets] of [
-    ["an API-key provider", HOSTED_GROQ, { groqApiKey: "gsk-saved-key" }],
-    [
-      "Corti",
-      {
-        ...HOSTED_GROQ,
-        cloudTranscriptionProvider: "corti",
-        cloudTranscriptionModel: "corti-transcribe",
-      },
-      { cortiClientId: "corti-client-id", cortiClientSecret: "corti-client-secret" },
-    ],
-  ]) {
-    await t.test(name, async (t) => {
-      const step = await mountByokStep(t, { settings, secrets });
-      await step.passConnectionTest();
-      assert.equal(step.proceedDisabled(), false);
-
-      await applyTranscriptionPolicy(step, {
-        allowedModes: ["providers"],
-        allowedByokProviders: ["openai"],
-      });
-      assert.equal(step.proceedDisabled(), true);
-    });
-  }
 });
 
 test("a key-less endpoint saved over a hosted setup keeps its model and routes to it", async (t) => {

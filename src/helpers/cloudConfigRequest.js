@@ -1,10 +1,9 @@
-const { readPolicyResponseError, toPolicyFailure } = require("./policyResponseError");
+const { readCloudResponseError, toCloudFailure } = require("./cloudResponseError");
 
 function createCloudConfigRequestHandler({
   getApiUrl,
   getAuthHeader,
   proxyFetch,
-  withPolicyHeaders,
   logger,
   configPath,
 }) {
@@ -20,7 +19,7 @@ function createCloudConfigRequestHandler({
       // re-serve a route the server already withdrew (e.g. after a refused
       // Orukeet session invalidates the in-memory config).
       const response = await proxyFetch(`${apiUrl}/api/${configPath}`, {
-        headers: withPolicyHeaders(authHeader),
+        headers: authHeader,
         cache: "no-store",
       });
       if (!response.ok) {
@@ -40,14 +39,14 @@ function createCloudConfigRequestHandler({
             status: 503,
           };
         }
-        throw await readPolicyResponseError(response, `API error: ${response.status}`);
+        throw await readCloudResponseError(response, `API error: ${response.status}`);
       }
 
       const data = await response.json();
       return { success: true, ...data };
     } catch (error) {
       logger?.error?.(`${configPath} fetch error:`, error);
-      return toPolicyFailure(error);
+      return toCloudFailure(error);
     }
   };
 }

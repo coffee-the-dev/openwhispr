@@ -20,27 +20,21 @@ export interface SyncConsent {
  *
  * Insights counters carry no content and are free, so they answer to their own
  * opt-in rather than the backup toggle or the plan. They still require local
- * history and are user data leaving the device, so org policy gates them like
- * backup.
+ * history.
  */
 export function resolveSyncConsent(state: {
   authValidated: boolean;
   signedIn: boolean;
   backupEnabled: boolean;
   subscribed: boolean;
-  backupAllowedByPolicy: boolean;
   dataRetentionEnabled: boolean;
   insightsSyncEnabled: boolean;
 }): SyncConsent {
   const shared = state.authValidated && state.signedIn;
   return {
     shared,
-    backup: shared && state.backupEnabled && state.subscribed && state.backupAllowedByPolicy,
-    analytics:
-      shared &&
-      state.insightsSyncEnabled &&
-      state.backupAllowedByPolicy &&
-      state.dataRetentionEnabled,
+    backup: shared && state.backupEnabled && state.subscribed,
+    analytics: shared && state.insightsSyncEnabled && state.dataRetentionEnabled,
   };
 }
 

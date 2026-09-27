@@ -83,7 +83,7 @@ test("a finished session's diarization is not published over the recording that 
   const store = await loadStore(t, api);
   assert.equal(typeof state.diarizationCallback, "function");
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   state.updatedTranscripts.length = 0;
 
   state.diarizationCallback({
@@ -109,7 +109,7 @@ test("the same result publishes normally once the recording has stopped", async 
   const { api, state } = createElectronAPI();
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   await store.stopRecording();
 
   state.diarizationCallback({
@@ -128,7 +128,7 @@ test("a live recording on another note does not suppress the publish", async (t)
   const { api, state } = createElectronAPI();
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording({ ...START_ARGS, noteId: 99 }), true);
+  await store.startRecording({ ...START_ARGS, noteId: 99 });
 
   state.diarizationCallback({
     noteId: NOTE_ID,

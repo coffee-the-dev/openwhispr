@@ -2,10 +2,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {
-  createPolicyResponseError,
-  readPolicyResponseError,
-  toPolicyFailure,
-} = require("../../src/helpers/policyResponseError");
+  createCloudResponseError,
+  readCloudResponseError,
+  toCloudFailure,
+} = require("../../src/helpers/cloudResponseError");
 
 test("preserves policy denial code, status, details, and minimum version", async () => {
   for (const [status, code] of [
@@ -20,9 +20,9 @@ test("preserves policy denial code, status, details, and minimum version", async
       }),
       { status }
     );
-    const error = await readPolicyResponseError(response, "Request failed");
+    const error = await readCloudResponseError(response, "Request failed");
 
-    assert.deepEqual(toPolicyFailure(error), {
+    assert.deepEqual(toCloudFailure(error), {
       success: false,
       error: "Request blocked by workspace policy",
       code,
@@ -34,7 +34,7 @@ test("preserves policy denial code, status, details, and minimum version", async
 });
 
 test("normalizes parsed multipart policy errors without losing legacy statusCode", () => {
-  const error = createPolicyResponseError(
+  const error = createCloudResponseError(
     426,
     { error: { message: "Update OpenWhispr" }, code: "UPGRADE_REQUIRED", minAppVersion: "2.1.0" },
     "Transcription failed"

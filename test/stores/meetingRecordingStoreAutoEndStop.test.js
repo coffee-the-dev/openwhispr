@@ -66,7 +66,7 @@ test("a completed stop reports that it ended the recording", async (t) => {
   const { api } = createElectronAPI({ stopResult: () => ({ success: true }) });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   const result = await store.stopRecording();
 
   assert.equal(result.stopped, true);
@@ -81,7 +81,7 @@ test("a session stamps its start time and clears it on stop", async (t) => {
   const store = await loadStore(t, api);
   const beforeStart = Date.now();
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   const startedAt = store.useMeetingRecordingStore.getState().recordingStartedAt;
   assert.equal(typeof startedAt, "number");
   assert.ok(startedAt >= beforeStart, "the stamp is the moment recording began");
@@ -100,7 +100,7 @@ test("a stop whose main-side teardown fails still reports the recording ended", 
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   const result = await store.stopRecording();
 
   assert.equal(result.stopped, true);
@@ -113,7 +113,7 @@ test("a stop main already dropped as stale still reports the recording ended", a
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   assert.equal((await store.stopRecording()).stopped, true);
 });
 
@@ -125,7 +125,7 @@ test("a stop that rejects still reports the recording ended", async (t) => {
   });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   assert.equal((await store.stopRecording()).stopped, true);
 });
 
@@ -140,7 +140,7 @@ test("a scoped stop for another session reports no stop happened", async (t) => 
   const { api } = createElectronAPI({ stopResult: () => ({ success: true }) });
   const store = await loadStore(t, api);
 
-  assert.equal(await store.startRecording(START_ARGS), true);
+  await store.startRecording(START_ARGS);
   const result = await store.stopRecording("some-other-session");
 
   assert.equal(result.stopped, false);

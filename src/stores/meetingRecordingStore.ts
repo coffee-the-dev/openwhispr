@@ -29,8 +29,6 @@ import {
   MAX_SPEAKER_COUNT,
 } from "../constants/speakerDetection.json";
 import logger from "../utils/logger";
-import { isTranscriptionContextAllowed } from "./policyRules";
-import { usePolicyStore } from "./policyStore";
 import {
   lockTranscriptSpeaker,
   mergeTranscriptSegments,
@@ -719,7 +717,6 @@ async function cleanup(): Promise<void> {
 
 export async function prepareTranscription(): Promise<void> {
   if (isPrepared || isRecordingFlag || isStartingFlag) return;
-  if (!isTranscriptionContextAllowed(usePolicyStore.getState(), getSettings(), "meeting")) return;
   if (preparePromise) return preparePromise;
 
   logger.info("Meeting transcription preparing (pre-warming WebSockets)...", {}, "meeting");
@@ -766,17 +763,9 @@ export interface StartRecordingArgs {
   autoEndEligible: boolean;
 }
 
-// Resolves false only when workspace policy refuses the recording; every other
-// outcome (including setup failures, which are reported through the store) is
-// "accepted" so callers don't roll back UI they didn't own.
-export async function startRecording(args: StartRecordingArgs): Promise<boolean> {
-  if (isRecordingFlag || isStartingFlag) return true;
-  if (!isTranscriptionContextAllowed(usePolicyStore.getState(), getSettings(), "meeting")) {
-    logger.warn("Meeting recording blocked by workspace policy", {}, "meeting");
-    reportMeetingError("policyRestricted");
-    return false;
-  }
-
+// Setup failures are reported through the store rather than thrown.
+export async function startRecording(args: StartRecordingArgs): Promise<void> {
+  if (isRecordingFlag || isStartingFlag) return;
   const sessionId = createMeetingRecordingSessionId();
   await meetingRecordingStartCoordinator.runStart(sessionId, async (startOperation) => {
     if (isRecordingFlag || isStartingFlag) return;
@@ -1539,7 +1528,6 @@ export async function startRecording(args: StartRecordingArgs): Promise<boolean>
       await teardownStart();
     }
   });
-  return true;
 }
 
 // Writes the live segments to the recording's note, serialized exactly as the

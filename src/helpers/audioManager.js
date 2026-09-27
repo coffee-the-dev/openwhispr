@@ -49,15 +49,6 @@ import {
 } from "../stores/settingsStore";
 
 import {
-  effectiveAudioRetentionDays,
-  effectiveLocalHistoryEnabled,
-  isAgentAllowed,
-  isCloudBackupAllowed,
-  isTranscriptionContextAllowed,
-  isTranscriptionSelectionAllowed,
-} from "../stores/policyRules";
-import { usePolicyStore } from "../stores/policyStore";
-import {
   getBatchTranscriptionModel,
   getCloudModel,
   getTranscriptionProvider,
@@ -72,10 +63,7 @@ import {
   resolveTranscriptionRoute,
   STREAMING_ONLY_PROVIDERS,
 } from "./transcriptionRoute.ts";
-import {
-  getManagedTranscriptionResolution,
-  isManagedTranscriptionActive,
-} from "../services/managedTranscription.ts";
+import { getManagedTranscriptionResolution } from "../services/managedTranscription.ts";
 import { getTranscriptionApiKey } from "../services/fileTranscription";
 import { shouldSkipTranscriptionApiKey } from "./transcriptionAuth";
 import {
@@ -176,27 +164,12 @@ const cloudSignInRequiredError = () => {
 const micDeviceKey = (settings) =>
   `${settings.microphoneSelectionMode}|${settings.selectedMicDeviceId}`;
 
-function getEffectiveRetentionPreferences() {
-  const settings = getSettings();
-  const policyState = usePolicyStore.getState();
-  return {
-    dataRetentionEnabled: effectiveLocalHistoryEnabled(policyState, settings.dataRetentionEnabled),
-    audioRetentionDays: effectiveAudioRetentionDays(policyState, settings.audioRetentionDays),
-  };
-}
-
 // Insights sync is opt-in, so nothing analytics-only may ride along on a cloud
 // request until the user has enabled it. History retention gates it too: the
 // local write below the same gate is skipped, and the cloud must not keep rows
-// the device never recorded. Managed workspaces that forbid cloud backup forbid
-// these counters with it — they are user data leaving the device like any other.
+// the device never recorded.
 function analyticsSyncEnabled(settings = getSettings()) {
-  return (
-    settings.isSignedIn &&
-    settings.insightsSyncEnabled &&
-    isCloudBackupAllowed(usePolicyStore.getState()) &&
-    getEffectiveRetentionPreferences().dataRetentionEnabled
-  );
+  return settings.isSignedIn && settings.insightsSyncEnabled && settings.dataRetentionEnabled;
 }
 
 // Shared by the agent route and its text-only retry, which needs the prompt
@@ -984,23 +957,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     });
   }
 
-  isRecordingAllowedByPolicy() {
-    const policyState = usePolicyStore.getState();
-    return (
-      (isManagedTranscriptionActive() ||
-        isTranscriptionContextAllowed(policyState, getSettings(), "dictation")) &&
-      (!this.voiceAgentRequested || isAgentAllowed(policyState))
-    );
-  }
-
-  assertAgentAllowedByPolicy() {
-    if (isAgentAllowed(usePolicyStore.getState())) return;
-    const error = new Error("AI agent use is restricted by your organization.");
-    error.code = "POLICY_RESTRICTED";
-    error.messageKey = "common.policyAgentRestricted";
-    throw error;
-  }
-
   setSttConfig(config) {
     this.sttConfig = config;
     this.sttConfigFetchedAt = Date.now();
@@ -1129,10 +1085,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   // warmupMicDriver (#845): a raced warm-up never resolved before the
   // recording's own open, so it only ever added a concurrent double open.
   async prepareMicCapture() {
-    // Preparing opens the device, so it answers to the same policy as the
-    // recording it anticipates — otherwise a blocked user's key-down would
-    // still light the mic and buffer pre-roll.
-    if (!this.isRecordingAllowedByPolicy()) return null;
     // A start already awaiting the mic open leaves isRecording false for as long
     // as that open takes, so without this guard a second prepare would open the
     // device again and buffer a pre-roll no recording ever answers.
@@ -1358,10 +1310,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     let freshTap = null;
     this._startInProgress = true;
     try {
-      if (!this.isRecordingAllowedByPolicy()) {
-        logger.warn("Recording blocked by workspace policy", {}, "audio");
-        return false;
-      }
       if (
         this.isRecording ||
         this.isProcessing ||
@@ -1903,7 +1851,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     // whether to retain the discarded audio from the snapshot rather than live
     // manager state (which may already belong to a new recording).
     const shouldSave =
-      shouldSaveDiscardedRecording(getSettings(), durationSeconds, usePolicyStore.getState()) &&
+      shouldSaveDiscardedRecording(getSettings(), durationSeconds) &&
       (chunks.length > 0 || segments.length > 0);
     if (shouldSave) {
       // Assemble and save in the background — the merge crosses IPC into FFmpeg
@@ -2334,18 +2282,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         throw error;
       }
 
-      const {
-        allowOpenAIFallback,
-        useLocalWhisper: isLocalMode,
-        cloudTranscriptionProvider,
-      } = getSettings();
-      // A policy-blocked fallback surfaces the local failure, not a policy error.
-      const fallbackAllowedByPolicy = isTranscriptionSelectionAllowed(usePolicyStore.getState(), {
-        mode: "providers",
-        provider: cloudTranscriptionProvider || "openai",
-      });
+      const { allowOpenAIFallback, useLocalWhisper: isLocalMode } = getSettings();
 
-      if (allowOpenAIFallback && isLocalMode && fallbackAllowedByPolicy) {
+      if (allowOpenAIFallback && isLocalMode) {
         try {
           const fallbackResult = await this.processWithOpenAIAPI(audioBlob, metadata, wasCancelled);
           return { ...fallbackResult, source: "openai-fallback" };
@@ -2445,18 +2384,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         throw error;
       }
 
-      const {
-        allowOpenAIFallback,
-        useLocalWhisper: isLocalMode,
-        cloudTranscriptionProvider,
-      } = getSettings();
-      // A policy-blocked fallback surfaces the local failure, not a policy error.
-      const fallbackAllowedByPolicy = isTranscriptionSelectionAllowed(usePolicyStore.getState(), {
-        mode: "providers",
-        provider: cloudTranscriptionProvider || "openai",
-      });
+      const { allowOpenAIFallback, useLocalWhisper: isLocalMode } = getSettings();
 
-      if (allowOpenAIFallback && isLocalMode && fallbackAllowedByPolicy) {
+      if (allowOpenAIFallback && isLocalMode) {
         try {
           const fallbackResult = await this.processWithOpenAIAPI(audioBlob, metadata, wasCancelled);
           return { ...fallbackResult, source: "openai-fallback" };
@@ -2623,7 +2553,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   async processWithReasoningModel(text, model, agentName, config) {
-    if (config?.requiresAgent) this.assertAgentAllowedByPolicy();
     logger.logReasoning("CALLING_REASONING_SERVICE", {
       model,
       agentName,
@@ -2718,14 +2647,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   // Panel-first commands make no LLM call here — the panel resolves the Voice
-  // Assistant scope itself — so the org policy guard must run at bank time.
+  // Assistant scope itself.
   _bankPanelAgentCommand(
     text,
     agentName,
     config,
     { selectedContext, selectedText, deliverySessionId, deliveryAcceptsMarkdown } = {}
   ) {
-    this.assertAgentAllowedByPolicy();
     const settings = getSettings();
     const command = this.voiceAgentRequested
       ? text
@@ -3960,13 +3888,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       }
 
       const isOpenAIMode = !getSettings().useLocalWhisper;
-      // A policy-blocked fallback surfaces the cloud failure, not a policy error.
-      const fallbackAllowedByPolicy = isTranscriptionSelectionAllowed(usePolicyStore.getState(), {
-        mode: "local",
-        provider: "",
-      });
-
-      if (allowLocalFallback && isOpenAIMode && fallbackAllowedByPolicy) {
+      if (allowLocalFallback && isOpenAIMode) {
         try {
           const arrayBuffer = await audioBlob.arrayBuffer();
           const options = { model: fallbackModel };
@@ -4029,7 +3951,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   resolveBatchRoute(settings, deploymentName = "") {
     const route = resolveTranscriptionRoute({
       settings: { ...settings, useLocalWhisper: false },
-      policy: usePolicyStore.getState(),
       providers: getTranscriptionProviders(),
       hasProviderKey: Boolean(
         getTranscriptionApiKey(settings.cloudTranscriptionProvider || "openai", settings)
@@ -4099,7 +4020,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     rawText = null,
     { clientTranscriptionId, analyticsOccurredAt } = {}
   ) {
-    const { dataRetentionEnabled, audioRetentionDays } = getEffectiveRetentionPreferences();
+    const { dataRetentionEnabled, audioRetentionDays } = getSettings();
     if (!dataRetentionEnabled) {
       logger.debug("Skipping transcription save — data retention disabled", {}, "audio");
       this.lastAudioBlob = null;
@@ -4163,7 +4084,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   async saveFailedTranscription(errorMessage, errorCode = null, metadata = {}) {
-    const { dataRetentionEnabled, audioRetentionDays } = getEffectiveRetentionPreferences();
+    const { dataRetentionEnabled, audioRetentionDays } = getSettings();
     if (!dataRetentionEnabled) {
       logger.debug("Skipping failed transcription save — data retention disabled", {}, "audio");
       this.lastAudioBlob = null;
@@ -4356,10 +4277,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   async warmupStreamingConnection({ isSignedIn: isSignedInOverride } = {}) {
-    if (!this.isRecordingAllowedByPolicy()) {
-      logger.debug("Streaming warmup skipped by workspace policy", {}, "streaming");
-      return false;
-    }
     if (!this.shouldUseStreaming(isSignedInOverride)) {
       logger.debug("Streaming warmup skipped - not in streaming mode", {}, "streaming");
       return false;
@@ -4604,10 +4521,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     let startWasCancelled = () => false;
     this._startInProgress = true;
     try {
-      if (!this.isRecordingAllowedByPolicy()) {
-        logger.warn("Streaming recording blocked by workspace policy", {}, "audio");
-        return false;
-      }
       if (this.streamingStartInProgress) {
         return false;
       }
