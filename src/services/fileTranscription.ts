@@ -155,12 +155,20 @@ export async function transcribeFileWithSpeakers(
   }
 
   try {
+    // Timed segments from the transcription server align speakers by time.
     const merged = await window.electronAPI.mergeSpeakerText?.(
       diar.segments,
       result.text,
-      durationSeconds || 0
+      durationSeconds || 0,
+      result.segments?.length ? result.segments : undefined
     );
-    if (merged?.success && merged.text) return { ...result, text: merged.text };
+    if (merged?.success && merged.text) {
+      return {
+        ...result,
+        text: merged.text,
+        ...(merged.segments?.length ? { segments: merged.segments } : {}),
+      };
+    }
   } catch {
     // Merge failure falls back to the plain transcript.
   }

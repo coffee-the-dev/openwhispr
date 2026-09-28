@@ -4,6 +4,7 @@ import ReasoningService from "../../services/ReasoningService";
 import { providerSupportsImages } from "../../services/ai/inferenceProviders";
 import { getSettings, useSettingsStore } from "../../stores/settingsStore";
 import { resolveChatStreamingInference } from "../../helpers/dictationAgentInference.js";
+import { resolveToolCalling } from "../../helpers/toolCallingPolicy.js";
 import logger from "../../utils/logger";
 import {
   appendDictionarySuffix,
@@ -25,13 +26,6 @@ import {
 const RAG_NOTE_LIMIT = 5;
 const RAG_NOTE_SNIPPET_LENGTH = 500;
 const STREAM_FLUSH_INTERVAL_MS = 32;
-
-const LOCAL_TOOL_MIN_PARAMS_B = 4;
-
-function estimateModelSizeB(modelId: string): number {
-  const match = modelId.match(/-([\d.]+)[bB]/);
-  return match ? parseFloat(match[1]) : 0;
-}
 
 async function buildRAGContext(userText: string, scope?: ContainerScope): Promise<string> {
   if (!window.electronAPI?.semanticSearchNotes) return "";
@@ -242,9 +236,13 @@ export function useChatStreaming({
       const llmMode = llmConfig.mode;
       setAgentState("thinking");
       const isLanAgent = llmMode === "self-hosted";
-      // Small models answer tool schemas with noise, so only a model whose id
-      // names a size large enough to call tools reliably gets them.
-      const supportsTools = estimateModelSizeB(llmConfig.model) >= LOCAL_TOOL_MIN_PARAMS_B;
+      // The scope's Tool calling setting; Auto keeps small models, which answer
+      // tool schemas with noise, off them.
+      const supportsTools = resolveToolCalling({
+        setting: llmConfig.toolCalling,
+        mode: llmMode,
+        model: llmConfig.model,
+      });
 
       const scope = searchScopeRef.current;
       let registry: ToolRegistry | null = null;

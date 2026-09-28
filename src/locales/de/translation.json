@@ -159,7 +159,6 @@
     "cancel": "Abbrechen",
     "recommended": "Empfohlen",
     "active": "Aktiv",
-    "comingSoon": "Demnächst verfügbar",
     "cloud": "Cloud",
     "local": "Lokal",
     "apiKey": "API-Schlüssel",
@@ -599,6 +598,19 @@
     },
     "selfHosted": {
       "endpointHelp": "Zeige auf einen OpenAI-kompatiblen Server in deinem lokalen Netzwerk (z. B. Ollama, LM Studio, vLLM oder llama-server)."
+    },
+    "toolCalling": {
+      "label": "Tool-Aufrufe",
+      "help": "Erlaubt dem Modell, deine Notizen zu durchsuchen, deinen Kalender zu prüfen und mehr. Auto aktiviert es für Modelle, die Tools bekanntermaßen unterstützen.",
+      "options": {
+        "auto": "Auto",
+        "on": "Ein",
+        "off": "Aus"
+      }
+    },
+    "acceptsImages": {
+      "label": "Modell akzeptiert Bilder",
+      "help": "Für ein Vision-Modell aktivieren, damit Bildschirmkontext mit deinen Befehlen gesendet werden kann."
     }
   },
   "transcription": {
@@ -1588,7 +1600,12 @@
     "selfHosted": {
       "endpointUrl": "Endpunkt-URL",
       "serverUrl": "Server-URL",
-      "apiKeyOptional": "API-Schlüssel (optional)"
+      "apiKeyOptional": "API-Schlüssel (optional)",
+      "apiKeyHelp": "Wird als Bearer-Token gesendet. Alle Transkriptionsserver-Einstellungen verwenden diesen Schlüssel.",
+      "modelHelp": "Wähle ein vom Server gelistetes Modell oder gib seine ID ein. Leer lassen für das Standardmodell des Servers.",
+      "modelsUnavailable": "Die Modelle dieses Servers konnten nicht abgerufen werden. Gib stattdessen eine Modell-ID ein.",
+      "meetingUrlHelp": "Leer lassen, um den Diktat-Server zu verwenden.",
+      "previewUnavailable": "Die Live-Vorschau benötigt ein lokales Modell. Ein selbst gehosteter Server liefert das Transkript, wenn du stoppst."
     }
   },
   "models": {
@@ -1923,7 +1940,7 @@
       "title": "Besprechungsnotizen",
       "description": "Transkriptionen und strukturierte Zusammenfassungen",
       "back": "Zurück",
-      "unsupportedSelfHosted": "Die Notizaufnahme kann noch keinen selbst gehosteten Endpunkt verwenden. Öffne die Einstellungen und wähle Lokal.",
+      "remoteTranscriptionWarning": "Der Transkriptionsserver hat nicht geantwortet, daher fehlt im Live-Transkript möglicherweise etwas. Die Aufnahme läuft weiter.",
       "systemAudioSilent": {
         "title": "Noch kein Meeting-Ton erkannt",
         "description": "Bisher hat nur Ihr Mikrofon Ton aufgenommen. Sie sind in einem Videoanruf? Prüfen Sie, ob der Meeting-Ton auf diesem Computer wiedergegeben wird und nicht stummgeschaltet ist. Sie nehmen vor Ort auf? Dann können Sie diesen Hinweis ignorieren – Ihr Mikrofon nimmt den Raum auf."

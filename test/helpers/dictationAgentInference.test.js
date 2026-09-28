@@ -91,14 +91,16 @@ test("thinking suppression follows the agent's own setting", async () => {
 
 // The assistant panel answers spoken commands on the Voice Assistant scope —
 // the tab the user actually edits — and gates screenshots exactly like the
-// dictation route does.
-const imageWired = (providerId) => providerId === "lan";
+// dictation route does. A self-hosted scope takes images only when its
+// "Model accepts images" toggle is on; the provider wiring is for local.
+const imageWired = () => false;
 const panelSettings = {
   ...baseSettings,
   chatAgentMode: "self-hosted",
   chatAgentProvider: "lan",
   chatAgentModel: "qwen3.8-flash-next",
   chatAgentRemoteUrl: "https://vllm.lan/v1",
+  chatAgentAcceptsImages: true,
 };
 const panel = (settings, options = {}) =>
   resolveChatStreamingInference(settings, {
@@ -152,4 +154,41 @@ test("a screenshot is dropped when the answering provider is not image-wired", (
 
   assert.equal(config.scope, "dictationAgent");
   assert.equal(attachScreenContext, false);
+});
+
+test("a self-hosted scope drops the screenshot until its model is marked image-capable", () => {
+  const off = resolveChatStreamingInference(
+    { ...panelSettings, chatAgentAcceptsImages: false },
+    { hasScreenContext: true, isProviderImageWired: () => true }
+  );
+  assert.equal(off.attachScreenContext, false);
+
+  const agentOn = panel(
+    {
+      ...panelSettings,
+      dictationAgentMode: "self-hosted",
+      dictationAgentRemoteUrl: "https://vllm.lan/v1",
+      dictationAgentAcceptsImages: true,
+    },
+    { hasScreenContext: true }
+  );
+  assert.equal(agentOn.config.scope, "dictationAgent");
+  assert.equal(agentOn.config.acceptsImages, true);
+  assert.equal(agentOn.attachScreenContext, true);
+});
+
+test("the on-device runtime follows its provider wiring", async () => {
+  const { scopeAcceptsImages } = await load();
+  assert.equal(
+    scopeAcceptsImages({ mode: "local", acceptsImages: true }, () => false),
+    false
+  );
+  assert.equal(
+    scopeAcceptsImages({ mode: "local" }, (id) => id === "local"),
+    true
+  );
+  assert.equal(
+    scopeAcceptsImages({ mode: "self-hosted" }, () => true),
+    false
+  );
 });

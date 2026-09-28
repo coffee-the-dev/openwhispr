@@ -7,6 +7,8 @@ export interface InferenceScopeStoreKeys {
   remoteUrl: keyof SettingsState;
   customApiKey: keyof SettingsState;
   disableThinking?: keyof SettingsState;
+  toolCalling?: keyof SettingsState;
+  acceptsImages?: keyof SettingsState;
 }
 
 export interface InferenceScopeDefinition {
@@ -35,6 +37,8 @@ export const INFERENCE_SCOPES = {
       remoteUrl: "dictationAgentRemoteUrl",
       customApiKey: "dictationAgentCustomApiKey",
       disableThinking: "dictationAgentDisableThinking",
+      toolCalling: "dictationAgentToolCalling",
+      acceptsImages: "dictationAgentAcceptsImages",
     },
   },
   noteFormatting: {
@@ -59,6 +63,8 @@ export const INFERENCE_SCOPES = {
       remoteUrl: "chatAgentRemoteUrl",
       customApiKey: "chatAgentCustomApiKey",
       disableThinking: "chatAgentDisableThinking",
+      toolCalling: "chatAgentToolCalling",
+      acceptsImages: "chatAgentAcceptsImages",
     },
   },
   dictationTranslation: {

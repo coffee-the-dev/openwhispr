@@ -159,7 +159,6 @@
     "cancel": "Annuler",
     "recommended": "Recommandé",
     "active": "Actif",
-    "comingSoon": "Bientôt disponible",
     "cloud": "Cloud",
     "local": "Local",
     "apiKey": "Clé API",
@@ -599,6 +598,19 @@
     },
     "selfHosted": {
       "endpointHelp": "Pointez vers un serveur compatible OpenAI sur votre réseau local (par ex. Ollama, LM Studio, vLLM ou llama-server)."
+    },
+    "toolCalling": {
+      "label": "Appels d'outils",
+      "help": "Permet au modèle de chercher dans vos notes, de consulter votre agenda et plus encore. Auto l'active pour les modèles connus pour gérer les outils.",
+      "options": {
+        "auto": "Auto",
+        "on": "Activé",
+        "off": "Désactivé"
+      }
+    },
+    "acceptsImages": {
+      "label": "Le modèle accepte les images",
+      "help": "Activez pour un modèle de vision afin d'envoyer le contexte d'écran avec vos commandes."
     }
   },
   "transcription": {
@@ -1588,7 +1600,12 @@
     "selfHosted": {
       "endpointUrl": "URL du point d'accès",
       "serverUrl": "URL du serveur",
-      "apiKeyOptional": "Clé API (facultative)"
+      "apiKeyOptional": "Clé API (facultative)",
+      "apiKeyHelp": "Envoyée comme jeton Bearer. Tous les réglages de serveur de transcription partagent cette clé.",
+      "modelHelp": "Choisissez un modèle listé par le serveur ou saisissez son identifiant. Laissez vide pour le modèle par défaut du serveur.",
+      "modelsUnavailable": "Impossible de lister les modèles de ce serveur. Saisissez plutôt un identifiant de modèle.",
+      "meetingUrlHelp": "Laissez vide pour utiliser le serveur de Dictée.",
+      "previewUnavailable": "L'aperçu en direct nécessite un modèle local. Un serveur auto-hébergé renvoie la transcription à l'arrêt."
     }
   },
   "models": {
@@ -1923,7 +1940,7 @@
       "title": "Notes de réunion",
       "description": "Transcriptions et résumés structurés",
       "back": "Retour",
-      "unsupportedSelfHosted": "L'enregistrement de notes ne peut pas encore utiliser un serveur auto-hébergé. Ouvrez les Réglages et choisissez Local.",
+      "remoteTranscriptionWarning": "Le serveur de transcription n'a pas répondu : une partie de la parole peut manquer dans la transcription en direct. L'enregistrement continue.",
       "systemAudioSilent": {
         "title": "Aucun son de réunion détecté pour le moment",
         "description": "Seul votre microphone a capté du son jusqu'à présent. Vous êtes en visioconférence ? Vérifiez que le son de la réunion est diffusé sur cet ordinateur et qu'il n'est pas coupé. Vous enregistrez en présentiel ? Vous pouvez ignorer ce message : votre microphone capte la salle."

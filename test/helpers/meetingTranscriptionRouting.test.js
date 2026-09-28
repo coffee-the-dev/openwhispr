@@ -48,12 +48,36 @@ test("each local engine falls back to its default model when none is chosen", as
   );
 });
 
-test("self-hosted mode fails closed with a sentinel the mount translates", async () => {
+test("self-hosted mode hands main the Note Recording server", async () => {
+  const { resolveMeetingTranscriptionOptions } = await load();
+
+  assert.deepEqual(
+    resolveMeetingTranscriptionOptions({
+      ...baseOptions,
+      transcriptionMode: "self-hosted",
+      remoteTranscriptionUrl: " https://vllm.ash.example/v1 ",
+      remoteTranscriptionModel: "whisper-1",
+    }),
+    {
+      provider: "self-hosted",
+      remoteTranscriptionUrl: "https://vllm.ash.example/v1",
+      remoteTranscriptionModel: "whisper-1",
+      language: "en",
+    }
+  );
+});
+
+test("self-hosted mode without a server fails closed with a sentinel the mount translates", async () => {
   const { resolveMeetingTranscriptionOptions } = await load();
 
   assert.throws(
-    () => resolveMeetingTranscriptionOptions({ ...baseOptions, transcriptionMode: "self-hosted" }),
-    { message: "unsupportedSelfHosted" }
+    () =>
+      resolveMeetingTranscriptionOptions({
+        ...baseOptions,
+        transcriptionMode: "self-hosted",
+        remoteTranscriptionUrl: "  ",
+      }),
+    { message: "selfHostedNotConfigured" }
   );
 
   const translation = JSON.parse(
@@ -63,6 +87,17 @@ test("self-hosted mode fails closed with a sentinel the mount translates", async
     path.join(__dirname, "../../src/components/MeetingRecordingMount.tsx"),
     "utf8"
   );
-  assert.equal(typeof translation.notes.meeting.unsupportedSelfHosted, "string");
-  assert.ok(mount.includes('unsupportedSelfHosted: "notes.meeting.unsupportedSelfHosted"'));
+  assert.equal(
+    typeof translation.hooks.audioRecording.errorDescriptions.selfHostedNotConfigured,
+    "string"
+  );
+  assert.equal(typeof translation.notes.meeting.remoteTranscriptionWarning, "string");
+  assert.ok(
+    mount.includes(
+      'selfHostedNotConfigured: "hooks.audioRecording.errorDescriptions.selfHostedNotConfigured"'
+    )
+  );
+  assert.ok(
+    mount.includes('remoteTranscriptionFailed: "notes.meeting.remoteTranscriptionWarning"')
+  );
 });

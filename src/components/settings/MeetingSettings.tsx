@@ -6,6 +6,7 @@ import { InferenceModeSelector, SettingsRow } from "../ui/SettingsSection";
 import type { InferenceModeOption } from "../ui/SettingsSection";
 import { Toggle } from "../ui/toggle";
 import TranscriptionModelPicker from "../TranscriptionModelPicker";
+import SelfHostedPanel from "../SelfHostedPanel";
 import type { TranscriptionMode } from "../../types/electron";
 
 export function MeetingSpeakerDetectionRow() {
@@ -38,6 +39,13 @@ export function MeetingTranscriptionPanel() {
     setMeetingParakeetModel,
     meetingCohereModel,
     setMeetingCohereModel,
+    meetingRemoteTranscriptionUrl,
+    setMeetingRemoteTranscriptionUrl,
+    meetingRemoteTranscriptionModel,
+    setMeetingRemoteTranscriptionModel,
+    remoteTranscriptionUrl,
+    customTranscriptionApiKey,
+    setCustomTranscriptionApiKey,
   } = useSettingsStore();
   const transcriptionModes: InferenceModeOption<TranscriptionMode>[] = [
     {
@@ -51,13 +59,10 @@ export function MeetingTranscriptionPanel() {
       label: t("settingsPage.transcription.modes.selfHosted"),
       description: t("settingsPage.transcription.modes.selfHostedDesc"),
       icon: <Network className="w-4 h-4" />,
-      disabled: true,
-      badge: t("common.comingSoon"),
     },
   ];
   const effectiveTranscriptionMode = meetingTranscriptionMode;
   const handleTranscriptionModeSelect = (mode: TranscriptionMode) => {
-    if (mode === "self-hosted") return;
     if (mode === effectiveTranscriptionMode) return;
     setMeetingTranscriptionMode(mode);
     setMeetingUseLocalWhisper(mode === "local");
@@ -107,6 +112,18 @@ export function MeetingTranscriptionPanel() {
       />
 
       {effectiveTranscriptionMode === "local" && renderTranscriptionPicker()}
+      {effectiveTranscriptionMode === "self-hosted" && (
+        <SelfHostedPanel
+          url={meetingRemoteTranscriptionUrl}
+          onUrlChange={setMeetingRemoteTranscriptionUrl}
+          model={meetingRemoteTranscriptionModel}
+          onModelChange={setMeetingRemoteTranscriptionModel}
+          apiKey={customTranscriptionApiKey}
+          onApiKeyChange={setCustomTranscriptionApiKey}
+          urlPlaceholder={remoteTranscriptionUrl || undefined}
+          urlHelp={t("settingsPage.selfHosted.meetingUrlHelp")}
+        />
+      )}
       <MeetingSpeakerDetectionRow />
     </div>
   );

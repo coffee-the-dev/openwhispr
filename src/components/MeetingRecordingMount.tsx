@@ -18,7 +18,8 @@ const EMA_NEXT = 0.5;
 // Sentinel errors set by meetingRecordingStore, translated at display time.
 // Anything that is not a sentinel reaches the toast unchanged.
 const MEETING_ERROR_KEYS: Record<string, string> = {
-  unsupportedSelfHosted: "notes.meeting.unsupportedSelfHosted",
+  selfHostedNotConfigured: "hooks.audioRecording.errorDescriptions.selfHostedNotConfigured",
+  remoteTranscriptionFailed: "notes.meeting.remoteTranscriptionWarning",
 };
 
 export default function MeetingRecordingMount(): null {

@@ -72,6 +72,10 @@ function mergeSpeakersWithText(segments, text, durationSeconds) {
     });
   }
 
+  return consolidateSpeakerRuns(assigned);
+}
+
+function consolidateSpeakerRuns(assigned) {
   const consolidated = [];
   for (const item of assigned) {
     const prev = consolidated[consolidated.length - 1];
@@ -82,8 +86,55 @@ function mergeSpeakersWithText(segments, text, durationSeconds) {
       consolidated.push({ ...item });
     }
   }
-
   return consolidated;
+}
+
+// The diarized speaker for a timed span: the one overlapping it most, else the
+// nearest in time.
+function speakerForSpan(diarSegments, start, end) {
+  let best = null;
+  let bestOverlap = 0;
+  for (const seg of diarSegments) {
+    const overlap = Math.min(end, seg.end) - Math.max(start, seg.start);
+    if (overlap > bestOverlap) {
+      bestOverlap = overlap;
+      best = seg;
+    }
+  }
+  if (best) return best.speaker;
+
+  const midpoint = (start + end) / 2;
+  let bestDistance = Number.POSITIVE_INFINITY;
+  for (const seg of diarSegments) {
+    const distance =
+      midpoint < seg.start ? seg.start - midpoint : midpoint > seg.end ? midpoint - seg.end : 0;
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      best = seg;
+    }
+  }
+  return best.speaker;
+}
+
+// Timed transcript segments (e.g. a server's verbose_json) align to diarization
+// by time, not by the character-proportional estimate mergeSpeakersWithText
+// has to fall back to. Returns one entry per transcript segment.
+function mergeSpeakersWithSegments(diarSegments, textSegments) {
+  return textSegments.map((seg) => ({
+    speaker: diarSegments.length ? speakerForSpan(diarSegments, seg.start, seg.end) : "speaker_0",
+    text: seg.text,
+    start: seg.start,
+    end: seg.end,
+  }));
+}
+
+// "Speaker N" labels in order of first appearance, as formatSpeakerTranscript prints them.
+function labelSpeakers(segments) {
+  const speakerMap = new Map();
+  return segments.map((seg) => {
+    if (!speakerMap.has(seg.speaker)) speakerMap.set(seg.speaker, speakerMap.size + 1);
+    return { ...seg, speaker: `Speaker ${speakerMap.get(seg.speaker)}` };
+  });
 }
 
 function formatSpeakerTranscript(mergedSegments) {
@@ -104,6 +155,9 @@ function formatSpeakerTranscript(mergedSegments) {
 
 module.exports = {
   mergeSpeakersWithText,
+  mergeSpeakersWithSegments,
+  consolidateSpeakerRuns,
+  labelSpeakers,
   formatSpeakerTranscript,
   splitIntoSentences,
   formatTimestamp,

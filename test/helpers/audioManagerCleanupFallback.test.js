@@ -29,6 +29,7 @@ test("cleanup failure details ride the raw result instead of notifying before pa
         export const useSettingsStore = { subscribe: () => () => {} };
       `,
       "/dictationAgentInference": `
+        export const scopeAcceptsImages = () => false;
         export const resolveDictationAgentInference = () => ({
           reachable: false, model: "", displayProvider: "none", config: {}
         });
@@ -104,6 +105,7 @@ test("a truncated cleanup inside the translation chain still reports the failure
         export const useSettingsStore = { subscribe: () => () => {} };
       `,
       "/dictationAgentInference": `
+        export const scopeAcceptsImages = () => false;
         export const resolveDictationAgentInference = () => ({
           reachable: false, model: "", displayProvider: "none", config: {}
         });

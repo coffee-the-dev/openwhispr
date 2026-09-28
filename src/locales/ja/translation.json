@@ -159,7 +159,6 @@
     "cancel": "キャンセル",
     "recommended": "推奨",
     "active": "有効",
-    "comingSoon": "近日公開",
     "cloud": "クラウド",
     "local": "ローカル",
     "apiKey": "API キー",
@@ -599,6 +598,19 @@
     },
     "selfHosted": {
       "endpointHelp": "ローカルネットワーク上の OpenAI 互換サーバーを指定します（例: Ollama、LM Studio、vLLM、llama-server）。"
+    },
+    "toolCalling": {
+      "label": "ツール呼び出し",
+      "help": "モデルがメモの検索やカレンダーの確認などを行えるようにします。「自動」はツールに対応していることが分かっているモデルで有効になります。",
+      "options": {
+        "auto": "自動",
+        "on": "オン",
+        "off": "オフ"
+      }
+    },
+    "acceptsImages": {
+      "label": "モデルが画像を受け付ける",
+      "help": "ビジョンモデルの場合はオンにすると、コマンドと一緒に画面のコンテキストを送信できます。"
     }
   },
   "transcription": {
@@ -1548,7 +1560,12 @@
     "selfHosted": {
       "endpointUrl": "エンドポイント URL",
       "serverUrl": "サーバー URL",
-      "apiKeyOptional": "API キー（任意）"
+      "apiKeyOptional": "API キー（任意）",
+      "apiKeyHelp": "Bearer トークンとして送信されます。すべての文字起こしサーバー設定でこのキーを共有します。",
+      "modelHelp": "サーバーが一覧表示するモデルを選ぶか、IDを入力してください。空欄の場合はサーバーの既定モデルを使います。",
+      "modelsUnavailable": "このサーバーのモデル一覧を取得できませんでした。モデルIDを直接入力してください。",
+      "meetingUrlHelp": "空欄の場合は音声入力のサーバーを使います。",
+      "previewUnavailable": "ライブプレビューにはローカルモデルが必要です。セルフホストのサーバーは停止時に文字起こしを返します。"
     }
   },
   "models": {
@@ -1887,7 +1904,7 @@
       "title": "議事録",
       "description": "文字起こしと構造化されたサマリー",
       "back": "戻る",
-      "unsupportedSelfHosted": "ノート録音はまだセルフホストのエンドポイントを利用できません。設定を開き、ローカルを選択してください。",
+      "remoteTranscriptionWarning": "文字起こしサーバーが応答しなかったため、ライブ文字起こしの一部が欠けている可能性があります。録音は続行中です。",
       "systemAudioSilent": {
         "title": "会議の音声がまだ検出されていません",
         "description": "これまでのところ、音声を拾っているのはマイクのみです。ビデオ会議中の場合は、会議の音声がこのコンピューターで再生されており、ミュートになっていないことを確認してください。対面で録音している場合は、この通知は無視してかまいません。マイクが室内の音を拾います。"

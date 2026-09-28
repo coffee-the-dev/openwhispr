@@ -19,3 +19,11 @@ export function buildNoteFormattingOverrides(noteFormatting) {
     lanUrl: undefined,
   };
 }
+
+// Whether note formatting (and title generation, which runs on the same scope)
+// has something to run on: a self-hosted server picks its model when none is
+// named, the on-device runtime needs one.
+export function isNoteFormattingConfigured(noteFormatting) {
+  if (noteFormatting?.mode === "self-hosted") return !!noteFormatting?.remoteUrl?.trim();
+  return !!noteFormatting?.model?.trim();
+}

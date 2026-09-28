@@ -110,7 +110,7 @@ test("persisted cloud and provider modes move to local or self-hosted once", asy
     });
     assert.equal(state.transcriptionMode, "local");
     assert.equal(state.useLocalWhisper, true);
-    // Note Recording has no self-hosted route.
+    // The migration always moves Note Recording local.
     assert.equal(state.meetingTranscriptionMode, "local");
   });
 

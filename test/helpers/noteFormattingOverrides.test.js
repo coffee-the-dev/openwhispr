@@ -47,3 +47,17 @@ test("local mode pins the local runtime and never forwards a key", async () => {
     lanUrl: undefined,
   });
 });
+
+test("note formatting is configured by a server URL when self-hosted, a model locally", async () => {
+  const { isNoteFormattingConfigured } = await load();
+  assert.equal(
+    isNoteFormattingConfigured({ mode: "self-hosted", remoteUrl: "https://v/v1" }),
+    true
+  );
+  assert.equal(
+    isNoteFormattingConfigured({ mode: "self-hosted", remoteUrl: " ", model: "m" }),
+    false
+  );
+  assert.equal(isNoteFormattingConfigured({ mode: "local", model: "qwen3-4b" }), true);
+  assert.equal(isNoteFormattingConfigured({ mode: "local", model: "" }), false);
+});

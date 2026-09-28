@@ -5,11 +5,23 @@ export function resolveMeetingTranscriptionOptions({
   whisperModel,
   parakeetModel,
   cohereModel,
+  remoteTranscriptionUrl,
+  remoteTranscriptionModel,
 }) {
-  // A sentinel MeetingRecordingMount translates, not an English sentence: Note
-  // Recording has no self-hosted route yet.
+  // Main re-resolves (and validates) the endpoint from these fields. A missing
+  // URL fails here with a sentinel MeetingRecordingMount translates, not an
+  // English sentence.
   if (transcriptionMode === "self-hosted") {
-    throw new Error("unsupportedSelfHosted");
+    const url = typeof remoteTranscriptionUrl === "string" ? remoteTranscriptionUrl.trim() : "";
+    if (!url) throw new Error("selfHostedNotConfigured");
+    const model =
+      typeof remoteTranscriptionModel === "string" ? remoteTranscriptionModel.trim() : "";
+    return {
+      provider: "self-hosted",
+      remoteTranscriptionUrl: url,
+      remoteTranscriptionModel: model,
+      language,
+    };
   }
 
   return {

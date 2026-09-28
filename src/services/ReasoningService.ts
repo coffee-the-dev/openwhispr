@@ -24,6 +24,8 @@ import {
 import { createStreamingThinkFilter } from "./ai/streamingThinkFilter";
 import { extractApiErrorMessage } from "./ai/apiErrorMessage";
 import { resolveChatRoute } from "../helpers/chatRouting";
+import { buildUserContent, hasImageContent, toOpenAIChatMessages } from "./ai/imageContent";
+import { resolveSelfHostedModel } from "./ai/selfHostedDefaultModel";
 import i18n from "../i18n";
 
 export type ToolMetadata = Record<string, unknown> | Array<Record<string, unknown>>;
@@ -87,12 +89,16 @@ class ReasoningService extends BaseReasoningService {
     const systemPrompt = config.systemPrompt || this.getSystemPrompt(agentName);
     const userPrompt = isCleanup ? wrapCleanupTranscript(text) : text;
 
+    // A screenshot reaches this call only when the scope's model is marked
+    // image-capable (resolveAgentImageTarget); it is sent, never logged.
     const messages = [
       { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt },
+      { role: "user", content: buildUserContent(userPrompt, config.screenContext) },
     ];
 
-    const requestBody: Record<string, unknown> = { model, messages };
+    // No model at all (a self-hosted server that lists none): omit the field
+    // and let the server answer with whatever it serves.
+    const requestBody: Record<string, unknown> = model ? { model, messages } : { messages };
     applyChatCompletionsParams(requestBody, {
       model,
       dialect: "lan",
@@ -114,7 +120,9 @@ class ReasoningService extends BaseReasoningService {
       endpoint,
       model,
       hasApiKey: !!apiKey,
-      requestBody: JSON.stringify(requestBody).substring(0, 200),
+      hasScreenContext: !!config.screenContext,
+      systemPromptLength: systemPrompt.length,
+      userPromptLength: userPrompt.length,
     });
 
     const requestGeneration = this.requestCancellationGeneration;
@@ -336,8 +344,15 @@ class ReasoningService extends BaseReasoningService {
     return { kind: "local", baseURL: `http://127.0.0.1:${serverResult.port}/v1`, apiKey: "" };
   }
 
+  // An empty self-hosted model means the server's default: its first listed id.
+  private resolveTargetModel(target: StreamingTarget, model: string): Promise<string> {
+    return target.kind === "self-hosted"
+      ? resolveSelfHostedModel(target.baseURL, target.apiKey, model)
+      : Promise.resolve(model);
+  }
+
   async *processTextStreaming(
-    messages: Array<{ role: string; content: string }>,
+    messages: Array<{ role: string; content: string | Array<Record<string, unknown>> }>,
     model: string,
     provider: string,
     config: ReasoningConfig & { systemPrompt: string }
@@ -354,7 +369,7 @@ class ReasoningService extends BaseReasoningService {
   }
 
   private async *processTextStreamingRaw(
-    messages: Array<{ role: string; content: string }>,
+    messages: Array<{ role: string; content: string | Array<Record<string, unknown>> }>,
     model: string,
     provider: string,
     config: ReasoningConfig & { systemPrompt: string },
@@ -362,12 +377,15 @@ class ReasoningService extends BaseReasoningService {
   ): AsyncGenerator<string, void, unknown> {
     const target = await this.resolveStreamingTarget(model, provider, config);
     const endpoint = buildApiUrl(target.baseURL, "/chat/completions");
+    model = await this.resolveTargetModel(target, model);
 
     if (abortController.signal.aborted) return;
 
+    // Image parts arrive in AI SDK shape (text + image); the wire format is
+    // OpenAI's image_url with a data URL.
     const requestBody: Record<string, unknown> = {
-      model,
-      messages,
+      ...(model ? { model } : {}),
+      messages: toOpenAIChatMessages(messages),
       stream: true,
     };
 
@@ -383,6 +401,7 @@ class ReasoningService extends BaseReasoningService {
       model,
       kind: target.kind,
       messageCount: messages.length,
+      hasScreenContext: hasImageContent(messages),
     });
 
     const headers: Record<string, string> = { "Content-Type": "application/json" };
@@ -511,10 +530,9 @@ class ReasoningService extends BaseReasoningService {
     this.streamAbortController = abortController;
 
     if (!tools) {
-      // Attachments are never routed to text-only streaming, so content is string-only here.
       try {
         const contentGen = this.processTextStreamingRaw(
-          messages as Array<{ role: string; content: string }>,
+          messages,
           model,
           provider,
           config,
@@ -537,6 +555,7 @@ class ReasoningService extends BaseReasoningService {
 
     const filterThinkTags = config.disableThinking !== false ? createStreamingThinkFilter() : null;
     const target = await this.resolveStreamingTarget(model, provider, config);
+    model = await this.resolveTargetModel(target, model);
     const aiModel = getAIModel(model, target.apiKey, target.baseURL);
 
     if (abortController.signal.aborted) {
@@ -550,6 +569,7 @@ class ReasoningService extends BaseReasoningService {
       hasTools: !!tools,
       toolCount: Object.keys(tools).length,
       messageCount: messages.length,
+      hasScreenContext: hasImageContent(messages),
     });
 
     const result = streamText({

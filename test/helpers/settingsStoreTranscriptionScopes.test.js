@@ -61,9 +61,11 @@ test("a self-hosted choice points dictation and upload at the server; meeting st
   const vite = await createRendererServer(t, {
     cachePrefix: "openwhispr-self-hosted-all-scopes-test-",
   });
-  const { useSettingsStore, selectResolvedUploadTranscription } = await vite.ssrLoadModule(
-    "/stores/settingsStore.ts"
-  );
+  const {
+    useSettingsStore,
+    selectResolvedUploadTranscription,
+    selectResolvedMeetingTranscription,
+  } = await vite.ssrLoadModule("/stores/settingsStore.ts");
   const state = () => useSettingsStore.getState();
 
   state().setRemoteTranscriptionUrl("http://192.168.1.20:8000/v1");
@@ -81,7 +83,22 @@ test("a self-hosted choice points dictation and upload at the server; meeting st
     },
     { url: "http://192.168.1.20:8000/v1", model: "whisper-1" }
   );
-  assert.equal(state().meetingTranscriptionMode, "local");
+  assert.equal(state().meetingTranscriptionMode, "self-hosted");
+  assert.equal(state().meetingUseLocalWhisper, false);
+  const meeting = selectResolvedMeetingTranscription(state());
+  assert.deepEqual(
+    { url: meeting.remoteTranscriptionUrl, model: meeting.remoteTranscriptionModel },
+    { url: "http://192.168.1.20:8000/v1", model: "whisper-1" }
+  );
+
+  // A Note Recording server of its own carries its own model.
+  state().setMeetingRemoteTranscriptionUrl("https://whisper.example.lan/v1");
+  state().setMeetingRemoteTranscriptionModel("");
+  const own = selectResolvedMeetingTranscription(state());
+  assert.deepEqual(
+    { url: own.remoteTranscriptionUrl, model: own.remoteTranscriptionModel },
+    { url: "https://whisper.example.lan/v1", model: "" }
+  );
 });
 
 test("stored transcription modes read as local unless self-hosted was chosen", async (t) => {

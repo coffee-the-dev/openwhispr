@@ -196,3 +196,39 @@ test("reports endpointNotFound only after every candidate 404s", async () => {
     }
   );
 });
+
+test("lists model ids from the first candidate that has any", async () => {
+  const seen = [];
+  const fetchImpl = async (url, init) => {
+    seen.push({ url, auth: init.headers.Authorization });
+    if (url === "https://vllm.ash.example/models") return new Response("", { status: 404 });
+    return Response.json({ data: [{ id: "whisper-1" }, { id: "Qwen3-ASR-1.7B" }] });
+  };
+  const result = await providerTest.listRemoteModels(
+    { baseUrl: "https://vllm.ash.example", apiKey: "k" },
+    fetchImpl
+  );
+  assert.deepEqual(result, { success: true, models: ["whisper-1", "Qwen3-ASR-1.7B"] });
+  assert.deepEqual(
+    seen.map((s) => s.url),
+    ["https://vllm.ash.example/models", "https://vllm.ash.example/v1/models"]
+  );
+  assert.ok(seen.every((s) => s.auth === "Bearer k"));
+});
+
+test("model listing reports rejected credentials and empty lists", async () => {
+  const rejected = await providerTest.listRemoteModels(
+    { baseUrl: "https://vllm.ash.example/v1" },
+    async () => new Response("", { status: 401 })
+  );
+  assert.equal(rejected.success, false);
+  assert.equal(rejected.errorCode, "credentialsRejected");
+  assert.deepEqual(rejected.models, []);
+
+  const empty = await providerTest.listRemoteModels(
+    { baseUrl: "https://vllm.ash.example/v1" },
+    async () => Response.json({ data: [] })
+  );
+  assert.equal(empty.success, false);
+  assert.deepEqual(empty.models, []);
+});

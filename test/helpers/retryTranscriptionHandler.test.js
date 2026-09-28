@@ -311,3 +311,62 @@ test("upload: an unconfigured or local route fails closed before any request", a
   }
   assert.equal(fetches.length, 0);
 });
+
+test("upload: timed segments come back when the server honors verbose_json", async () => {
+  fetches.length = 0;
+  const previous = fetchResponse;
+  fetchResponse = () => {
+    const payload = {
+      text: "Hello. Bye.",
+      segments: [
+        { text: "Hello.", start: 0, end: 1 },
+        { text: "Bye.", start: 1, end: 2 },
+      ],
+    };
+    return { ok: true, status: 200, text: async () => JSON.stringify(payload) };
+  };
+  try {
+    const result = await invokeUpload({
+      transcriptionMode: "self-hosted",
+      remoteTranscriptionUrl: "https://verbose.lan/v1",
+    });
+    assert.equal(result.success, true);
+    assert.deepEqual(result.segments, [
+      { text: "Hello.", start: 0, end: 1 },
+      { text: "Bye.", start: 1, end: 2 },
+    ]);
+    const body = fetches[0].init.body.toString();
+    assert.match(body, /name="response_format"\r\n\r\nverbose_json/);
+    assert.match(body, /name="timestamp_granularities\[\]"\r\n\r\nsegment/);
+  } finally {
+    fetchResponse = previous;
+  }
+});
+
+test("upload: a server that rejects verbose_json is retried as plain json", async () => {
+  fetches.length = 0;
+  const previous = fetchResponse;
+  fetchResponse = (_url, init) => {
+    const verbose = init.body.toString().includes("verbose_json");
+    return verbose
+      ? { ok: false, status: 400, text: async () => JSON.stringify({ error: "bad format" }) }
+      : { ok: true, status: 200, text: async () => JSON.stringify({ text: "plain text" }) };
+  };
+  try {
+    const result = await invokeUpload({
+      transcriptionMode: "self-hosted",
+      remoteTranscriptionUrl: "https://textonly.lan/v1",
+    });
+    assert.deepEqual(
+      { success: result.success, text: result.text },
+      {
+        success: true,
+        text: "plain text",
+      }
+    );
+    assert.equal(result.segments, undefined);
+    assert.equal(fetches.length, 2);
+  } finally {
+    fetchResponse = previous;
+  }
+});

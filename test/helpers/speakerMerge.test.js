@@ -1,6 +1,9 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const { mergeSpeakersWithText, formatSpeakerTranscript } = require("../../src/helpers/speakerMerge");
+const {
+  mergeSpeakersWithText,
+  formatSpeakerTranscript,
+} = require("../../src/helpers/speakerMerge");
 
 test("mergeSpeakersWithText assigns sentences to speakers by time proportion", () => {
   const segments = [
@@ -73,7 +76,10 @@ test("formatSpeakerTranscript formats with labels and timestamps", () => {
   ];
 
   const output = formatSpeakerTranscript(merged);
-  assert.equal(output, "[Speaker 1] 0:00 - 0:10\nHello there.\n\n[Speaker 2] 0:10 - 0:20\nHi back.");
+  assert.equal(
+    output,
+    "[Speaker 1] 0:00 - 0:10\nHello there.\n\n[Speaker 2] 0:10 - 0:20\nHi back."
+  );
 });
 
 test("mergeSpeakersWithText handles duration=0 with segments", () => {
@@ -166,8 +172,45 @@ test("zero duration with unsorted segments still maps proportionally against the
     { speaker: "spk_1", start: 25, end: 40 },
     { speaker: "spk_0", start: 10, end: 15 },
   ];
-  const text = "First sentence here. Second sentence here. Third sentence here. Fourth sentence here.";
+  const text =
+    "First sentence here. Second sentence here. Third sentence here. Fourth sentence here.";
   const merged = mergeSpeakersWithText(segments, text, 0);
   const last = merged[merged.length - 1];
   assert.equal(last.speaker, "spk_1", "tail sentences must map to the late segment");
+});
+
+test("timed transcript segments take the speaker they overlap most", () => {
+  const {
+    mergeSpeakersWithSegments,
+    consolidateSpeakerRuns,
+    labelSpeakers,
+  } = require("../../src/helpers/speakerMerge");
+  const diar = [
+    { speaker: "speaker_3", start: 0, end: 4 },
+    { speaker: "speaker_1", start: 4, end: 9 },
+  ];
+  const assigned = mergeSpeakersWithSegments(diar, [
+    { text: "Hi.", start: 0.5, end: 2 },
+    { text: "Straddles.", start: 3, end: 6 },
+    { text: "After the end.", start: 12, end: 13 },
+  ]);
+  assert.deepEqual(
+    assigned.map((s) => s.speaker),
+    ["speaker_3", "speaker_1", "speaker_1"]
+  );
+  assert.deepEqual(
+    consolidateSpeakerRuns(assigned).map((s) => [s.speaker, s.text, s.start, s.end]),
+    [
+      ["speaker_3", "Hi.", 0.5, 2],
+      ["speaker_1", "Straddles. After the end.", 3, 13],
+    ]
+  );
+  assert.deepEqual(
+    labelSpeakers(assigned).map((s) => s.speaker),
+    ["Speaker 1", "Speaker 2", "Speaker 2"]
+  );
+  assert.deepEqual(
+    mergeSpeakersWithSegments([], [{ text: "x", start: 0, end: 1 }]).map((s) => s.speaker),
+    ["speaker_0"]
+  );
 });

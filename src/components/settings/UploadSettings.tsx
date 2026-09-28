@@ -27,6 +27,8 @@ export function UploadTranscriptionPanel() {
     setUploadRemoteTranscriptionUrl,
     uploadRemoteTranscriptionModel,
     setUploadRemoteTranscriptionModel,
+    customTranscriptionApiKey,
+    setCustomTranscriptionApiKey,
   } = useSettingsStore();
   const transcriptionModes: InferenceModeOption<TranscriptionMode>[] = [
     {
@@ -95,11 +97,12 @@ export function UploadTranscriptionPanel() {
       {effectiveTranscriptionMode === "local" && renderTranscriptionPicker()}
       {effectiveTranscriptionMode === "self-hosted" && (
         <SelfHostedPanel
-          service="transcription"
           url={uploadRemoteTranscriptionUrl}
           onUrlChange={setUploadRemoteTranscriptionUrl}
           model={uploadRemoteTranscriptionModel}
           onModelChange={setUploadRemoteTranscriptionModel}
+          apiKey={customTranscriptionApiKey}
+          onApiKeyChange={setCustomTranscriptionApiKey}
         />
       )}
     </div>

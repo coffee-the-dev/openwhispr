@@ -3,6 +3,7 @@ import { buildApiUrl } from "../../../config/constants";
 import { getSettings } from "../../../stores/settingsStore";
 import logger from "../../../utils/logger";
 import { resolveSelfHostedOpenAIBase } from "../openaiBase";
+import { resolveSelfHostedModel } from "../selfHostedDefaultModel";
 
 export const lanProvider: InferenceProvider = {
   id: "lan",
@@ -19,7 +20,7 @@ export const lanProvider: InferenceProvider = {
         config.customApiKey?.trim() ||
         (isAgentCall ? "" : settings.cleanupCustomApiKey?.trim()) ||
         "";
-      const resolvedModel = model?.trim() || "default";
+      const resolvedModel = await resolveSelfHostedModel(baseUrl, apiKey, model || "");
       return await ctx.callChatCompletionsApi(
         endpoint,
         apiKey,

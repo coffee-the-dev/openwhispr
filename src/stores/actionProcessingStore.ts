@@ -472,7 +472,7 @@ export function runBackgroundAction(
 
       let title: string | undefined;
       if (options.allowTitleGeneration && getSettings().autoGenerateNoteTitle) {
-        const generated = await generateNoteTitle(enhanced, modelId, providerOverrides);
+        const generated = await generateNoteTitle(enhanced);
         if (generated) title = generated;
       }
 

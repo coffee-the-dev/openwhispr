@@ -83,9 +83,25 @@ const WAV_UPLOAD_LIMIT_BYTES = 25 * 1024 * 1024;
 // Debounce delay: wait for user to stop typing before processing corrections
 const AUTO_LEARN_DEBOUNCE_MS = 1500;
 
-const { testProviderConnection } = require("./providerConnectionTest");
+const { testProviderConnection, listRemoteModels } = require("./providerConnectionTest");
+const {
+  SELF_HOSTED_CHUNK_SECONDS,
+  SELF_HOSTED_UPLOAD_LIMIT_BYTES,
+  requestTranscription,
+  stitchTranscriptionChunks,
+} = require("./selfHostedFileTranscription");
+const {
+  capMeetingBacklog,
+  createSelfHostedChunkTranscriber,
+} = require("./selfHostedMeetingTranscriber");
 const { createUploadCancelRegistry } = require("./uploadCancelRegistry");
-const { mergeSpeakersWithText, formatSpeakerTranscript } = require("./speakerMerge");
+const {
+  consolidateSpeakerRuns,
+  formatSpeakerTranscript,
+  labelSpeakers,
+  mergeSpeakersWithSegments,
+  mergeSpeakersWithText,
+} = require("./speakerMerge");
 const { listLocalTranscriptionModels } = require("./localTranscriptionModels");
 
 // Canonicalize allowed dirs so realpath'd inputs match on macOS (/var -> /private/var).
@@ -919,6 +935,8 @@ class IPCHandlers {
     ipcMain.handle("test-provider-connection", async (_event, config) =>
       testProviderConnection(config)
     );
+
+    ipcMain.handle("list-remote-models", async (_event, config) => listRemoteModels(config));
 
     ipcMain.handle("window-minimize", () => {
       if (this.windowManager.controlPanelWindow) {
@@ -2748,31 +2766,55 @@ class IPCHandlers {
       }
     });
 
-    ipcMain.handle("merge-speaker-text", async (event, { segments, text, duration }) => {
-      try {
-        if (
-          !Array.isArray(segments) ||
-          typeof text !== "string" ||
-          typeof duration !== "number" ||
-          !isFinite(duration)
-        ) {
-          return { success: false, error: "Invalid arguments" };
+    ipcMain.handle(
+      "merge-speaker-text",
+      async (event, { segments, text, duration, textSegments }) => {
+        try {
+          if (
+            !Array.isArray(segments) ||
+            typeof text !== "string" ||
+            typeof duration !== "number" ||
+            !isFinite(duration)
+          ) {
+            return { success: false, error: "Invalid arguments" };
+          }
+          if (segments.length > 10000 || text.length > 1_000_000) {
+            return { success: false, error: "Input too large" };
+          }
+          const sanitizedSegments = segments.map((s) => ({
+            speaker: typeof s.speaker === "string" ? s.speaker.slice(0, 100) : "unknown",
+            start: typeof s.start === "number" && isFinite(s.start) ? s.start : 0,
+            end: typeof s.end === "number" && isFinite(s.end) ? s.end : 0,
+          }));
+          if (
+            Array.isArray(textSegments) &&
+            textSegments.length > 0 &&
+            textSegments.length <= 10000
+          ) {
+            const timed = textSegments
+              .filter((s) => typeof s?.text === "string" && isFinite(s.start))
+              .map((s) => ({
+                text: s.text,
+                start: s.start,
+                end: isFinite(s.end) ? s.end : s.start,
+              }));
+            if (timed.length > 0) {
+              const assigned = mergeSpeakersWithSegments(sanitizedSegments, timed);
+              return {
+                success: true,
+                text: formatSpeakerTranscript(consolidateSpeakerRuns(assigned)),
+                segments: labelSpeakers(assigned),
+              };
+            }
+          }
+          const merged = mergeSpeakersWithText(sanitizedSegments, text, duration);
+          return { success: true, text: formatSpeakerTranscript(merged) };
+        } catch (error) {
+          debugLogger.error("Speaker merge error", { error: error.message });
+          return { success: false, error: error.message };
         }
-        if (segments.length > 10000 || text.length > 1_000_000) {
-          return { success: false, error: "Input too large" };
-        }
-        const sanitizedSegments = segments.map((s) => ({
-          speaker: typeof s.speaker === "string" ? s.speaker.slice(0, 100) : "unknown",
-          start: typeof s.start === "number" && isFinite(s.start) ? s.start : 0,
-          end: typeof s.end === "number" && isFinite(s.end) ? s.end : 0,
-        }));
-        const merged = mergeSpeakersWithText(sanitizedSegments, text, duration);
-        return { success: true, text: formatSpeakerTranscript(merged) };
-      } catch (error) {
-        debugLogger.error("Speaker merge error", { error: error.message });
-        return { success: false, error: error.message };
       }
-    });
+    );
 
     ipcMain.handle("cancel-diarization-download", async () => {
       return this.diarizationManager.cancelDownload();
@@ -4614,6 +4656,11 @@ class IPCHandlers {
     let meetingLocalModel = null;
     let meetingLocalLanguage = null;
     let meetingLocalTranscribing = false;
+    let meetingLocalTranscribePromise = null;
+    // Set when Note Recording transcribes on a self-hosted server instead of
+    // the local engine; see selfHostedMeetingTranscriber.js for the queue policy.
+    let meetingRemoteTranscriber = null;
+    let meetingRemoteFailureReported = false;
     let meetingPendingMicChunks = [];
     let meetingPendingMicFinals = [];
     let meetingPendingMicFinalTimer = null;
@@ -4897,12 +4944,37 @@ class IPCHandlers {
       return started;
     };
 
+    // Once per failure streak, so a down server raises one warning rather than
+    // one every chunk; the recording itself keeps running.
+    const reportRemoteMeetingFailure = () => {
+      if (meetingRemoteFailureReported) return;
+      meetingRemoteFailureReported = true;
+      if (meetingLocalWin && !meetingLocalWin.isDestroyed()) {
+        meetingLocalWin.webContents.send(
+          "meeting-transcription-error",
+          "remoteTranscriptionFailed"
+        );
+      }
+    };
+
     const transcribeLocalMeetingChunk = async (source) => {
-      const chunks = meetingLocalBuffers[source];
+      let chunks = meetingLocalBuffers[source];
       if (!chunks.length) return;
+      meetingLocalBuffers[source] = [];
+
+      if (meetingRemoteTranscriber) {
+        const capped = capMeetingBacklog(chunks);
+        chunks = capped.chunks;
+        if (capped.droppedBytes > 0) {
+          debugLogger.warn("Self-hosted meeting transcription fell behind; dropped oldest audio", {
+            source,
+            droppedMs: Math.round((capped.droppedBytes / 2 / 24000) * 1000),
+          });
+          reportRemoteMeetingFailure();
+        }
+      }
 
       const pcm24k = Buffer.concat(chunks);
-      meetingLocalBuffers[source] = [];
 
       const pcm16k = downsample24kTo16k(pcm24k);
 
@@ -4934,7 +5006,10 @@ class IPCHandlers {
 
       try {
         let result;
-        if (isSherpaLocalProvider(meetingLocalProvider)) {
+        if (meetingRemoteTranscriber) {
+          result = await meetingRemoteTranscriber.transcribe(wav);
+          meetingRemoteFailureReported = false;
+        } else if (isSherpaLocalProvider(meetingLocalProvider)) {
           result = await this.parakeetManager.transcribeLocalParakeet(wav, {
             model: meetingLocalModel,
             language: meetingLocalLanguage,
@@ -5070,22 +5145,35 @@ class IPCHandlers {
       } catch (error) {
         debugLogger.error("Local meeting transcription chunk failed", {
           source,
+          remote: !!meetingRemoteTranscriber,
           error: error.message,
         });
-        if (meetingLocalWin && !meetingLocalWin.isDestroyed()) {
+        if (meetingRemoteTranscriber) {
+          reportRemoteMeetingFailure();
+        } else if (meetingLocalWin && !meetingLocalWin.isDestroyed()) {
           meetingLocalWin.webContents.send("meeting-transcription-error", error.message);
         }
       }
     };
 
+    // One pass at a time: a tick that lands mid-pass is skipped and its audio
+    // rides the next pass.
     const transcribeAllLocalBuffers = async () => {
       if (meetingLocalTranscribing) return;
       meetingLocalTranscribing = true;
+      const pass = (async () => {
+        try {
+          await transcribeLocalMeetingChunk("system");
+          await transcribeLocalMeetingChunk("mic");
+        } finally {
+          meetingLocalTranscribing = false;
+        }
+      })();
+      meetingLocalTranscribePromise = pass;
       try {
-        await transcribeLocalMeetingChunk("system");
-        await transcribeLocalMeetingChunk("mic");
+        await pass;
       } finally {
-        meetingLocalTranscribing = false;
+        if (meetingLocalTranscribePromise === pass) meetingLocalTranscribePromise = null;
       }
     };
 
@@ -5138,6 +5226,9 @@ class IPCHandlers {
       meetingLocalModel = null;
       meetingLocalLanguage = null;
       meetingLocalTranscribing = false;
+      meetingLocalTranscribePromise = null;
+      meetingRemoteTranscriber = null;
+      meetingRemoteFailureReported = false;
       meetingPendingMicChunks = [];
       resetPendingMicFinals();
       meetingAecEnabled = false;
@@ -5352,7 +5443,7 @@ class IPCHandlers {
         return { success: false, error: "Operation in progress" };
       }
 
-      if (options.provider !== "local") {
+      if (options.provider !== "local" && options.provider !== "self-hosted") {
         return { success: false, error: `Unsupported provider: ${options.provider}` };
       }
 
@@ -5401,6 +5492,29 @@ class IPCHandlers {
           this.activeMeetingSpeakerConfig = this._resolveInitialMeetingSpeakerConfig(meetingNoteId);
         }
 
+        meetingRemoteTranscriber = null;
+        meetingRemoteFailureReported = false;
+        if (options.provider === "self-hosted") {
+          const { resolveTranscriptionRoute } = await import("./transcriptionRoute.ts");
+          const route = resolveTranscriptionRoute({
+            settings: {
+              transcriptionMode: "self-hosted",
+              remoteTranscriptionUrl: options.remoteTranscriptionUrl,
+              remoteTranscriptionModel: options.remoteTranscriptionModel,
+            },
+            request: { effectiveLanguage: options.language || undefined },
+          });
+          // A sentinel the renderer translates (MeetingRecordingMount).
+          if (route.transport !== "http-batch") throw new Error("selfHostedNotConfigured");
+          meetingRemoteTranscriber = createSelfHostedChunkTranscriber({
+            endpoint: route.endpoint,
+            model: route.model,
+            language: route.language,
+            getHeaders: selfHostedAuthHeaders,
+            fetchImpl: proxyFetch,
+          });
+        }
+
         meetingLocalMode = true;
         meetingLocalProvider = options.localProvider || "whisper";
         meetingLocalModel = options.localModel || null;
@@ -5424,7 +5538,7 @@ class IPCHandlers {
         ));
 
         debugLogger.debug("Meeting transcription started in local mode", {
-          provider: meetingLocalProvider,
+          provider: meetingRemoteTranscriber ? "self-hosted" : meetingLocalProvider,
           systemAudioMode,
           systemAudioStrategy,
         });
@@ -5726,6 +5840,9 @@ class IPCHandlers {
           meetingLocalTimer = null;
         }
         try {
+          // A pass still in flight (a slow self-hosted request) would make the
+          // final flush a no-op and drop the last seconds of audio.
+          await meetingLocalTranscribePromise?.catch(() => {});
           await transcribeAllLocalBuffers();
         } catch (err) {
           debugLogger.error("Local meeting final transcription failed", { error: err.message });
@@ -6030,32 +6147,71 @@ class IPCHandlers {
 
           const upload = await prepareProviderUpload(sourcePath, { signal });
           cleanupUpload = upload.cleanup;
-          // No language field: an uploaded file is often not in the dictation
-          // language, and a wrong hint silently mistranscribes it.
-          const { body, boundary } = buildMultipartBody(
-            fs.readFileSync(upload.path),
-            path.basename(upload.path),
-            providerContentType(upload.path),
-            { model: route.model }
-          );
-          const data = await postMultipart(
-            new URL(route.endpoint),
-            body,
-            boundary,
-            selfHostedAuthHeaders(),
-            { signal }
-          );
-          if (data.statusCode === 401) {
-            return { success: false, error: "Self-hosted server rejected the API key." };
+
+          // Over the server's upload cap: split into fixed-length MP3 chunks and
+          // stitch their segments back on one timeline.
+          let parts = [{ path: upload.path, offsetSeconds: 0 }];
+          if (fs.statSync(upload.path).size > SELF_HOSTED_UPLOAD_LIMIT_BYTES) {
+            const { splitAudioFile } = require("./ffmpegUtils");
+            const { getSafeTempDir } = require("./safeTempDir");
+            const chunkDir = fs.mkdtempSync(path.join(getSafeTempDir(), "ow-selfhosted-"));
+            const previousCleanup = cleanupUpload;
+            cleanupUpload = () => {
+              previousCleanup?.();
+              fs.rmSync(chunkDir, { recursive: true, force: true });
+            };
+            const { chunkPaths } = await splitAudioFile(upload.path, chunkDir, {
+              segmentDuration: SELF_HOSTED_CHUNK_SECONDS,
+              audioBitrate: "64k",
+              signal,
+            });
+            parts = chunkPaths.map((chunkPath, index) => ({
+              path: chunkPath,
+              offsetSeconds: index * SELF_HOSTED_CHUNK_SECONDS,
+            }));
           }
-          if (data.statusCode !== 200) {
-            throw new Error(
-              data.data?.error?.message ||
-                data.data?.error ||
-                `Self-hosted API Error: ${data.statusCode}`
-            );
+
+          const results = [];
+          for (const part of parts) {
+            const fileBuffer = fs.readFileSync(part.path);
+            // No language field: an uploaded file is often not in the dictation
+            // language, and a wrong hint silently mistranscribes it.
+            const post = (fields) => {
+              const { body, boundary } = buildMultipartBody(
+                fileBuffer,
+                path.basename(part.path),
+                providerContentType(part.path),
+                fields
+              );
+              return postMultipart(
+                new URL(route.endpoint),
+                body,
+                boundary,
+                selfHostedAuthHeaders(),
+                { signal }
+              );
+            };
+            const data = await requestTranscription({
+              post,
+              endpoint: route.endpoint,
+              model: route.model,
+              offsetSeconds: part.offsetSeconds,
+            });
+            if (data.statusCode === 401 || data.statusCode === 403) {
+              return { success: false, error: "Self-hosted server rejected the API key." };
+            }
+            if (data.statusCode !== 200) {
+              throw new Error(
+                data.data?.error?.message ||
+                  data.data?.error ||
+                  `Self-hosted API Error: ${data.statusCode}`
+              );
+            }
+            results.push(data);
           }
-          return { success: true, text: data.data.text };
+
+          const { text, segments } = stitchTranscriptionChunks(results);
+          return { success: true, text, ...(segments ? { segments } : {}) };
         } catch (error) {
           if (signal?.aborted) {
             debugLogger.debug("Self-hosted audio file transcription cancelled", { requestId });

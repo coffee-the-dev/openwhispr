@@ -48,7 +48,7 @@ import {
   resolveModeReachability,
   resolveWakeWordLanguage,
 } from "./dictationRouting";
-import { resolveDictationAgentInference } from "./dictationAgentInference";
+import { resolveDictationAgentInference, scopeAcceptsImages } from "./dictationAgentInference";
 import { providerSupportsImages } from "../services/ai/inferenceProviders";
 import { resolveDictationTranslationInference } from "./dictationTranslationInference";
 import { resolvePrompt, appendScreenContextSuffix } from "../config/prompts";
@@ -202,8 +202,9 @@ function resolveReasoningRoute(
   if (kind === "agent") {
     const attach = resolveAgentImageTarget({
       hasScreenContext: !!screenContext,
-      providerImageWired: providerSupportsImages(
-        settings.dictationAgentMode === "self-hosted" ? "lan" : "local"
+      providerImageWired: scopeAcceptsImages(
+        selectResolvedLLMConfig(settings, "dictationAgent"),
+        providerSupportsImages
       ),
     });
     logger.logReasoning("AGENT_IMAGE_TARGET", { hasScreenContext: !!screenContext, attach });

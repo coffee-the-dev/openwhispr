@@ -159,7 +159,6 @@
     "cancel": "Cancelar",
     "recommended": "Recomendado",
     "active": "Activo",
-    "comingSoon": "Próximamente",
     "cloud": "Nube",
     "local": "Local",
     "apiKey": "Clave API",
@@ -599,6 +598,19 @@
     },
     "selfHosted": {
       "endpointHelp": "Apunta a un servidor compatible con OpenAI en tu red local (p. ej. Ollama, LM Studio, vLLM o llama-server)."
+    },
+    "toolCalling": {
+      "label": "Llamadas a herramientas",
+      "help": "Permite al modelo buscar en tus notas, consultar tu calendario y más. Auto lo activa para modelos que admiten herramientas.",
+      "options": {
+        "auto": "Auto",
+        "on": "Activado",
+        "off": "Desactivado"
+      }
+    },
+    "acceptsImages": {
+      "label": "El modelo acepta imágenes",
+      "help": "Actívalo para un modelo de visión y así enviar el contexto de pantalla con tus comandos."
     }
   },
   "transcription": {
@@ -1548,7 +1560,12 @@
     "selfHosted": {
       "endpointUrl": "URL del endpoint",
       "serverUrl": "URL del servidor",
-      "apiKeyOptional": "API Key (opcional)"
+      "apiKeyOptional": "API Key (opcional)",
+      "apiKeyHelp": "Se envía como token Bearer. Todas las configuraciones de servidor de transcripción comparten esta clave.",
+      "modelHelp": "Elige un modelo que liste el servidor o escribe su ID. Déjalo vacío para usar el modelo predeterminado del servidor.",
+      "modelsUnavailable": "No se pudieron listar los modelos de este servidor. Escribe un ID de modelo.",
+      "meetingUrlHelp": "Déjalo vacío para usar el servidor de Dictado.",
+      "previewUnavailable": "La vista previa en directo necesita un modelo local. Un servidor autoalojado devuelve la transcripción al detener."
     }
   },
   "models": {
@@ -1820,7 +1837,7 @@
       "title": "Notas de reunión",
       "description": "Transcripciones y resúmenes estructurados",
       "back": "Atrás",
-      "unsupportedSelfHosted": "La grabación de notas aún no puede usar un servidor propio. Abre Ajustes y elige Local.",
+      "remoteTranscriptionWarning": "El servidor de transcripción no respondió, así que puede faltar parte del habla en la transcripción en directo. La grabación continúa.",
       "systemAudioSilent": {
         "title": "Aún no se detecta el audio de la reunión",
         "description": "Hasta ahora solo tu micrófono ha captado sonido. ¿Estás en una videollamada? Comprueba que el audio de la reunión se reproduce en este equipo y no está silenciado. ¿Estás grabando en persona? Puedes ignorar este aviso: tu micrófono capta la sala."

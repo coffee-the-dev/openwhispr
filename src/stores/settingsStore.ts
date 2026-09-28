@@ -75,6 +75,13 @@ function readInferenceMode(key: string): InferenceMode {
   return readString(key, "local") === "self-hosted" ? "self-hosted" : "local";
 }
 
+export type ToolCallingSetting = "" | "auto" | "on" | "off";
+
+function readToolCallingSetting(key: string): ToolCallingSetting {
+  const stored = readString(key, "");
+  return stored === "auto" || stored === "on" || stored === "off" ? stored : "";
+}
+
 function readLocalProvider(key: string): LocalTranscriptionProvider {
   const stored = readString(key, "whisper");
   return stored === "nvidia" || stored === "cohere" ? stored : "whisper";
@@ -235,6 +242,8 @@ const BOOLEAN_SETTINGS = new Set([
   "dictationAgentDisableThinking",
   "noteFormattingDisableThinking",
   "chatAgentDisableThinking",
+  "dictationAgentAcceptsImages",
+  "chatAgentAcceptsImages",
   "notificationsEnabled",
   "notifyMeetingDetection",
   "notifyCalendarReminders",
@@ -738,7 +747,7 @@ const LOCAL_ONLY_TRANSCRIPTION_KEYS: ReadonlyArray<{
   useLocal: string;
   provider: string;
   baseUrl: string;
-  // Note Recording has no self-hosted route, so it always goes local.
+  // Note Recording had no server of its own to move to, so it goes local.
   remoteUrl: string | null;
 }> = [
   {
@@ -986,6 +995,7 @@ export interface SettingsState
   meetingCohereModel: string;
   meetingRemoteTranscriptionType: SelfHostedType;
   meetingRemoteTranscriptionUrl: string;
+  meetingRemoteTranscriptionModel: string;
 
   uploadTranscriptionMode: TranscriptionMode;
   uploadUseLocalWhisper: boolean;
@@ -1027,6 +1037,13 @@ export interface SettingsState
   noteFormattingDisableThinking: boolean;
   chatAgentDisableThinking: boolean;
 
+  // Per-scope capabilities of the model answering chat and voice commands.
+  // An empty tool-calling value means the mode's default (see toolCallingPolicy).
+  dictationAgentToolCalling: ToolCallingSetting;
+  chatAgentToolCalling: ToolCallingSetting;
+  dictationAgentAcceptsImages: boolean;
+  chatAgentAcceptsImages: boolean;
+
   customPrompts: Record<PromptKind, string>;
   setCustomPrompt: (kind: PromptKind, value: string) => void;
 
@@ -1053,6 +1070,7 @@ export interface SettingsState
   setMeetingCohereModel: (value: string) => void;
   setMeetingRemoteTranscriptionType: (type: SelfHostedType) => void;
   setMeetingRemoteTranscriptionUrl: (url: string) => void;
+  setMeetingRemoteTranscriptionModel: (model: string) => void;
 
   setUploadTranscriptionMode: (mode: TranscriptionMode) => void;
   setUploadUseLocalWhisper: (value: boolean) => void;
@@ -1470,6 +1488,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     return v === "openai-compatible" ? "openai-compatible" : ("lan" as SelfHostedType);
   })(),
   meetingRemoteTranscriptionUrl: readString("meetingRemoteTranscriptionUrl", ""),
+  meetingRemoteTranscriptionModel: readString("meetingRemoteTranscriptionModel", ""),
 
   uploadTranscriptionMode: readTranscriptionMode("uploadTranscriptionMode"),
   uploadUseLocalWhisper: readBoolean("uploadUseLocalWhisper", true),
@@ -1529,6 +1548,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     type: SelfHostedType
   ) => void,
   setMeetingRemoteTranscriptionUrl: createStringSetter("meetingRemoteTranscriptionUrl"),
+  setMeetingRemoteTranscriptionModel: createStringSetter("meetingRemoteTranscriptionModel"),
 
   setUploadTranscriptionMode: createStringSetter("uploadTranscriptionMode") as (
     mode: TranscriptionMode
@@ -1588,6 +1608,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   dictationAgentDisableThinking: readBoolean("dictationAgentDisableThinking", true),
   noteFormattingDisableThinking: readBoolean("noteFormattingDisableThinking", true),
   chatAgentDisableThinking: readBoolean("chatAgentDisableThinking", true),
+  dictationAgentToolCalling: readToolCallingSetting("dictationAgentToolCalling"),
+  chatAgentToolCalling: readToolCallingSetting("chatAgentToolCalling"),
+  dictationAgentAcceptsImages: readBoolean("dictationAgentAcceptsImages", false),
+  chatAgentAcceptsImages: readBoolean("chatAgentAcceptsImages", false),
 
   customPrompts: PROMPT_KIND_LIST.reduce(
     (acc, kind) => ({ ...acc, [kind]: readString(`customPrompt.${kind}`, "") }),
@@ -1978,8 +2002,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       s.setShowTranscriptionPreview(settings.showTranscriptionPreview);
   },
 
-  // Point dictation and audio upload at one engine, as onboarding does. Note
-  // Recording has no self-hosted route, so it only follows a Local choice.
+  // Point dictation, Note Recording and audio upload at one engine, as
+  // onboarding does. Note Recording's server is cleared so it follows dictation's.
   setTranscriptionModeForAllScopes: (mode: TranscriptionMode) => {
     const s = useSettingsStore.getState();
     const useLocal = mode === "local";
@@ -1987,12 +2011,14 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     s.setUseLocalWhisper(useLocal);
     s.setUploadTranscriptionMode(mode);
     s.setUploadUseLocalWhisper(useLocal);
+    s.setMeetingTranscriptionMode(mode);
+    s.setMeetingUseLocalWhisper(useLocal);
     if (useLocal) {
-      s.setMeetingTranscriptionMode(mode);
-      s.setMeetingUseLocalWhisper(true);
       s.setMeetingLocalTranscriptionProvider(s.localTranscriptionProvider);
       s.setUploadLocalTranscriptionProvider(s.localTranscriptionProvider);
     } else {
+      s.setMeetingRemoteTranscriptionUrl("");
+      s.setMeetingRemoteTranscriptionModel("");
       s.setUploadRemoteTranscriptionUrl(s.remoteTranscriptionUrl);
       s.setUploadRemoteTranscriptionModel(s.remoteTranscriptionModel);
     }
@@ -2042,8 +2068,11 @@ export interface ResolvedMeetingTranscription {
   transcriptionMode: TranscriptionMode;
   remoteTranscriptionType: SelfHostedType;
   remoteTranscriptionUrl: string;
+  remoteTranscriptionModel: string;
 }
 
+// An unset Note Recording server falls back to the dictation server, model and
+// all; a set one uses its own model (empty = the server's default).
 export const selectResolvedMeetingTranscription = (
   state: SettingsState
 ): ResolvedMeetingTranscription => ({
@@ -2054,7 +2083,12 @@ export const selectResolvedMeetingTranscription = (
   cohereModel: state.meetingCohereModel || state.cohereModel,
   transcriptionMode: state.meetingTranscriptionMode,
   remoteTranscriptionType: state.meetingRemoteTranscriptionType,
-  remoteTranscriptionUrl: state.meetingRemoteTranscriptionUrl || state.remoteTranscriptionUrl,
+  remoteTranscriptionUrl: state.meetingRemoteTranscriptionUrl.trim()
+    ? state.meetingRemoteTranscriptionUrl
+    : state.remoteTranscriptionUrl,
+  remoteTranscriptionModel: state.meetingRemoteTranscriptionUrl.trim()
+    ? state.meetingRemoteTranscriptionModel
+    : state.remoteTranscriptionModel,
 });
 
 export interface ResolvedUploadTranscription {
@@ -2119,6 +2153,9 @@ export interface ResolvedLLMConfig {
   remoteUrl?: string;
   customApiKey?: string;
   disableThinking: boolean;
+  /** Only on scopes that stream chat (see INFERENCE_SCOPES storeKeys). */
+  toolCalling?: ToolCallingSetting;
+  acceptsImages?: boolean;
 }
 
 export const selectResolvedLLMConfig = (
@@ -2139,6 +2176,9 @@ export const selectResolvedLLMConfig = (
   const disableThinkingKey = def.storeKeys.disableThinking;
   const disableThinking = disableThinkingKey ? (state[disableThinkingKey] as boolean) : true;
 
+  const toolCallingKey = def.storeKeys.toolCalling;
+  const acceptsImagesKey = def.storeKeys.acceptsImages;
+
   return {
     scope,
     mode: state[def.storeKeys.mode] as InferenceMode,
@@ -2150,6 +2190,8 @@ export const selectResolvedLLMConfig = (
     // belongs on the request path — see selectResolvedNoteFormatting.
     customApiKey: read("customApiKey"),
     disableThinking,
+    ...(toolCallingKey ? { toolCalling: state[toolCallingKey] as ToolCallingSetting } : {}),
+    ...(acceptsImagesKey ? { acceptsImages: state[acceptsImagesKey] === true } : {}),
   };
 };
 

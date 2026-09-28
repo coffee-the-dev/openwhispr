@@ -47,7 +47,7 @@ export function resolveDictationAgentInference(settings) {
  * to Chat, its previous home.
  *
  * Screenshots follow the dictation route's rule (resolveAgentImageTarget): they
- * attach only where the answering provider is image-wired.
+ * attach only where the answering model takes images (scopeAcceptsImages).
  *
  * `isProviderImageWired` is injected: the provider registry reads Vite env at
  * load, which this helper's callers and tests do not all have.
@@ -81,7 +81,20 @@ export function resolveChatStreamingInference(
     config,
     attachScreenContext: resolveAgentImageTarget({
       hasScreenContext,
-      providerImageWired: isProviderImageWired(config.mode === "self-hosted" ? "lan" : "local"),
+      providerImageWired: scopeAcceptsImages(config, isProviderImageWired),
     }),
   };
+}
+
+/**
+ * Whether a scope's answering model takes image parts. A self-hosted server's
+ * model is the user's call (the scope's "Model accepts images" toggle); the
+ * on-device runtime follows its provider client's wiring.
+ *
+ * @param {{ mode: string, acceptsImages?: boolean }} config
+ * @param {(providerId: string | undefined) => boolean} isProviderImageWired
+ */
+export function scopeAcceptsImages(config, isProviderImageWired = () => false) {
+  if (config.mode === "self-hosted") return config.acceptsImages === true;
+  return isProviderImageWired("local");
 }

@@ -159,7 +159,6 @@
     "cancel": "Annulla",
     "recommended": "Consigliato",
     "active": "Attivo",
-    "comingSoon": "Prossimamente",
     "cloud": "Cloud",
     "local": "Locale",
     "apiKey": "Chiave API",
@@ -599,6 +598,19 @@
     },
     "selfHosted": {
       "endpointHelp": "Punta a un server compatibile con OpenAI sulla tua rete locale (es. Ollama, LM Studio, vLLM o llama-server)."
+    },
+    "toolCalling": {
+      "label": "Chiamate agli strumenti",
+      "help": "Consente al modello di cercare nelle note, controllare il calendario e altro. Auto lo attiva per i modelli noti per supportare gli strumenti.",
+      "options": {
+        "auto": "Auto",
+        "on": "Attivo",
+        "off": "Disattivo"
+      }
+    },
+    "acceptsImages": {
+      "label": "Il modello accetta immagini",
+      "help": "Attivalo per un modello di visione, così il contesto dello schermo può essere inviato con i tuoi comandi."
     }
   },
   "transcription": {
@@ -1548,7 +1560,12 @@
     "selfHosted": {
       "endpointUrl": "URL endpoint",
       "serverUrl": "URL server",
-      "apiKeyOptional": "API Key (opzionale)"
+      "apiKeyOptional": "API Key (opzionale)",
+      "apiKeyHelp": "Inviata come token Bearer. Tutte le impostazioni dei server di trascrizione condividono questa chiave.",
+      "modelHelp": "Scegli un modello elencato dal server o digita il suo ID. Lascia vuoto per il modello predefinito del server.",
+      "modelsUnavailable": "Impossibile elencare i modelli di questo server. Digita invece un ID modello.",
+      "meetingUrlHelp": "Lascia vuoto per usare il server di Dettatura.",
+      "previewUnavailable": "L'anteprima dal vivo richiede un modello locale. Un server self-hosted restituisce la trascrizione quando ti fermi."
     }
   },
   "models": {
@@ -1820,7 +1837,7 @@
       "title": "Note delle riunioni",
       "description": "Trascrizioni e riassunti strutturati",
       "back": "Indietro",
-      "unsupportedSelfHosted": "La registrazione delle note non può ancora usare un endpoint self-hosted. Apri le Impostazioni e scegli Locale.",
+      "remoteTranscriptionWarning": "Il server di trascrizione non ha risposto, quindi parte del parlato potrebbe mancare dalla trascrizione dal vivo. La registrazione continua.",
       "systemAudioSilent": {
         "title": "Nessun audio della riunione rilevato finora",
         "description": "Finora solo il tuo microfono ha captato suoni. Sei in una videochiamata? Verifica che l'audio della riunione venga riprodotto su questo computer e non sia disattivato. Stai registrando di persona? Puoi ignorare questo avviso: il tuo microfono cattura la stanza."

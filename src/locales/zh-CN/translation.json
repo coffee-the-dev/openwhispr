@@ -159,7 +159,6 @@
     "cancel": "取消",
     "recommended": "推荐",
     "active": "已激活",
-    "comingSoon": "即将推出",
     "cloud": "云端",
     "local": "本地",
     "apiKey": "API Key",
@@ -599,6 +598,19 @@
     },
     "selfHosted": {
       "endpointHelp": "指向本地网络中兼容 OpenAI 的服务器（例如 Ollama、LM Studio、vLLM 或 llama-server）。"
+    },
+    "toolCalling": {
+      "label": "工具调用",
+      "help": "允许模型搜索你的笔记、查看日历等。“自动”会为已知支持工具的模型开启。",
+      "options": {
+        "auto": "自动",
+        "on": "开启",
+        "off": "关闭"
+      }
+    },
+    "acceptsImages": {
+      "label": "模型接受图像",
+      "help": "对于视觉模型请开启，以便随命令发送屏幕上下文。"
     }
   },
   "transcription": {
@@ -1548,7 +1560,12 @@
     "selfHosted": {
       "endpointUrl": "端点 URL",
       "serverUrl": "服务器 URL",
-      "apiKeyOptional": "API Key（可选）"
+      "apiKeyOptional": "API Key（可选）",
+      "apiKeyHelp": "作为 Bearer 令牌发送。所有转录服务器设置共用此密钥。",
+      "modelHelp": "选择服务器列出的模型，或输入其 ID。留空则使用服务器的默认模型。",
+      "modelsUnavailable": "无法获取此服务器的模型列表，请直接输入模型 ID。",
+      "meetingUrlHelp": "留空则使用听写服务器。",
+      "previewUnavailable": "实时预览需要本地模型。自托管服务器会在停止后返回转录内容。"
     }
   },
   "models": {
@@ -1820,7 +1837,7 @@
       "title": "会议笔记",
       "description": "转录与结构化摘要",
       "back": "返回",
-      "unsupportedSelfHosted": "笔记录音暂不支持自托管端点。请打开设置，选择本地。",
+      "remoteTranscriptionWarning": "转录服务器未响应，实时转录中可能缺少部分语音。录制仍在继续。",
       "systemAudioSilent": {
         "title": "尚未检测到会议音频",
         "description": "到目前为止，只有您的麦克风采集到声音。正在进行视频通话？请检查会议音频是否正在此电脑上播放且未被静音。正在进行现场录音？您可以忽略此提示——您的麦克风会采集房间内的声音。"

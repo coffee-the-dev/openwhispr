@@ -159,7 +159,6 @@
     "cancel": "Cancel",
     "recommended": "Recommended",
     "active": "Active",
-    "comingSoon": "Coming Soon",
     "cloud": "Cloud",
     "local": "Local",
     "apiKey": "API Key",
@@ -599,6 +598,19 @@
     },
     "selfHosted": {
       "endpointHelp": "Point to an OpenAI-compatible server on your local network (e.g. Ollama, LM Studio, vLLM, or llama-server)."
+    },
+    "toolCalling": {
+      "label": "Tool calling",
+      "help": "Lets the model search your notes, check your calendar and more. Auto turns it on for models known to handle tools.",
+      "options": {
+        "auto": "Auto",
+        "on": "On",
+        "off": "Off"
+      }
+    },
+    "acceptsImages": {
+      "label": "Model accepts images",
+      "help": "Turn on for a vision model so screen context can be sent with your commands."
     }
   },
   "transcription": {
@@ -1588,7 +1600,12 @@
     "selfHosted": {
       "endpointUrl": "Endpoint URL",
       "serverUrl": "Server URL",
-      "apiKeyOptional": "API Key (optional)"
+      "apiKeyOptional": "API Key (optional)",
+      "apiKeyHelp": "Sent as a Bearer token. Every transcription server setting shares this key.",
+      "modelHelp": "Pick a model the server lists, or type its ID. Leave empty for the server's default.",
+      "modelsUnavailable": "Couldn't list this server's models. Type a model ID instead.",
+      "meetingUrlHelp": "Leave empty to use the Dictation server.",
+      "previewUnavailable": "Live preview needs a local model. A self-hosted server returns the transcript when you stop."
     }
   },
   "models": {
@@ -1923,7 +1940,7 @@
       "title": "Meeting Notes",
       "description": "Transcriptions & structured summaries",
       "back": "Back",
-      "unsupportedSelfHosted": "Note Recording can't use a self-hosted endpoint yet. Open Settings and choose Local.",
+      "remoteTranscriptionWarning": "The transcription server didn't respond, so some speech may be missing from the live transcript. Recording continues.",
       "systemAudioSilent": {
         "title": "No meeting audio detected yet",
         "description": "Only your microphone has picked up sound so far. On a video call? Check that the meeting audio is playing on this computer and isn't muted. Recording in person? You can ignore this — your microphone captures the room."

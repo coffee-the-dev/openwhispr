@@ -59,6 +59,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     (callback) => (_event, payload) => callback(payload)
   ),
   testProviderConnection: (config) => ipcRenderer.invoke("test-provider-connection", config),
+  listRemoteModels: (config) => ipcRenderer.invoke("list-remote-models", config),
   pasteText: (text, options) => ipcRenderer.invoke("paste-text", text, options),
   captureSelectedText: (options) => ipcRenderer.invoke("capture-selected-text", options),
   replaceSelectedText: (sessionId, text, options) =>
@@ -401,8 +402,8 @@ contextBridge.exposeInMainWorld("electronAPI", {
   cancelDiarizationDownload: () => ipcRenderer.invoke("cancel-diarization-download"),
   diarizeAudioFile: (filePath, options) =>
     ipcRenderer.invoke("diarize-audio-file", filePath, options),
-  mergeSpeakerText: (segments, text, duration) =>
-    ipcRenderer.invoke("merge-speaker-text", { segments, text, duration }),
+  mergeSpeakerText: (segments, text, duration, textSegments) =>
+    ipcRenderer.invoke("merge-speaker-text", { segments, text, duration, textSegments }),
   onDiarizationDownloadProgress: registerListener(
     "diarization-download-progress",
     (callback) => (_event, data) => callback(data)

@@ -13,6 +13,12 @@ import type { InferenceModeOption } from "../ui/SettingsSection";
 import ReasoningModelSelector from "../ReasoningModelSelector";
 import OpenAICompatiblePanel from "../OpenAICompatiblePanel";
 import { Toggle } from "../ui/toggle";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import ProviderConnectionTest from "../onboarding/ProviderConnectionTest";
+import {
+  TOOL_CALLING_SETTINGS,
+  effectiveToolCallingSetting,
+} from "../../helpers/toolCallingPolicy.js";
 import type { InferenceMode } from "../../types/electron";
 import type { InferenceScope } from "../../config/inferenceScopes";
 import { isProviderValidForMode, getLocalModel } from "../../models/ModelRegistry";
@@ -24,6 +30,8 @@ const MODE_LABEL_PREFIX: Record<InferenceScope, string> = {
   chatIntelligence: "agentMode.settings.modes",
   dictationTranslation: "settingsPage.aiModels.modes",
 };
+
+const ignoreConnectionResult = () => {};
 
 interface InferenceConfigEditorProps {
   scope: InferenceScope;
@@ -81,6 +89,10 @@ export default function InferenceConfigEditor({ scope, onModeChange }: Inference
 
   const setModel = setField("model");
 
+  const remoteUrl = config.remoteUrl?.trim() ?? "";
+  const showToolCalling = config.toolCalling !== undefined;
+  const showAcceptsImages = effectiveMode === "self-hosted" && config.acceptsImages !== undefined;
+
   const showThinkingToggle =
     effectiveMode === "self-hosted" ||
     (effectiveMode === "local" && !!getLocalModel(config.model)?.supportsThinking);
@@ -113,6 +125,53 @@ export default function InferenceConfigEditor({ scope, onModeChange }: Inference
             </p>
           }
         />
+      )}
+
+      {effectiveMode === "self-hosted" && remoteUrl && (
+        <ProviderConnectionTest
+          config={{ baseUrl: remoteUrl, apiKey: config.customApiKey ?? "", model: config.model }}
+          onSuccessChange={ignoreConnectionResult}
+        />
+      )}
+
+      {showToolCalling && (
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-medium text-foreground">
+              {t("reasoning.toolCalling.label")}
+            </h4>
+            <p className="text-xs text-muted-foreground">{t("reasoning.toolCalling.help")}</p>
+          </div>
+          <Select
+            value={effectiveToolCallingSetting(config.toolCalling, effectiveMode)}
+            onValueChange={(value: "auto" | "on" | "off") =>
+              setResolvedLLMConfig(scope, { toolCalling: value })
+            }
+          >
+            <SelectTrigger className="h-7 w-28 text-xs rounded-lg px-2.5 [&>svg]:h-3 [&>svg]:w-3">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {TOOL_CALLING_SETTINGS.map((option) => (
+                <SelectItem key={option} value={option}>
+                  {t(`reasoning.toolCalling.options.${option}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {showAcceptsImages && (
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-medium text-foreground">
+              {t("reasoning.acceptsImages.label")}
+            </h4>
+            <p className="text-xs text-muted-foreground">{t("reasoning.acceptsImages.help")}</p>
+          </div>
+          <Toggle checked={config.acceptsImages === true} onChange={setField("acceptsImages")} />
+        </div>
       )}
 
       {showThinkingToggle && (

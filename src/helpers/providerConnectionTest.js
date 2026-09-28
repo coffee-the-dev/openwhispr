@@ -226,19 +226,9 @@ async function responseOffersModel(response, model) {
   }
 }
 
-async function testProviderConnection(config, fetchImpl = fetch) {
-  let request;
-  try {
-    request = resolveProviderRequest(config);
-  } catch (error) {
-    return {
-      success: false,
-      errorCode: error.errorCode || "invalidUrl",
-      error: error.message,
-    };
-  }
-
-  const model = String(config?.model || "").trim();
+// GET each candidate model-list endpoint in turn. `onResponse` decides what an
+// OK response means; returning undefined keeps trying the next candidate.
+async function probeModelEndpoints(request, onResponse, fetchImpl) {
   let failure = null;
   for (const endpoint of request.endpoints) {
     const controller = new AbortController();
@@ -250,11 +240,9 @@ async function testProviderConnection(config, fetchImpl = fetch) {
         signal: controller.signal,
       });
       if (response.ok) {
-        if (await responseOffersModel(response, model)) return { success: true };
-        failure = pickFailure(failure, {
-          errorCode: "modelNotFound",
-          error: "The selected model is not available from this server.",
-        });
+        const outcome = await onResponse(response);
+        if (outcome.result) return outcome.result;
+        failure = pickFailure(failure, outcome.failure);
         continue;
       }
       failure = pickFailure(failure, describeStatusFailure(response.status));
@@ -277,4 +265,58 @@ async function testProviderConnection(config, fetchImpl = fetch) {
   return { success: false, ...failure };
 }
 
-module.exports = { resolveProviderRequest, testProviderConnection };
+function resolveRequestOrFailure(config) {
+  try {
+    return { request: resolveProviderRequest(config) };
+  } catch (error) {
+    return {
+      failure: { success: false, errorCode: error.errorCode || "invalidUrl", error: error.message },
+    };
+  }
+}
+
+// The server's model ids, for the model pickers. Runs in the main process so a
+// server without CORS headers still lists.
+async function listRemoteModels(config, fetchImpl = fetch) {
+  const { request, failure } = resolveRequestOrFailure(config);
+  if (failure) return { ...failure, models: [] };
+  const result = await probeModelEndpoints(
+    request,
+    async (response) => {
+      let models = [];
+      try {
+        models = responseModelIds(await response.json());
+      } catch {
+        models = [];
+      }
+      if (models.length > 0) return { result: { success: true, models } };
+      return {
+        failure: { errorCode: "endpointNotFound", error: "The server listed no models." },
+      };
+    },
+    fetchImpl
+  );
+  return result.success ? result : { ...result, models: [] };
+}
+
+async function testProviderConnection(config, fetchImpl = fetch) {
+  const { request, failure } = resolveRequestOrFailure(config);
+  if (failure) return failure;
+
+  const model = String(config?.model || "").trim();
+  return probeModelEndpoints(
+    request,
+    async (response) =>
+      (await responseOffersModel(response, model))
+        ? { result: { success: true } }
+        : {
+            failure: {
+              errorCode: "modelNotFound",
+              error: "The selected model is not available from this server.",
+            },
+          },
+    fetchImpl
+  );
+}
+
+module.exports = { resolveProviderRequest, testProviderConnection, listRemoteModels };

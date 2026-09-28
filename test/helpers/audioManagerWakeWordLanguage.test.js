@@ -25,6 +25,7 @@ async function loadAudioManager(t) {
         export const selectResolvedLLMConfig = () => ({ mode: "local", model: "cleanup-model" });
       `,
       "/dictationAgentInference": `
+        export const scopeAcceptsImages = () => false;
         export const resolveDictationAgentInference = () => ({
           reachable: true,
           model: "agent-model",

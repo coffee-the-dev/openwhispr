@@ -161,6 +161,8 @@ const getMeetingTranscriptionOptions = () => {
     whisperModel: resolved.whisperModel,
     parakeetModel: resolved.parakeetModel,
     cohereModel: resolved.cohereModel,
+    remoteTranscriptionUrl: resolved.remoteTranscriptionUrl,
+    remoteTranscriptionModel: resolved.remoteTranscriptionModel,
   });
 };
 

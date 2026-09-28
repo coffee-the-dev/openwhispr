@@ -17,6 +17,7 @@ async function loadRouteResolver(t, mode = "local") {
         });
       `,
       "/dictationAgentInference": `
+        export const scopeAcceptsImages = () => false;
         export const resolveDictationAgentInference = () => ({
           reachable: true,
           model: "agent-model",

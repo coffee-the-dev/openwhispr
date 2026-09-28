@@ -561,6 +561,13 @@ declare global {
         baseUrl?: string;
         model?: string;
       }) => Promise<{ success: boolean; error?: string; errorCode?: string; status?: number }>;
+      listRemoteModels?: (config: { apiKey?: string; baseUrl?: string }) => Promise<{
+        success: boolean;
+        models: string[];
+        error?: string;
+        errorCode?: string;
+        status?: number;
+      }>;
       pasteText: (
         text: string,
         options?: {
@@ -1554,6 +1561,8 @@ declare global {
         provider?: string;
         localProvider?: string;
         localModel?: string;
+        remoteTranscriptionUrl?: string;
+        remoteTranscriptionModel?: string;
         language?: string;
         noteId?: number | null;
         sessionId: string;
@@ -1634,8 +1643,14 @@ declare global {
       mergeSpeakerText?: (
         segments: Array<{ start: number; end: number; speaker: string }>,
         text: string,
-        duration: number
-      ) => Promise<{ success: boolean; text?: string; error?: string }>;
+        duration: number,
+        textSegments?: Array<{ text: string; start: number; end: number }>
+      ) => Promise<{
+        success: boolean;
+        text?: string;
+        segments?: Array<{ text: string; start: number; end: number; speaker: string }>;
+        error?: string;
+      }>;
       diarizeAudioFile?: (
         filePath: string,
         options?: { numSpeakers?: number; threshold?: number; requestId?: string }

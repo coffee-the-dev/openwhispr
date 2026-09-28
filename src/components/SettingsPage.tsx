@@ -462,6 +462,8 @@ function TranscriptionSection({
   toast,
 }: TranscriptionSectionProps) {
   const { t } = useTranslation();
+  const customTranscriptionApiKey = useSettingsStore((s) => s.customTranscriptionApiKey);
+  const setCustomTranscriptionApiKey = useSettingsStore((s) => s.setCustomTranscriptionApiKey);
   const transcriptionModes: InferenceModeOption<TranscriptionMode>[] = [
     {
       id: "local",
@@ -553,13 +555,19 @@ function TranscriptionSection({
       {previewAvailable && renderPreviewToggle()}
 
       {effectiveTranscriptionMode === "self-hosted" && (
-        <SelfHostedPanel
-          service="transcription"
-          url={remoteTranscriptionUrl}
-          onUrlChange={setRemoteTranscriptionUrl}
-          model={remoteTranscriptionModel}
-          onModelChange={setRemoteTranscriptionModel}
-        />
+        <>
+          <SelfHostedPanel
+            url={remoteTranscriptionUrl}
+            onUrlChange={setRemoteTranscriptionUrl}
+            model={remoteTranscriptionModel}
+            onModelChange={setRemoteTranscriptionModel}
+            apiKey={customTranscriptionApiKey}
+            onApiKeyChange={setCustomTranscriptionApiKey}
+          />
+          <p className="text-xs text-muted-foreground">
+            {t("settingsPage.selfHosted.previewUnavailable")}
+          </p>
+        </>
       )}
 
       {/* Local decoding still serves meetings and uploads, so the GPU choice stays reachable. */}
@@ -968,6 +976,10 @@ export default function SettingsPage({
     setWhisperVadSamplesOverlap,
   } = useSettings();
 
+  const meetingTranscriptionMode = useSettingsStore((s) => s.meetingTranscriptionMode);
+  const meetingLocalTranscriptionProvider = useSettingsStore(
+    (s) => s.meetingLocalTranscriptionProvider
+  );
   const meetingProcessDetection = useSettingsStore((state) => state.meetingProcessDetection);
   const voiceAgentKey = useSettingsStore((s) => s.voiceAgentKey);
   const setVoiceAgentKey = useSettingsStore((s) => s.setVoiceAgentKey);
@@ -3031,8 +3043,8 @@ EOF`,
             renderNoteRecording={() => (
               <div className="space-y-6">
                 <MeetingTranscriptionPanel />
-                {transcriptionMode === "local" &&
-                  localTranscriptionProvider === "whisper" &&
+                {meetingTranscriptionMode === "local" &&
+                  meetingLocalTranscriptionProvider === "whisper" &&
                   renderWhisperVadSettings()}
               </div>
             )}
