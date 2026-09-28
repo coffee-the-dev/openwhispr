@@ -43,8 +43,6 @@ export interface CleanupSettings {
   useDictationAgent: boolean;
   cleanupModel: string;
   cleanupProvider: string;
-  cleanupCloudBaseUrl?: string;
-  cleanupCloudMode: string;
   cleanupMode: InferenceMode;
   cleanupRemoteUrl: string;
 }
@@ -75,13 +73,6 @@ export interface MicrophoneSettings {
 }
 
 export interface ApiKeySettings {
-  openaiApiKey: string;
-  anthropicApiKey: string;
-  geminiApiKey: string;
-  groqApiKey: string;
-  openrouterApiKey: string;
-  cortiApiKey: string;
-  tinfoilApiKey: string;
   customTranscriptionApiKey: string;
   cleanupCustomApiKey: string;
 }
@@ -100,9 +91,7 @@ export interface ThemeSettings {
 export interface ChatAgentSettings {
   chatAgentModel: string;
   chatAgentProvider: string;
-  chatAgentCloudMode: string;
   chatAgentMode: InferenceMode;
-  chatAgentCloudBaseUrl: string;
   chatAgentRemoteUrl: string;
   chatAgentCustomApiKey: string;
 }
@@ -244,8 +233,6 @@ function useSettingsInternal() {
     fallbackWhisperModel: store.fallbackWhisperModel,
     preferredLanguage: store.preferredLanguage,
     chineseScriptPreference: store.chineseScriptPreference,
-    cleanupCloudBaseUrl: store.cleanupCloudBaseUrl,
-    cleanupCloudMode: store.cleanupCloudMode,
     transcriptionMode: store.transcriptionMode,
     remoteTranscriptionType: store.remoteTranscriptionType,
     remoteTranscriptionUrl: store.remoteTranscriptionUrl,
@@ -261,12 +248,6 @@ function useSettingsInternal() {
     useDictationAgent: store.useDictationAgent,
     cleanupModel: store.cleanupModel,
     cleanupProvider: store.cleanupProvider,
-    openaiApiKey: store.openaiApiKey,
-    anthropicApiKey: store.anthropicApiKey,
-    geminiApiKey: store.geminiApiKey,
-    groqApiKey: store.groqApiKey,
-    openrouterApiKey: store.openrouterApiKey,
-    tinfoilApiKey: store.tinfoilApiKey,
     dictationKey: store.dictationKey,
     meetingKey: store.meetingKey,
     voiceAgentKey: store.voiceAgentKey,
@@ -283,8 +264,6 @@ function useSettingsInternal() {
     setFallbackWhisperModel: store.setFallbackWhisperModel,
     setPreferredLanguage: store.setPreferredLanguage,
     setChineseScriptPreference: store.setChineseScriptPreference,
-    setCleanupCloudBaseUrl: store.setCleanupCloudBaseUrl,
-    setCleanupCloudMode: store.setCleanupCloudMode,
     setTranscriptionMode: store.setTranscriptionMode,
     setRemoteTranscriptionType: store.setRemoteTranscriptionType,
     setRemoteTranscriptionUrl: store.setRemoteTranscriptionUrl,
@@ -297,10 +276,6 @@ function useSettingsInternal() {
     setUseDictationAgent: store.setUseDictationAgent,
     setCleanupModel: store.setCleanupModel,
     setCleanupProvider: store.setCleanupProvider,
-    setOpenaiApiKey: store.setOpenaiApiKey,
-    setAnthropicApiKey: store.setAnthropicApiKey,
-    setGeminiApiKey: store.setGeminiApiKey,
-    setGroqApiKey: store.setGroqApiKey,
     customTranscriptionApiKey: store.customTranscriptionApiKey,
     setCustomTranscriptionApiKey: store.setCustomTranscriptionApiKey,
     cleanupCustomApiKey: store.cleanupCustomApiKey,

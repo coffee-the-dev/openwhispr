@@ -1,5 +1,4 @@
 import type { ModelDefinition } from "../models/ModelRegistry";
-import type { TinfoilCatalogModel } from "../models/tinfoilModels";
 import type { CalendarAvailabilityRequest, CalendarAvailabilityResult } from "./calendar";
 
 export type LocalTranscriptionProvider = "whisper" | "nvidia" | "cohere";
@@ -15,7 +14,7 @@ export interface MainWindowInputRegion {
 
 export type ChineseScriptPreference = "simplified" | "traditional" | "as-transcribed";
 
-export type InferenceMode = "openwhispr" | "providers" | "local" | "self-hosted" | "enterprise";
+export type InferenceMode = "local" | "self-hosted";
 
 export type TranscriptionMode = "local" | "self-hosted";
 
@@ -328,16 +327,6 @@ export interface ScreenRecordingAccessResult {
   needsRelaunch?: boolean;
 }
 
-export type CloudReasonPurpose = "cleanup" | "assistant" | "translation" | "noteFormatting";
-
-// Orukeet's audio language estimate, reported for the backend's per-user gate.
-export interface SttDetectedLanguageFields {
-  sttDetectedLanguage?: string;
-  sttDetectedLanguageConfidence?: number;
-  sttDetectedLanguageAudioSeconds?: number;
-  sttDetectedLanguageStatus?: "detected" | "unknown";
-}
-
 export interface ScreenContextImage {
   mediaType: string;
   /** Base64 image bytes, no data-URL prefix. */
@@ -568,8 +557,6 @@ declare global {
       publishOnboardingDemoEvent?: (event: Omit<OnboardingDemoEvent, "demoId">) => Promise<boolean>;
       onOnboardingDemoEvent?: (callback: (event: OnboardingDemoEvent) => void) => () => void;
       testProviderConnection?: (config: {
-        scope: "transcription" | "reasoning";
-        provider: string;
         apiKey?: string;
         baseUrl?: string;
         model?: string;
@@ -976,11 +963,6 @@ declare global {
       onTranscriptionsCleared?: (callback: (payload: { cleared: number }) => void) => () => void;
       onAnalyticsChanged?: (callback: () => void) => () => void;
 
-      // API key management
-      getOpenAIKey: () => Promise<string>;
-      saveOpenAIKey: (key: string) => Promise<{ success: boolean }>;
-      getAnthropicKey: () => Promise<string | null>;
-      saveAnthropicKey: (key: string) => Promise<void>;
       getUiLanguage: () => Promise<string>;
       saveUiLanguage: (language: string) => Promise<{ success: boolean; language: string }>;
       setUiLanguage: (language: string) => Promise<{ success: boolean; language: string }>;
@@ -1163,60 +1145,6 @@ declare global {
       /** Aborts the local request tagged with this `requestId`, if it is still in flight. */
       cancelLocalReasoning: (requestId: string) => Promise<void>;
 
-      // Anthropic reasoning
-      processAnthropicReasoning: (
-        text: string,
-        modelId: string,
-        agentName: string | null,
-        config: any
-      ) => Promise<{ success: boolean; text?: string; error?: string; messageKey?: string }>;
-
-      // Enterprise reasoning (Bedrock, Azure, Vertex)
-      processEnterpriseReasoning: (
-        text: string,
-        modelId: string,
-        agentName: string | null,
-        config: any
-      ) => Promise<{
-        success: boolean;
-        text?: string;
-        error?: string;
-        messageKey?: string;
-        messageParams?: Record<string, string | number>;
-        action?: string;
-        actionKey?: string;
-        copyCommand?: string;
-        retryable?: boolean;
-        technicalDetails?: {
-          status?: number;
-          exceptionType?: string;
-          requestId?: string;
-          underlyingError?: string;
-        };
-      }>;
-      cancelEnterpriseReasoning?: () => void;
-      enterpriseStreamStart?: (payload: {
-        streamId: string;
-        provider: string;
-        modelId: string;
-        config: Record<string, unknown>;
-        options: Record<string, unknown>;
-      }) => Promise<{ success: boolean; error?: string }>;
-      enterpriseStreamCancel?: (streamId: string) => Promise<void>;
-      onEnterpriseStreamPart?: (
-        callback: (payload: {
-          streamId: string;
-          part?: unknown;
-          done?: boolean;
-          error?: string;
-        }) => void
-      ) => () => void;
-      listBedrockModels?: (config: Record<string, unknown>) => Promise<{
-        success: boolean;
-        models?: Array<{ value: string; label: string; vendor: string }>;
-        error?: string;
-      }>;
-
       // llama.cpp management
       llamaCppCheck: () => Promise<{ isInstalled: boolean; version?: string }>;
       llamaCppInstall: () => Promise<{ success: boolean; error?: string }>;
@@ -1356,22 +1284,6 @@ declare global {
       onAccessibilityMissing?: (callback: () => void) => () => void;
       checkAccessibilityTrusted?: () => Promise<boolean>;
 
-      // Gemini API key management
-      getGeminiKey: () => Promise<string | null>;
-      saveGeminiKey: (key: string) => Promise<void>;
-
-      // Groq API key management
-      getGroqKey: () => Promise<string | null>;
-      saveGroqKey: (key: string) => Promise<void>;
-      getOpenrouterKey: () => Promise<string | null>;
-      saveOpenrouterKey: (key: string) => Promise<void>;
-
-      getCortiKey?: () => Promise<string | null>;
-      saveCortiKey?: (key: string) => Promise<void>;
-      getTinfoilKey?: () => Promise<string | null>;
-      saveTinfoilKey?: (key: string) => Promise<void>;
-      getTinfoilChatModels?: () => Promise<TinfoilCatalogModel[]>;
-
       // Custom endpoint API keys
       getCustomTranscriptionKey?: () => Promise<string | null>;
       saveCustomTranscriptionKey?: (key: string) => Promise<void>;
@@ -1387,50 +1299,6 @@ declare global {
       saveDictationAgentVisionCustomKey?: (key: string) => Promise<void>;
       getChatAgentCustomKey?: () => Promise<string | null>;
       saveChatAgentCustomKey?: (key: string) => Promise<void>;
-
-      // Enterprise provider key persistence
-      getBedrockRegion?: () => Promise<string | null>;
-      saveBedrockRegion?: (value: string) => Promise<void>;
-      getBedrockProfile?: () => Promise<string | null>;
-      saveBedrockProfile?: (value: string) => Promise<void>;
-      getBedrockAccessKeyId?: () => Promise<string | null>;
-      saveBedrockAccessKeyId?: (key: string) => Promise<void>;
-      getBedrockSecretAccessKey?: () => Promise<string | null>;
-      saveBedrockSecretAccessKey?: (key: string) => Promise<void>;
-      getBedrockSessionToken?: () => Promise<string | null>;
-      saveBedrockSessionToken?: (key: string) => Promise<void>;
-      getAzureEndpoint?: () => Promise<string | null>;
-      saveAzureEndpoint?: (value: string) => Promise<void>;
-      getAzureApiKey?: () => Promise<string | null>;
-      saveAzureApiKey?: (key: string) => Promise<void>;
-      getAzureDeployment?: () => Promise<string | null>;
-      saveAzureDeployment?: (value: string) => Promise<void>;
-      getAzureApiVersion?: () => Promise<string | null>;
-      saveAzureApiVersion?: (value: string) => Promise<void>;
-      getVertexProject?: () => Promise<string | null>;
-      saveVertexProject?: (value: string) => Promise<void>;
-      getVertexLocation?: () => Promise<string | null>;
-      saveVertexLocation?: (value: string) => Promise<void>;
-      getVertexApiKey?: () => Promise<string | null>;
-      saveVertexApiKey?: (key: string) => Promise<void>;
-      testEnterpriseConnection?: (
-        provider: string,
-        config: Record<string, unknown>
-      ) => Promise<{
-        success: boolean;
-        error?: string;
-        messageKey?: string;
-        messageParams?: Record<string, string | number>;
-        action?: string;
-        actionKey?: string;
-        copyCommand?: string;
-        technicalDetails?: {
-          status?: number;
-          exceptionType?: string;
-          requestId?: string;
-          underlyingError?: string;
-        };
-      }>;
 
       // Dictation key persistence (file-based for reliable startup)
       getDictationKey?: () => Promise<string | null>;
@@ -1519,35 +1387,6 @@ declare global {
       // Settings, which otherwise looks like a toggle that will not stick.
       getAutoStartEnabled?: () => Promise<{ enabled: boolean; requiresApproval: boolean }>;
       setAutoStartEnabled?: (enabled: boolean) => Promise<{ success: boolean; error?: string }>;
-
-      cloudReason?: (
-        text: string,
-        opts: {
-          model?: string;
-          agentName?: string;
-          customDictionary?: string[];
-          customPrompt?: string;
-          systemPrompt?: string;
-          requestPurpose?: "agent";
-          promptMode?: "cleanup" | "agent";
-          purpose?: CloudReasonPurpose;
-          screenContext?: ScreenContextImage;
-          language?: string;
-          locale?: string;
-          streamingFallbackReason?: string;
-        } & SttDetectedLanguageFields
-      ) => Promise<{
-        success: boolean;
-        text?: string;
-        model?: string;
-        provider?: string;
-        promptMode?: string;
-        matchType?: string;
-        screenContextApplied?: boolean;
-        error?: string;
-        code?: string;
-      }>;
-      cancelCloudReason?: () => void;
 
       cancelUploadTranscription?: (requestId: string) => Promise<{ success: boolean }>;
 
@@ -1675,51 +1514,8 @@ declare global {
         limit?: number
       ) => Promise<ConversationPreview[]>;
 
-      // Agent cloud streaming (event-based)
-      startAgentStream?: (
-        requestId: string,
-        messages: Array<{ role: string; content: string | Array<unknown> }>,
-        opts?: {
-          systemPrompt?: string;
-          tools?: Array<{ name: string; description: string; parameters: Record<string, unknown> }>;
-          screenContext?: { data: string; mediaType: string };
-        }
-      ) => void;
-      cancelAgentStream?: (requestId: string) => void;
-      onAgentStreamChunk?: (
-        callback: (payload: {
-          requestId: string;
-          chunk: {
-            type: "content" | "tool_call" | "done";
-            text?: string;
-            id?: string;
-            name?: string;
-            arguments?: string;
-            finishReason?: string;
-          };
-        }) => void
-      ) => () => void;
-      onAgentStreamError?: (
-        callback: (payload: CloudFailureMetadata & { requestId: string; error: string }) => void
-      ) => () => void;
-      onAgentStreamEnd?: (callback: (payload: { requestId: string }) => void) => () => void;
-
-      // Agent cloud tools
+      // Agent tools
       agentOpenNote?: (noteId: number) => Promise<{ success: boolean; error?: string }>;
-      agentWebSearch?: (
-        query: string,
-        numResults?: number
-      ) => Promise<
-        {
-          success: boolean;
-          results?: Array<{
-            title: string;
-            url: string;
-            text: string;
-            publishedDate?: string;
-          }>;
-        } & CloudFailureMetadata
-      >;
 
       // Calendar events (shared cache)
       calendarGetUpcomingEvents?: (

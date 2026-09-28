@@ -30,21 +30,9 @@ import { isCacheableMicrophoneResolution, resolvePreferredMicrophone } from "./m
 import { isStaleDeviceError } from "./staleMicDevice";
 import { shouldSaveDiscardedRecording } from "./discardedRecording";
 import { countSpokenWords, localDateKey, resolveAnalyticsMode } from "./analytics";
-import {
-  getSettings,
-  useSettingsStore,
-  getEffectiveCleanupModel,
-  isCloudCleanupMode,
-  isCloudDictationAgentMode,
-  isCloudTranslationMode,
-  selectResolvedLLMConfig,
-} from "../stores/settingsStore";
+import { getSettings, useSettingsStore, selectResolvedLLMConfig } from "../stores/settingsStore";
 
-import {
-  getCloudModel,
-  isOnlineParakeetModel,
-  isSherpaLocalProvider,
-} from "../models/ModelRegistry";
+import { isOnlineParakeetModel, isSherpaLocalProvider } from "../models/ModelRegistry";
 import { resolveTranscriptionRoute } from "./transcriptionRoute.ts";
 import { resolveSelfHostedTranscriptionModel } from "./selfHostedTranscription";
 import { transcriptionFailureOutcome } from "./transcriptionFailureOutcome";
@@ -57,12 +45,10 @@ import { detectAgentName, stripAgentAddress } from "../config/agentDetection";
 import {
   resolveDictationRouteKind,
   resolveAgentImageTarget,
+  resolveModeReachability,
   resolveWakeWordLanguage,
 } from "./dictationRouting";
-import {
-  resolveDictationAgentInference,
-  resolveDictationAgentVisionInference,
-} from "./dictationAgentInference";
+import { resolveDictationAgentInference } from "./dictationAgentInference";
 import { providerSupportsImages } from "../services/ai/inferenceProviders";
 import { resolveDictationTranslationInference } from "./dictationTranslationInference";
 import { resolvePrompt, appendScreenContextSuffix } from "../config/prompts";
@@ -99,10 +85,6 @@ const cleanupFailureFromError = (error) => ({
   message: error?.message || String(error),
   ...(error?.messageKey ? { messageKey: error.messageKey } : {}),
   ...(error?.messageParams ? { messageParams: error.messageParams } : {}),
-  ...(error?.action ? { action: error.action } : {}),
-  ...(error?.actionKey ? { actionKey: error.actionKey } : {}),
-  ...(error?.copyCommand ? { copyCommand: error.copyCommand } : {}),
-  ...(error?.technicalDetails ? { technicalDetails: error.technicalDetails } : {}),
 });
 
 const micDeviceKey = (settings) =>
@@ -120,14 +102,25 @@ function dictationAgentPrompt(settings, agentName) {
 }
 
 function dictationAgentReachable(settings) {
-  return resolveDictationAgentInference(settings, { isCloudAgent: isCloudDictationAgentMode() })
-    .reachable;
+  return resolveDictationAgentInference(settings).reachable;
 }
 
 function translationChainReachable(settings) {
-  return resolveDictationTranslationInference(settings, {
-    isCloudTranslation: isCloudTranslationMode(),
-  }).reachable;
+  return resolveDictationTranslationInference(settings).reachable;
+}
+
+// Cleanup runs once a local model is picked, or once its self-hosted server is
+// set (the server picks its default model when none is named).
+function cleanupReachableFor(settings) {
+  const cleanup = selectResolvedLLMConfig(settings, "dictationCleanup");
+  return (
+    !!settings.useCleanupModel &&
+    resolveModeReachability({
+      mode: cleanup.mode,
+      model: cleanup.model,
+      isSelfHosted: !!cleanup.remoteUrl?.trim(),
+    })
+  );
 }
 
 function resolveReasoningRoute(
@@ -140,21 +133,12 @@ function resolveReasoningRoute(
   detectedLanguage
 ) {
   const wakeWordLanguage = resolveWakeWordLanguage(settings, detectedLanguage, text);
-  const cleanup = selectResolvedLLMConfig(settings, "dictationCleanup");
-  // Pin cleanup to 0 where supported; bridges otherwise default to 0.7 (local)
-  // or 0.3 (Anthropic/enterprise). Zero does not guarantee determinism.
-  // Direct Gemini owns its defaults (3: 1.0, older: 0); check mode to ignore stale providers.
-  const cleanupTemperature =
-    cleanup.mode === "providers" && cleanup.provider === "gemini" ? undefined : 0;
-  const cleanupReachable =
-    !!settings.useCleanupModel && (!!cleanup.model?.trim() || isCloudCleanupMode());
-  const agent = resolveDictationAgentInference(settings, {
-    isCloudAgent: isCloudDictationAgentMode(),
-  });
-
-  const translation = resolveDictationTranslationInference(settings, {
-    isCloudTranslation: isCloudTranslationMode(),
-  });
+  // Pin cleanup to 0; the local bridge otherwise defaults to 0.7. Zero does not
+  // guarantee determinism.
+  const cleanupTemperature = 0;
+  const cleanupReachable = cleanupReachableFor(settings);
+  const agent = resolveDictationAgentInference(settings);
+  const translation = resolveDictationTranslationInference(settings);
 
   const kind = resolveDictationRouteKind({
     cleanupReachable,
@@ -216,30 +200,21 @@ function resolveReasoningRoute(
     };
   }
   if (kind === "agent") {
-    const vision = resolveDictationAgentVisionInference(settings);
-    const { attach, useVisionOverride } = resolveAgentImageTarget({
+    const attach = resolveAgentImageTarget({
       hasScreenContext: !!screenContext,
-      visionOverrideActive: vision.active,
-      visionProviderImageWired: providerSupportsImages(vision.config.provider),
-      baseProviderImageWired: providerSupportsImages(agent.config.provider),
-      isCloudAgent: isCloudDictationAgentMode(),
-      baseModelSupportsVision: !!getCloudModel(agent.model, agent.config.provider)?.supportsVision,
+      providerImageWired: providerSupportsImages(
+        settings.dictationAgentMode === "self-hosted" ? "lan" : "local"
+      ),
     });
-    const target = useVisionOverride ? vision : agent;
-    logger.logReasoning("AGENT_IMAGE_TARGET", {
-      hasScreenContext: !!screenContext,
-      visionOverrideActive: vision.active,
-      attach,
-      useVisionOverride,
-    });
+    logger.logReasoning("AGENT_IMAGE_TARGET", { hasScreenContext: !!screenContext, attach });
 
     const systemPrompt = dictationAgentPrompt(settings, agentName);
 
     return {
       kind: "agent",
-      model: target.model,
+      model: agent.model,
       config: {
-        ...target.config,
+        ...agent.config,
         systemPrompt: attach
           ? appendScreenContextSuffix(systemPrompt, settings.uiLanguage)
           : systemPrompt,
@@ -2311,15 +2286,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       return false;
     }
 
-    if (s.useCleanupModel && isCloudCleanupMode()) {
-      this.reasoningAvailabilityCache = {
-        value: true,
-        expiresAt: now + REASONING_CACHE_TTL,
-      };
-      this.cachedReasoningPreference = useReasoning;
-      return true;
-    }
-
     try {
       const isAvailable = await ReasoningService.isAvailable();
 
@@ -2351,46 +2317,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
   }
 
-  // Cleanup-then-translate chain shared by batch, cloud, and streaming paths: Step 1
+  // Cleanup-then-translate chain shared by batch and streaming paths: Step 1
   // (optional cleanup) soft-fails to input; Step 2 translates unless source === target.
   async runTranslationChain({ text, settings, agentName, route, cleanup }) {
-    const runCleanup = async (currentText) => {
-      if (cleanup.mode === "cloudReason") {
-        const customPrompt = this.getCustomPrompt();
-        const reasonResult = await (async () => {
-          const res = await window.electronAPI.cloudReason(currentText, {
-            agentName,
-            promptMode: "cleanup",
-            purpose: "cleanup",
-            customDictionary: getDictionaryHintWords(settings),
-            customPrompt,
-            language: this.getCleanupLanguage(settings),
-            locale: settings.uiLanguage || "en",
-            ...(cleanup.meta || {}),
-          });
-          if (!res.success) {
-            const err = new Error(res.error || "Cloud reasoning failed");
-            err.code = res.code;
-            throw err;
-          }
-          return res;
-        })();
-        if (!customPrompt && hasTextContent(reasonResult.text)) {
-          assertValidCleanupOutput(currentText, reasonResult.text);
-        }
-        return reasonResult.success && reasonResult.text ? reasonResult.text : null;
-      }
-      const cleanupModel = cleanup.model;
-      if (cleanupModel) {
-        return this.processWithReasoningModel(
-          currentText,
-          cleanupModel,
-          agentName,
-          route.cleanupConfig
-        );
-      }
-      return null;
-    };
+    const runCleanup = async (currentText) =>
+      this.processWithReasoningModel(currentText, cleanup.model, agentName, route.cleanupConfig);
 
     const runTranslate = async (currentText) =>
       this.processWithReasoningModel(currentText, route.model, agentName, route.config);
@@ -2399,14 +2330,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       const chainResult = await executeTranslationChain({
         text,
         cleanupReachable: route.cleanupReachable,
-        cleanupIsCloud: cleanup.mode === "cloudReason",
         runCleanup,
         runTranslate,
         shouldTranslate: shouldRunTranslateStep(
           settings.translationSourceLanguage,
           settings.translationTargetLanguage
         ),
-        translateIsCloud: route.config?.provider === "openwhispr",
         onCleanupError: (cleanupError) => {
           const { level = "error", channel, extra } = cleanup.log || {};
           logger[level](
@@ -2464,11 +2393,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       timestamp: new Date().toISOString(),
     });
 
-    const cleanupModel = getEffectiveCleanupModel();
-    const isCloud = isCloudCleanupMode();
     const settings = getSettings();
+    const cleanupModel = selectResolvedLLMConfig(settings, "dictationCleanup").model;
     const cleanupProvider = settings.cleanupProvider || "auto";
-    const cleanupReachable = !!settings.useCleanupModel && (!!cleanupModel || isCloud);
+    const cleanupReachable = cleanupReachableFor(settings);
     const agentReachable = dictationAgentReachable(settings);
     const agentName =
       typeof window !== "undefined" && window.localStorage ? getAgentName() : "OpenWhispr";
@@ -2520,7 +2448,6 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             agentName,
             route,
             cleanup: {
-              mode: "model",
               model: cleanupModel,
               log: { level: "warn", channel: "notes", extra: { source } },
             },

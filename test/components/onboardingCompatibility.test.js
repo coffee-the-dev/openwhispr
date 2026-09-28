@@ -35,6 +35,7 @@ async function createOnboardingRenderer(t, platform = "linux") {
         export function useSettingsStore() { return {}; }
         useSettingsStore.getState = () => ({});
       `,
+      "/OpenAICompatiblePanel": `export default function OpenAICompatiblePanel() { return null; }`,
       "/ui/ProviderIcon": `
         import React from "react";
         export function ProviderIcon() { return React.createElement("span"); }
@@ -322,7 +323,7 @@ test("provider setup stages mark dictation complete before Assistant", async (t)
     "/components/onboarding/ProviderSetupStep.tsx"
   );
 
-  for (const stepId of ["byok-assistant", "local-assistant"]) {
+  for (const stepId of ["self-hosted-assistant", "local-assistant"]) {
     const markup = renderToStaticMarkup(React.createElement(SetupStageStepper, { stepId }));
 
     assert.match(markup, /data-icon="circle-check"/);

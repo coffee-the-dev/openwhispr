@@ -285,10 +285,6 @@
         "titleLineOne": "OpenWhispr の",
         "titleLineTwo": "セットアップを選択",
         "description": "働き方に合った方法を選んでください。",
-        "byok": {
-          "title": "API プロバイダー",
-          "description": "自分の API キーを使用します。"
-        },
         "local": {
           "title": "デバイス上で実行",
           "description": "プライベートなオフライン文字起こし。空き容量が {{minimumSpace}} GB 以上必要です。",
@@ -302,16 +298,6 @@
           }
         },
         "warnings": {
-          "byok": {
-            "title": "データはプロバイダーが取り扱います",
-            "description": "ディクテーションと Assistant のプロバイダーそれぞれに認証情報を追加します。プロバイダーの料金と保持ポリシーが適用されます。",
-            "continue": "API プロバイダーを設定",
-            "steps": {
-              "1": "ディクテーションと Assistant のプロバイダーを選ぶ",
-              "2": "安全なストレージを使って認証情報を追加する",
-              "3": "有効化する前に各接続をテストする"
-            }
-          },
           "local": {
             "title": "ローカル設定には追加の手順がいくつか必要です",
             "description": "ローカル処理では音声がこのデバイスに留まりますが、初回の設定と {{minimumSpace}} GB 以上の空き容量が必要です。",
@@ -324,36 +310,30 @@
           }
         },
         "continueSetup": "セットアップを続ける",
-        "showMore": "その他のオプションを表示",
-        "moreOptions": {
-          "title": "API の設定方法を選択",
-          "description": "API キーを追加するか、セルフホストモデルを接続します。",
-          "selfHosted": {
-            "title": "セルフホスト",
-            "description": "自分でホストしているモデルを接続します。"
-          }
+        "selfHosted": {
+          "title": "セルフホスト",
+          "description": "ネットワーク上の OpenAI 互換サーバーに接続します。",
+          "features": {
+            "network": "自分のネットワークで動作",
+            "key": "API キーは任意",
+            "models": "サーバーのどのモデルでも使用可能"
+          },
+          "connect": "サーバーを接続"
         }
       },
       "provider": {
         "progress": "プロバイダー設定の進行状況",
         "dictation": "ディクテーション",
         "assistant": "アシスタント",
-        "title": "AI プロバイダーを接続",
-        "description": "プロバイダーを選び、認証情報を追加して、接続をテストします。",
-        "descriptionLineOne": "プロバイダーを選んで",
-        "descriptionLineTwo": "API キーを追加してください。",
-        "selfHosted": "セルフホストモデルのキーを持っている",
-        "providerLabel": "プロバイダー",
-        "providerPlaceholder": "モデルプロバイダーを選択",
-        "modelLabel": "モデル",
-        "modelPlaceholder": "モデルを選択",
+        "title": "サーバーを接続",
+        "description": "サーバーのアドレスと任意の API キーを入力し、接続をテストしてください。",
+        "descriptionLineOne": "サーバーのアドレスと",
+        "descriptionLineTwo": "任意の API キーを入力してください。",
         "apiKey": "API キー",
-        "apiKeyPlaceholder": "API キーを貼り付け",
         "endpointUrl": "エンドポイント URL",
         "endpointPlaceholder": "エンドポイント URL を貼り付け",
         "optional": "任意",
         "modelId": "モデル ID",
-        "modelIdPlaceholder": "モデル ID を入力",
         "testConnection": "接続をテスト",
         "proceed": "次へ進む",
         "runTest": "テストを実行",
@@ -364,8 +344,6 @@
           "endpointRequired": "テストの前にエンドポイント URL を入力してください。",
           "invalidUrl": "エンドポイントは有効な HTTP または HTTPS の URL である必要があります。",
           "httpsRequired": "公開エンドポイントにはHTTPSが必要です。HTTPはプライベートアドレスでのみ使用できます。",
-          "unsupportedProvider": "このプロバイダーでは接続テストを利用できません。",
-          "apiKeyRequired": "テストの前に API キーを追加してください。",
           "credentialsRejected": "プロバイダーがこの認証情報を拒否しました。",
           "endpointNotFound": "このエンドポイントは OpenAI 互換のモデル一覧を公開していません。",
           "modelNotFound": "選択したモデルはこのプロバイダーでは利用できません。",
@@ -493,27 +471,6 @@
       "hotkeyLabel": "会議ホットキー",
       "hotkeyHint": "任意 — 会議中に押すとすぐにメモを開始できます。"
     },
-    "finish": {
-      "title": "準備完了",
-      "cloudDescription": "OpenWhispr Cloud をご利用中です — 高速・高精度、データ保持なし、毎週 2,000 ワード無料。すべてを端末内で処理したい場合は、設定からローカル処理に切り替えられます。",
-      "localDescription": "ローカル処理またはご自身の API キーで設定済みです。音声の処理方法はいつでも設定から変更できます。",
-      "cleanupNote": "AI によるテキスト整形は適切な初期設定で動作します。設定からいつでも調整できます。",
-      "openSettings": "設定を開く",
-      "skipForNow": "今はスキップ",
-      "corti": {
-        "title": "臨床文字起こしが目的とのことですね",
-        "description": "私たちは Corti と提携しています — 最高精度の臨床グレード音声認識で、HIPAA に準拠しています。",
-        "createAccount": "Corti アカウントを作成",
-        "creditBadge": "50ドルの無料クレジット",
-        "regionHint": "音声の処理場所を選べます — 米国または EU。",
-        "llmHint": "言語モデル機能も Corti モデルで実行されます。",
-        "useCorti": "Corti を使う",
-        "skip": "後で",
-        "step1": "corti.ai でアカウントを作成",
-        "step2": "Corti コンソールで API 認証情報を作成",
-        "step3": "Client ID と Secret を下に貼り付け"
-      }
-    },
     "welcomeSubtitle": "あなたの声の力を、あなたのやり方で。"
   },
   "streaming": {
@@ -611,25 +568,15 @@
     }
   },
   "reasoning": {
-    "mode": {
-      "cloud": "クラウド",
-      "local": "ローカル",
-      "enterprise": "エンタープライズ",
-      "localDescription": "デバイス上で動作。完全なプライバシー保護、オフライン対応。",
-      "cloudDescription": "API 経由の高度なモデル。高速・高機能、インターネット接続が必要。",
-      "enterpriseDescription": "組織のクラウド認証情報を使用します。"
-    },
     "custom": {
       "endpointWithProtocol": "プロトコルを含む完全なベース URL を入力してください（例: https://server/v1）。",
       "httpsRequired": "HTTPS が必要です（ローカルネットワークのみ HTTP を許可）。",
-      "endpointInvalid": "カスタムエンドポイントが無効か未設定です。設定 → AIモデルでエンドポイントURLを確認してください。",
       "endpointUnauthorized": "エンドポイントがリクエストを拒否しました（401/403）。API キーを追加するか、サーバーの認証設定を調整してください。",
       "endpointTitle": "エンドポイント URL",
-      "endpointExamples": "例:",
       "ollama": "（Ollama）",
       "localAi": "（LocalAI）",
       "apiKeyOptional": "API キー（任意）",
-      "apiKeyHelp": "任意。Bearer トークンとして認証に使用されます。OpenAI API キーとは別のものです。",
+      "apiKeyHelp": "任意。Bearer トークンとして認証に使用されます。",
       "applyAndRefresh": "適用して更新",
       "queryPrefix": "問い合わせ先:",
       "querySuffix": "で利用可能なモデルを取得します。",
@@ -637,18 +584,14 @@
       "enterEndpoint": "上にエンドポイント URL を入力してモデルを読み込んでください。",
       "fetchingModels": "エンドポイントからモデル一覧を取得中...",
       "noModels": "モデルが見つかりません。エンドポイント URL を確認してください。",
-      "providerName": "カスタム",
       "ownerLabel": "提供元: {{owner}}",
       "unableToLoadModels": "エンドポイントからモデルを読み込めませんでした。",
       "searchPlaceholder": "モデルを検索…",
       "selectedGroup": "選択中",
       "otherGroup": "その他",
       "noSearchResults": "「{{query}}」に一致するモデルはありません",
-      "selectModelHint": "モデルが未選択です — 下のリストから選択してください。",
-      "keyRequiredHint": "推論には API キーが必要です — このプロバイダーを使用するには追加してください。"
+      "selectModelHint": "モデルが未選択です — 下のリストから選択してください。"
     },
-    "getApiKey": "API キーを取得 ->",
-    "selectModel": "モデルを選択",
     "availableModels": "利用可能なモデル",
     "disableThinking": {
       "label": "思考出力を無効にする",
@@ -656,43 +599,6 @@
     },
     "selfHosted": {
       "endpointHelp": "ローカルネットワーク上の OpenAI 互換サーバーを指定します（例: Ollama、LM Studio、vLLM、llama-server）。"
-    },
-    "enterprise": {
-      "errors": {
-        "bedrock": {
-          "ssoExpired": "AWS SSO セッションの有効期限が切れました。",
-          "credentialsRejected": "AWS によって認証情報が拒否されました。アクセスキー ID、シークレット、セッショントークンを確認してください。",
-          "accessDenied": "AWS Bedrock がこのリクエストを拒否しました。リージョン {{region}} で選択したモデルを呼び出す権限を AWS 管理者に依頼してください。",
-          "modelNotFound": "AWS Bedrock はリージョン {{region}} で選択したモデルを見つけられませんでした。モデル ID とそのリージョンでの提供状況を確認してください。",
-          "configurationRejected": "AWS Bedrock はリージョン {{region}} のモデル設定を拒否しました。モデル ID、推論プロファイル、リージョンを確認してください。",
-          "notConfigured": "AWS Bedrock が正しく設定されていません。リージョンと AWS 認証情報を確認してください。",
-          "serviceUnavailable": "需要が高いため、AWS Bedrock は一時的に利用できません。これは OpenWhispr の障害ではなく AWS サービス側の問題です。数分後にもう一度お試しください。",
-          "throttled": "リクエストが多すぎるため、AWS Bedrock は一時的にリクエストを制限しています。少し待ってから再試行してください。続く場合は、AWS 管理者に Bedrock の使用量とクォータの確認を依頼してください。",
-          "timeout": "AWS Bedrock が時間内に応答しませんでした。もう一度お試しください。続く場合は、インターネット接続と AWS Bedrock サービスの状態を確認してください。",
-          "network": "AWS Bedrock に接続できませんでした。インターネット接続を確認して、もう一度お試しください。",
-          "unknown": "AWS Bedrock エラー: {{error}}",
-          "actions": {
-            "reauthenticate": "再認証するには、ターミナルで次のコマンドを実行してください:"
-          }
-        }
-      },
-      "technicalDetails": {
-        "title": "技術情報",
-        "httpStatus": "HTTP ステータス",
-        "awsException": "AWS 例外",
-        "awsRequestId": "AWS リクエスト ID",
-        "underlyingError": "原因となったエラー",
-        "copy": "技術情報をコピー",
-        "copyCommand": "復旧コマンドをコピー"
-      }
-    },
-    "tinfoil": {
-      "modelRetiredTitle": "モデルが利用できません",
-      "modelRetired": "Tinfoil は {{from}} を提供終了しました。{{to}} に切り替えました。",
-      "refreshingModels": "モデルを更新しています…"
-    },
-    "corti": {
-      "euOnly": "Corti のモデルは EU リージョンでのみ利用できます。"
     }
   },
   "transcription": {
@@ -1150,7 +1056,6 @@
     "test": {
       "addressHint": "「{{agentName}}」と呼びかけて指示モードをテストしてみてください",
       "aiModels": "AI モデル",
-      "baseUrlMissing": "{{provider}} のベース URL が未設定です。AI モデル設定で追加してください。",
       "cleanup": "クリーンアップ",
       "disabledInSettingsPrefix": "AI テキスト補正が無効です。",
       "disabledInSettingsSuffix": "AI モデルで有効にするとプロンプトをテストできます。",
@@ -1164,11 +1069,8 @@
       "none": "なし",
       "outputLabel": "出力",
       "processing": "処理中...",
-      "openwhisprCloud": "OpenWhispr Cloud",
       "providerLabel": "プロバイダー",
       "run": "テスト実行",
-      "customEndpoint": "カスタムエンドポイント",
-      "apiKeyMissing": "{{provider}} の API キーが未設定です。AI モデル設定で追加してください。",
       "translateHint": "テキストは{{language}}に翻訳されます",
       "translation": "翻訳",
       "translationDisabled": "このプロンプトをテストするには音声入力翻訳を有効にしてください",
@@ -1239,35 +1141,17 @@
       }
     },
     "aiModels": {
-      "customSetup": "カスタム設定",
-      "customSetupDescription": "独自のプロバイダーと API キーを使用。",
       "description": "文字起こしのクリーンアップ、コマンド処理、エラー修正を行いながら、あなたの話し方を維持します。",
       "enableTextCleanup": "テキスト補正を有効にする",
       "enableTextCleanupDescription": "AI がフィラーワードを除去し、文法と句読点を整える",
       "modes": {
-        "providers": "クラウドプロバイダー",
         "local": "ローカル",
         "selfHosted": "セルフホスト",
-        "providersDesc": "自分のAPIキーを使用。",
         "localDesc": "端末上のモデル。完全プライベート。",
         "selfHostedDesc": "自前サーバーをネットワーク上に。"
       },
-      "openwhisprCloud": "OpenWhispr Cloud",
-      "openwhisprCloudDescription": "信頼できる精度。設定不要。",
       "title": "AI テキスト補正",
       "toasts": {
-        "switchedCloud": {
-          "description": "テキスト補正に OpenWhispr のクラウドサービスを使用します。",
-          "title": "OpenWhispr Cloud に切り替えました"
-        },
-        "switchedCustom": {
-          "description": "独自のプロバイダーと API キーを設定してください。",
-          "title": "カスタム設定に切り替えました"
-        },
-        "switchedProviders": {
-          "title": "クラウドプロバイダー",
-          "description": "独自の API キーを使用します。"
-        },
         "switchedLocal": {
           "title": "デバイス上",
           "description": "AI はお使いのマシン上でローカルに実行されます。"
@@ -1275,10 +1159,6 @@
         "switchedSelfHosted": {
           "title": "セルフホスト",
           "description": "独自のサーバーを使用します。"
-        },
-        "switchedEnterprise": {
-          "title": "エンタープライズ",
-          "description": "組織のクラウドアカウントを使用しています。"
         }
       }
     },
@@ -1692,61 +1572,6 @@
         "medium": "高品質",
         "large": "最高品質、最も低速",
         "turbo": "高速で高品質"
-      },
-      "cloud": {
-        "openai_gpt_5_2": "強力な推論モデル",
-        "openai_gpt_5_mini": "高速で費用対効果が高い",
-        "openai_gpt_5_nano": "超高速、低レイテンシー",
-        "openai_gpt_4_1": "強力なベースライン、100 万トークンコンテキスト",
-        "openai_gpt_4_1_mini": "小型 GPT-4.1 モデル",
-        "openai_gpt_4_1_nano": "最低レイテンシーの GPT-4.1",
-        "anthropic_claude_fable_5_1": "Anthropic の最も高性能なモデル、Mythos クラス",
-        "anthropic_claude_fable_5": "前世代の Mythos クラスのフラッグシップ",
-        "anthropic_claude_sonnet_5": "低コストで高速かつ高性能なアシスタントモデル",
-        "anthropic_claude_sonnet_4_6": "バランスの取れた性能",
-        "anthropic_claude_sonnet_4_5": "前世代の Sonnet モデル",
-        "anthropic_claude_haiku_4_5": "高速でフロンティアに近い知能",
-        "gemini_gemini_3_5_flash": "最新の高速で高性能な Gemini モデル",
-        "gemini_gemini_3_5_flash_lite": "最速かつ最も低コストの 3.5 モデル",
-        "gemini_gemini_3_1_pro_preview": "複雑な推論向けの次世代フラッグシップモデル",
-        "gemini_gemini_3_1_flash_lite": "フロンティア級の性能を低コストで",
-        "gemini_gemini_3_flash_preview": "超高速・高性能の次世代モデル",
-        "gemini_gemini_2_5_flash_lite": "最低レイテンシーとコスト",
-        "gemini_gemma_4_31b_it": "Google 最大の Gemma 4、31B デンス、256K コンテキスト",
-        "gemini_gemma_4_26b_a4b_it": "Google の Gemma 4 MoE、4B アクティブパラメータ、256K コンテキスト",
-        "groq_openai_gpt_oss_120b": "OpenAI のオープンソースフラッグシップ、500 T/秒",
-        "groq_openai_gpt_oss_20b": "高速オープンソースモデル、1000 T/秒",
-        "groq_compound": "Groq の Compound システム、450 T/秒",
-        "groq_compound_mini": "高速 Compound システム、3x 低レイテンシー",
-        "openai_gpt_6_astra": "コーディングと研究のための OpenAI の最も高性能なモデル",
-        "openai_gpt_5_6_sol": "複雑なコーディングと研究のためのフラッグシップ GPT-5.6",
-        "openai_gpt_5_6_terra": "日常業務向けのバランス型 GPT-5.6",
-        "openai_gpt_5_6_luna": "最速かつ最も低コストの GPT-5.6",
-        "openai_gpt_5_5": "複雑な推論のためのフロンティアモデル",
-        "anthropic_claude_opus_5": "最も高性能な Opus モデル、100 万トークンコンテキスト",
-        "anthropic_claude_opus_4_8": "誠実さと信頼性を重視した強力な Opus モデル",
-        "anthropic_claude_opus_4_7": "高性能な Opus モデル",
-        "anthropic_claude_opus_4_6": "前世代の Opus、100 万トークンコンテキスト",
-        "anthropic_claude_opus_4_5": "旧世代の Opus モデル",
-        "tinfoil_glm_5_3": "セキュアエンクレーブ内のプライベート・エージェント型コーディングモデル、1M コンテキスト",
-        "tinfoil_gemma4_31b": "ツール呼び出し対応のプライベート多言語推論モデル、256K コンテキスト",
-        "tinfoil_gpt_oss_120b": "ツール使用対応のプライベート・オープンウェイト推論モデル、131K コンテキスト",
-        "tinfoil_llama3_3_70b": "ツール呼び出し対応のプライベート会話モデル、128K コンテキスト",
-        "corti_corti_s1_instant": "高速なヘルスケアモデル、推論トレースなし",
-        "corti_corti_s1": "推論対応の最も高性能な臨床モデル",
-        "corti_corti_s1_mini_instant": "コンパクトなヘルスケアモデル、最速かつ最も低コスト",
-        "corti_corti_s1_mini": "推論対応のコンパクトな臨床モデルを半額で"
-      },
-      "enterprise": {
-        "bedrock_claude_fable_5": "最も高性能な Claude モデル。最も難しいアシスタントタスクに最適です。",
-        "bedrock_claude_haiku_4_5": "高速で低コスト。テキスト整形に最適です。",
-        "bedrock_claude_sonnet_5": "バランス型。アシスタントタスクの既定モデルに最適です。",
-        "bedrock_claude_opus_4_8": "最高性能。複雑なアシスタントタスクに最適です。",
-        "bedrock_gpt_oss_120b": "OpenAI のオープンウェイトモデル。低コストで高い推論力。",
-        "bedrock_deepseek_v3_2": "オープンウェイトのフロンティアモデル。アシスタントタスクに最適。",
-        "bedrock_qwen3_next_80b": "スパースなオープンウェイトモデル。高速で多言語対応。",
-        "vertex_gemini_2_5_flash": "Fast multimodal model via Vertex",
-        "vertex_gemini_2_5_pro": "Advanced reasoning via Vertex"
       },
       "local": {
         "qwen_qwen3_5_9b_q4_k_m": "強力なハイブリッドモデル",
@@ -2402,15 +2227,11 @@
       "enable": "画面コンテキストを共有",
       "enableDescription": "音声アシスタントの録音開始時に、カーソルのあるディスプレイをキャプチャします。保存やログ記録は一切されません。",
       "unsupported": "Linux Wayland では画面キャプチャを利用できません。",
-      "visionModel": "専用のビジョンモデル",
-      "visionModelDescription": "スクリーンショット付きのコマンドを、画像対応の別モデルに振り分けます。",
       "permissionTitle": "画面収録",
       "permissionDescription": "画面をキャプチャするには macOS の画面収録の許可が必要です。",
       "relaunchHint": "画面収録の許可は OpenWhispr の実行中に付与されました。スクリーンショットのキャプチャを開始するには、OpenWhispr を終了して再度開いてください。"
     },
     "modes": {
-      "providers": "自分の API キーを使用",
-      "providersDesc": "自分の API キーで OpenAI、Anthropic、Gemini、Groq に接続します。",
       "local": "ローカル",
       "localDesc": "端末上でローカル LLM を実行。完全プライベート。",
       "selfHosted": "セルフホスト",
@@ -2427,10 +2248,8 @@
       "systemPromptDescription": "アシスタントへのカスタム指示",
       "systemPromptPlaceholder": "カスタムシステムプロンプトを入力...",
       "modes": {
-        "providers": "クラウドプロバイダー",
         "local": "ローカル",
         "selfHosted": "セルフホスト",
-        "providersDesc": "独自のAPIキーを使用。",
         "localDesc": "デバイス上のモデル。完全プライベート。",
         "selfHostedDesc": "ネットワーク上の自分のサーバー。"
       }

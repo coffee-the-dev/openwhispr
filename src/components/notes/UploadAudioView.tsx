@@ -33,14 +33,10 @@ import {
   transcriptionErrorKey,
   MEETINGS_FOLDER_NAME,
 } from "./shared";
-import {
-  getAllReasoningModels,
-  getParakeetModelInfo,
-  isSherpaLocalProvider,
-} from "../../models/ModelRegistry";
+import { getParakeetModelInfo, isSherpaLocalProvider } from "../../models/ModelRegistry";
 import {
   useSettingsStore,
-  selectIsCloudCleanupMode,
+  selectResolvedLLMConfig,
   selectResolvedUploadTranscription,
   getSettings,
 } from "../../stores/settingsStore";
@@ -245,11 +241,16 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   } = useSettingsStore(useShallow((settings) => selectResolvedUploadTranscription(settings)));
 
   const preferredLanguage = useSettingsStore((s) => s.preferredLanguage);
-  const isCloudCleanup = useSettingsStore((settings) => selectIsCloudCleanupMode(settings));
-  const effectiveCleanupModel = useSettingsStore((settings) => {
-    const effectiveSettings = settings;
-    return selectIsCloudCleanupMode(effectiveSettings) ? "" : effectiveSettings.cleanupModel;
-  });
+  const cleanup = useSettingsStore(
+    useShallow((settings) => {
+      const resolved = selectResolvedLLMConfig(settings, "dictationCleanup");
+      return {
+        mode: resolved.mode,
+        model: resolved.model,
+        remoteUrl: resolved.remoteUrl ?? "",
+      };
+    })
+  );
   const useCleanupModel = useSettingsStore((s) => s.useCleanupModel);
   // Mode detection
   const isSelfHosted = transcriptionMode === "self-hosted" && !useLocalWhisper;
@@ -354,9 +355,11 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   const generateTitle = async (text: string): Promise<string> => {
     if (!useCleanupModel) return "";
     if (!getSettings().autoGenerateNoteTitle) return "";
-    const model = isCloudCleanup ? "" : effectiveCleanupModel || getAllReasoningModels()[0]?.value;
-    if (!model && !isCloudCleanup) return "";
-    return generateNoteTitle(text, model);
+    // A self-hosted server picks its default model when none is named.
+    const configured =
+      cleanup.mode === "self-hosted" ? !!cleanup.remoteUrl.trim() : !!cleanup.model;
+    if (!configured) return "";
+    return generateNoteTitle(text, cleanup.model);
   };
 
   const handleBrowse = async () => {

@@ -1,26 +1,15 @@
 import type { ReasoningConfig } from "../../BaseReasoningService";
 
 export interface ProviderContext {
-  getApiKey(provider: string): Promise<string>;
   getSystemPrompt(agentName: string | null): string;
-  getCustomDictionary(): string[];
-  getPreferredLanguage(): string;
-  getUiLanguage(): string;
   callChatCompletionsApi(
     endpoint: string,
     apiKey: string,
     model: string,
     text: string,
     agentName: string | null,
-    config: ReasoningConfig,
-    providerName: string
+    config: ReasoningConfig
   ): Promise<string>;
-  calculateMaxTokens(
-    textLength: number,
-    minTokens?: number,
-    maxTokens?: number,
-    multiplier?: number
-  ): number;
 }
 
 export interface ProviderCallParams {

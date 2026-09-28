@@ -2,7 +2,10 @@ import { PENDING_LOCAL_MODELS_KEY } from "./pendingLocalModels";
 
 export const ONBOARDING_SESSION_KEY = "onboardingSessionV2";
 export const LEGACY_ONBOARDING_STEP_KEY = "onboardingCurrentStep";
-export const ONBOARDING_FLOW_VERSION = 2;
+// Bumped when the route changes shape: a session saved under an older route
+// (cloud or provider setup modes, steps this build no longer has) restarts
+// from the first step rather than resuming somewhere it cannot finish.
+export const ONBOARDING_FLOW_VERSION = 3;
 
 /**
  * Resume drafts hold typed fields, and every write persists the whole session, so
@@ -25,20 +28,19 @@ export type OnboardingStepId =
   | "assistant-demo"
   | "notes"
   | "setup-choice"
-  | "byok-dictation"
-  | "byok-assistant"
+  | "self-hosted-dictation"
+  | "self-hosted-assistant"
   | "local-dictation"
   | "local-assistant";
 
-export type OnboardingSetupMode = "byok" | "local" | null;
-export type OnboardingByokStepId = "byok-dictation" | "byok-assistant";
+export type OnboardingSetupMode = "local" | "self-hosted" | null;
+export type OnboardingSelfHostedStepId = "self-hosted-dictation" | "self-hosted-assistant";
 export type OnboardingLocalStepId = "local-dictation" | "local-assistant";
 
-export interface OnboardingByokDraft {
-  selectedProvider: string;
-  selectedModel: string;
+/** A self-hosted step's typed fields. The API key is never persisted here. */
+export interface OnboardingSelfHostedDraft {
   baseUrl: string;
-  customModel: string;
+  model: string;
 }
 
 export interface OnboardingLocalModelDraft {
@@ -51,7 +53,7 @@ export interface OnboardingResumeState {
   assistantHotkeyConfirmed: boolean;
   dictationDemoCompleted: boolean;
   assistantDemoCompleted: boolean;
-  byok: Partial<Record<OnboardingByokStepId, OnboardingByokDraft>>;
+  selfHosted: Partial<Record<OnboardingSelfHostedStepId, OnboardingSelfHostedDraft>>;
   localModels: Partial<Record<OnboardingLocalStepId, OnboardingLocalModelDraft>>;
 }
 
@@ -60,7 +62,6 @@ export interface OnboardingSession {
   currentStepId: OnboardingStepId;
   history: OnboardingStepId[];
   setupMode: OnboardingSetupMode;
-  selfHostedRequested: boolean;
   /**
    * The permissions step's screen-context Enable was clicked and the grant has
    * not landed yet. Persisted so the opt-in completes across the quit-and-reopen
@@ -78,12 +79,27 @@ export interface OnboardingRouteContext {
 // The permission grants and a hotkey the user has seen come first:
 // finalizeOnboarding registers dictationHotkey, and skipping these steps
 // shipped users who neither granted the mic nor knew their trigger key.
-const BASE_ROUTE: OnboardingStepId[] = ["permissions", "dictation-hotkey", "setup-choice"];
+const BASE_ROUTE: OnboardingStepId[] = [
+  "permissions",
+  "languages",
+  "use-cases",
+  "dictation-hotkey",
+  "setup-choice",
+];
 
 const SETUP_ROUTES: Record<Exclude<OnboardingSetupMode, null>, OnboardingStepId[]> = {
-  byok: ["byok-dictation", "byok-assistant"],
   local: ["local-dictation", "local-assistant"],
+  "self-hosted": ["self-hosted-dictation", "self-hosted-assistant"],
 };
+
+// The practice steps run on the models the setup steps configured, so they
+// only join the route once a setup mode is picked.
+const PRACTICE_ROUTE: OnboardingStepId[] = [
+  "dictation-demo",
+  "notes",
+  "assistant-hotkey",
+  "assistant-demo",
+];
 
 // Canonical flow order, independent of any one route. reconcileStepWithRoute uses
 // it to clamp backwards instead of jumping to the end of the route.
@@ -93,15 +109,15 @@ const STEP_ORDER: OnboardingStepId[] = [
   "use-cases",
   "dictation-hotkey",
   "activation-mode",
+  "setup-choice",
+  "self-hosted-dictation",
+  "self-hosted-assistant",
+  "local-dictation",
+  "local-assistant",
   "dictation-demo",
   "notes",
   "assistant-hotkey",
   "assistant-demo",
-  "setup-choice",
-  "byok-dictation",
-  "byok-assistant",
-  "local-dictation",
-  "local-assistant",
 ];
 
 const KNOWN_STEPS = new Set<OnboardingStepId>(STEP_ORDER);
@@ -125,8 +141,10 @@ const LEGACY_STEP_MAP: OnboardingStepId[] = [
   "permissions",
   "permissions",
   "dictation-hotkey",
-  "assistant-hotkey",
-  "notes",
+  // The old flow reached these before choosing a setup; the route now picks
+  // the setup first, so they resume there.
+  "setup-choice",
+  "setup-choice",
   "setup-choice",
 ];
 
@@ -136,7 +154,7 @@ export function createOnboardingResumeState(): OnboardingResumeState {
     assistantHotkeyConfirmed: false,
     dictationDemoCompleted: false,
     assistantDemoCompleted: false,
-    byok: {},
+    selfHosted: {},
     localModels: {},
   };
 }
@@ -147,7 +165,6 @@ export function createOnboardingSession(): OnboardingSession {
     currentStepId: "permissions",
     history: [],
     setupMode: null,
-    selfHostedRequested: false,
     screenContextRequested: false,
     resume: createOnboardingResumeState(),
   };
@@ -162,7 +179,9 @@ export function resetOnboardingProgress(storage: OnboardingStorage): void {
 }
 
 export function getOnboardingRoute(context: OnboardingRouteContext): OnboardingStepId[] {
-  return context.setupMode ? [...BASE_ROUTE, ...SETUP_ROUTES[context.setupMode]] : [...BASE_ROUTE];
+  return context.setupMode
+    ? [...BASE_ROUTE, ...SETUP_ROUTES[context.setupMode], ...PRACTICE_ROUTE]
+    : [...BASE_ROUTE];
 }
 
 /**
@@ -189,13 +208,11 @@ function readDraftString(value: unknown): string {
   return typeof value === "string" ? value : "";
 }
 
-function parseByokDraft(value: unknown): OnboardingByokDraft | undefined {
+function parseSelfHostedDraft(value: unknown): OnboardingSelfHostedDraft | undefined {
   if (!isRecord(value)) return undefined;
   return {
-    selectedProvider: readDraftString(value.selectedProvider),
-    selectedModel: readDraftString(value.selectedModel),
     baseUrl: readDraftString(value.baseUrl),
-    customModel: readDraftString(value.customModel),
+    model: readDraftString(value.model),
   };
 }
 
@@ -237,10 +254,10 @@ function parseOnboardingResumeState(
   const defaults = createOnboardingResumeState();
   if (!isRecord(value)) return defaults;
 
-  const byokValue = isRecord(value.byok) ? value.byok : {};
+  const selfHostedValue = isRecord(value.selfHosted) ? value.selfHosted : {};
   const localModelsValue = isRecord(value.localModels) ? value.localModels : {};
-  const byokDictation = parseByokDraft(byokValue["byok-dictation"]);
-  const byokAssistant = parseByokDraft(byokValue["byok-assistant"]);
+  const selfHostedDictation = parseSelfHostedDraft(selfHostedValue["self-hosted-dictation"]);
+  const selfHostedAssistant = parseSelfHostedDraft(selfHostedValue["self-hosted-assistant"]);
   const localDictation = parseLocalModelDraft(localModelsValue["local-dictation"]);
   const localAssistant = parseLocalModelDraft(localModelsValue["local-assistant"]);
 
@@ -249,9 +266,9 @@ function parseOnboardingResumeState(
     assistantHotkeyConfirmed: value.assistantHotkeyConfirmed === true,
     dictationDemoCompleted: value.dictationDemoCompleted === true,
     assistantDemoCompleted: value.assistantDemoCompleted === true,
-    byok: {
-      ...(byokDictation ? { "byok-dictation": byokDictation } : {}),
-      ...(byokAssistant ? { "byok-assistant": byokAssistant } : {}),
+    selfHosted: {
+      ...(selfHostedDictation ? { "self-hosted-dictation": selfHostedDictation } : {}),
+      ...(selfHostedAssistant ? { "self-hosted-assistant": selfHostedAssistant } : {}),
     },
     localModels: {
       ...(localDictation ? { "local-dictation": localDictation } : {}),
@@ -273,16 +290,9 @@ export function parseOnboardingSession(value: string | null): OnboardingSession 
       return null;
     }
 
-    // Sessions saved by builds with OpenWhispr Cloud may carry "cloud", which
-    // this build cannot finish; they pick a setup again.
     const rawSetupMode: unknown = parsed.setupMode;
-    const setupMode = rawSetupMode === "byok" || rawSetupMode === "local" ? rawSetupMode : null;
-    if (
-      parsed.selfHostedRequested !== undefined &&
-      typeof parsed.selfHostedRequested !== "boolean"
-    ) {
-      return null;
-    }
+    const setupMode =
+      rawSetupMode === "local" || rawSetupMode === "self-hosted" ? rawSetupMode : null;
     if (
       parsed.screenContextRequested !== undefined &&
       typeof parsed.screenContextRequested !== "boolean"
@@ -295,7 +305,6 @@ export function parseOnboardingSession(value: string | null): OnboardingSession 
       currentStepId: parsed.currentStepId,
       history: parsed.history.filter(isOnboardingStepId),
       setupMode,
-      selfHostedRequested: parsed.selfHostedRequested ?? false,
       screenContextRequested: parsed.screenContextRequested ?? false,
       resume: parseOnboardingResumeState(parsed.resume, parsed.currentStepId),
     };
@@ -356,9 +365,9 @@ export interface OnboardingProgressState {
  * counter on, filled up to the current one.
  *
  * The total comes from the route rather than a constant because the route itself
- * is conditional — the provider pair only exists once a setup mode is picked.
- * Choosing BYOK/local on setup-choice therefore appends two steps and the row
- * grows by two dots at that moment, which is the flow honestly getting longer.
+ * is conditional — the setup pair and the practice steps only exist once a setup
+ * mode is picked. Choosing local or self-hosted on setup-choice therefore appends
+ * them and the row grows at that moment, which is the flow honestly getting longer.
  *
  * Returns null when there is nothing worth drawing: a compact step, an off-route
  * step, or a route with fewer than two counted steps, where a one-dot row would

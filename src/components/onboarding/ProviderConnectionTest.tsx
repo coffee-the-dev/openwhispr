@@ -35,7 +35,7 @@ export default function ProviderConnectionTest({
     return () => {
       requestIdRef.current += 1;
     };
-  }, [config.apiKey, config.baseUrl, config.model, config.provider, config.scope, onSuccessChange]);
+  }, [config.apiKey, config.baseUrl, config.model, onSuccessChange]);
 
   const describeError = (result: ConnectionTestResult | undefined) => {
     if (result?.errorCode) {

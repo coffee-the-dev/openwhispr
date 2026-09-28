@@ -24,13 +24,9 @@ export default function CleanupFailureToastListener() {
     const title = failure.messageKey
       ? t(failure.messageKey, failure.messageParams)
       : failure.message || t("app.toasts.cleanupFailed.title");
-    const description = failure.actionKey ? t(failure.actionKey) : failure.action;
     toast({
       title,
-      ...(description ? { description } : {}),
       secondaryDescription: t("app.toasts.cleanupFailed.description"),
-      ...(failure.copyCommand ? { copyCommand: failure.copyCommand } : {}),
-      technicalDetails: failure.technicalDetails,
       variant: "destructive",
       duration: 10000,
     });

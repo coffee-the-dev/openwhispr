@@ -285,10 +285,6 @@
         "titleLineOne": "选择你的",
         "titleLineTwo": "OpenWhispr 设置",
         "description": "选择最适合你工作方式的方案。",
-        "byok": {
-          "title": "API 服务商",
-          "description": "使用你自己的 API Key。"
-        },
         "local": {
           "title": "在你的设备上",
           "description": "私密的离线转录。至少需要 {{minimumSpace}} GB 可用空间。",
@@ -302,16 +298,6 @@
           }
         },
         "warnings": {
-          "byok": {
-            "title": "你的数据由服务商处理",
-            "description": "你需要分别为听写和 Assistant 服务商添加凭据。将适用服务商的定价和数据保留政策。",
-            "continue": "设置 API 服务商",
-            "steps": {
-              "1": "为听写和 Assistant 选择服务商",
-              "2": "使用安全存储添加凭据",
-              "3": "启用前测试每个连接"
-            }
-          },
           "local": {
             "title": "本地设置需要多几个步骤",
             "description": "本地处理会把你的语音保留在此设备上，但需要一次性设置和至少 {{minimumSpace}} GB 可用空间。",
@@ -324,36 +310,30 @@
           }
         },
         "continueSetup": "继续设置",
-        "showMore": "显示更多选项",
-        "moreOptions": {
-          "title": "选择你的 API 设置方式",
-          "description": "添加 API Key 或连接自托管模型。",
-          "selfHosted": {
-            "title": "自托管",
-            "description": "连接你自己托管的模型。"
-          }
+        "selfHosted": {
+          "title": "自托管",
+          "description": "连接你网络中兼容 OpenAI 的服务器。",
+          "features": {
+            "network": "在你的网络中运行",
+            "key": "API Key 可选",
+            "models": "使用服务器上的任意模型"
+          },
+          "connect": "连接服务器"
         }
       },
       "provider": {
         "progress": "服务商设置进度",
         "dictation": "听写",
         "assistant": "助手",
-        "title": "连接你的 AI 服务商",
-        "description": "选择服务商，添加凭据，然后测试连接。",
-        "descriptionLineOne": "选择服务商并添加",
-        "descriptionLineTwo": "你的 API Key。",
-        "selfHosted": "我有自托管模型的密钥",
-        "providerLabel": "服务商",
-        "providerPlaceholder": "选择模型服务商",
-        "modelLabel": "模型",
-        "modelPlaceholder": "选择模型",
+        "title": "连接你的服务器",
+        "description": "输入服务器地址和可选的 API Key，然后测试连接。",
+        "descriptionLineOne": "输入服务器地址",
+        "descriptionLineTwo": "和可选的 API Key。",
         "apiKey": "API 密钥",
-        "apiKeyPlaceholder": "粘贴你的 API Key",
         "endpointUrl": "端点 URL",
         "endpointPlaceholder": "粘贴你的端点 URL",
         "optional": "可选",
         "modelId": "模型 ID",
-        "modelIdPlaceholder": "填写你的模型 ID",
         "testConnection": "测试连接",
         "proceed": "继续",
         "runTest": "运行测试",
@@ -364,8 +344,6 @@
           "endpointRequired": "测试前请先输入端点 URL。",
           "invalidUrl": "端点必须是有效的 HTTP 或 HTTPS URL。",
           "httpsRequired": "公共端点必须使用 HTTPS。HTTP 仅允许用于私有地址。",
-          "unsupportedProvider": "此服务商不支持连接测试。",
-          "apiKeyRequired": "测试前请先添加 API Key。",
           "credentialsRejected": "服务商拒绝了这些凭据。",
           "endpointNotFound": "该端点未提供兼容 OpenAI 的模型列表。",
           "modelNotFound": "所选模型无法从此服务商获得。",
@@ -493,27 +471,6 @@
       "hotkeyLabel": "会议快捷键",
       "hotkeyHint": "可选 — 在任何会议中按下即可立即开始记录。"
     },
-    "finish": {
-      "title": "一切就绪",
-      "cloudDescription": "你正在使用 OpenWhispr Cloud — 快速、准确、零数据保留，每周免费 2,000 词。希望一切都在本地？可在“设置”中切换到本地处理。",
-      "localDescription": "你已配置本地处理或自带密钥。可随时在“设置”中调整音频处理方式。",
-      "cleanupNote": "AI 文本清理使用合理的默认设置，可随时在“设置”中调整。",
-      "openSettings": "打开设置",
-      "skipForNow": "暂时跳过",
-      "corti": {
-        "title": "你告诉我们你是为临床转写而来",
-        "description": "我们与 Corti 合作 — 临床级语音转文字，准确率最高，并符合 HIPAA。",
-        "createAccount": "创建你的 Corti 账户",
-        "creditBadge": "50 美元免费额度",
-        "regionHint": "选择音频处理地区 — 美国或欧盟。",
-        "llmHint": "语言模型功能也将在 Corti 模型上运行。",
-        "useCorti": "使用 Corti",
-        "skip": "暂不需要",
-        "step1": "在 corti.ai 注册",
-        "step2": "打开 Corti 控制台并创建 API 凭据",
-        "step3": "在下方粘贴 Client ID 和 Secret"
-      }
-    },
     "welcomeSubtitle": "你的声音，由你掌控。"
   },
   "streaming": {
@@ -611,25 +568,15 @@
     }
   },
   "reasoning": {
-    "mode": {
-      "cloud": "云端",
-      "local": "本地",
-      "enterprise": "企业",
-      "localDescription": "在你的设备上运行，完全隐私，离线可用。",
-      "cloudDescription": "通过 API 使用高级模型，快速且强大，需要联网。",
-      "enterpriseDescription": "使用你组织的云服务商凭据。"
-    },
     "custom": {
       "endpointWithProtocol": "请输入包含协议的完整 URL（例如 https://server/v1）。",
       "httpsRequired": "需要 HTTPS（仅本地网络允许 HTTP）。",
-      "endpointInvalid": "自定义端点无效或未配置。请在设置 → AI 模型中检查端点 URL。",
       "endpointUnauthorized": "端点拒绝了请求（401/403）。请添加 API Key 或调整服务器认证设置。",
       "endpointTitle": "端点 URL",
-      "endpointExamples": "示例：",
       "ollama": "（Ollama）",
       "localAi": "（LocalAI）",
       "apiKeyOptional": "API Key（可选）",
-      "apiKeyHelp": "可选。作为 Bearer token 用于身份验证，与 OpenAI API Key 无关。",
+      "apiKeyHelp": "可选。作为 Bearer token 用于身份验证。",
       "applyAndRefresh": "应用并刷新",
       "queryPrefix": "我们将查询",
       "querySuffix": "获取可用模型。",
@@ -637,18 +584,14 @@
       "enterEndpoint": "请在上方输入端点 URL 以加载模型。",
       "fetchingModels": "正在从端点获取模型列表...",
       "noModels": "未返回任何模型，请检查端点 URL。",
-      "providerName": "自定义",
       "ownerLabel": "所有者：{{owner}}",
       "unableToLoadModels": "无法从端点加载模型。",
       "searchPlaceholder": "搜索模型…",
       "selectedGroup": "已选择",
       "otherGroup": "其他",
       "noSearchResults": "没有与“{{query}}”匹配的模型",
-      "selectModelHint": "尚未选择模型 — 请从下方列表中选择一个。",
-      "keyRequiredHint": "推理需要 API 密钥 — 请添加密钥以使用此提供商。"
+      "selectModelHint": "尚未选择模型 — 请从下方列表中选择一个。"
     },
-    "getApiKey": "获取你的 API Key ->",
-    "selectModel": "选择模型",
     "availableModels": "可用模型",
     "disableThinking": {
       "label": "禁用思考输出",
@@ -656,43 +599,6 @@
     },
     "selfHosted": {
       "endpointHelp": "指向本地网络中兼容 OpenAI 的服务器（例如 Ollama、LM Studio、vLLM 或 llama-server）。"
-    },
-    "enterprise": {
-      "errors": {
-        "bedrock": {
-          "ssoExpired": "AWS SSO 会话已过期。",
-          "credentialsRejected": "AWS 拒绝了这些凭证。请检查访问密钥 ID、密钥和会话令牌。",
-          "accessDenied": "AWS Bedrock 拒绝了此请求。请让 AWS 管理员授予在区域 {{region}} 中调用所选模型的权限。",
-          "modelNotFound": "AWS Bedrock 在区域 {{region}} 中找不到所选模型。请检查模型 ID 以及该模型是否在此区域可用。",
-          "configurationRejected": "AWS Bedrock 拒绝了区域 {{region}} 的模型配置。请检查模型 ID、推理配置文件和区域。",
-          "notConfigured": "AWS Bedrock 配置不正确。请检查区域和 AWS 凭证。",
-          "serviceUnavailable": "由于需求过高，AWS Bedrock 暂时不可用。这是 AWS 服务问题，并非 OpenWhispr 中断。请几分钟后重试。",
-          "throttled": "由于收到的请求过多，AWS Bedrock 正在暂时限制请求。请稍候再试。如果问题持续，请让 AWS 管理员检查 Bedrock 使用量和配额。",
-          "timeout": "AWS Bedrock 未及时响应。请重试。如果问题持续，请检查互联网连接和 AWS Bedrock 服务状态。",
-          "network": "无法连接到 AWS Bedrock。请检查互联网连接并重试。",
-          "unknown": "AWS Bedrock 错误：{{error}}",
-          "actions": {
-            "reauthenticate": "请在终端中运行以下命令以重新进行身份验证："
-          }
-        }
-      },
-      "technicalDetails": {
-        "title": "技术详情",
-        "httpStatus": "HTTP 状态",
-        "awsException": "AWS 异常",
-        "awsRequestId": "AWS 请求 ID",
-        "underlyingError": "底层错误",
-        "copy": "复制技术详情",
-        "copyCommand": "复制恢复命令"
-      }
-    },
-    "tinfoil": {
-      "modelRetiredTitle": "模型已不可用",
-      "modelRetired": "Tinfoil 已停用 {{from}}，已切换至 {{to}}。",
-      "refreshingModels": "正在刷新模型…"
-    },
-    "corti": {
-      "euOnly": "Corti 模型仅在欧盟地区可用。"
     }
   },
   "transcription": {
@@ -1150,7 +1056,6 @@
     "test": {
       "addressHint": "试试说“{{agentName}}”来测试指令模式",
       "aiModels": "AI 模型",
-      "baseUrlMissing": "{{provider}} 的 URL 缺失，请在 AI 模型设置中添加。",
       "cleanup": "文本整理",
       "disabledInSettingsPrefix": "AI 文本增强已禁用。",
       "disabledInSettingsSuffix": "请在 AI 模型中启用以测试提示词。",
@@ -1164,11 +1069,8 @@
       "none": "无",
       "outputLabel": "输出",
       "processing": "处理中...",
-      "openwhisprCloud": "OpenWhispr Cloud",
       "providerLabel": "服务商",
       "run": "运行测试",
-      "customEndpoint": "自定义端点",
-      "apiKeyMissing": "未配置 {{provider}} API 密钥，请在 AI 模型设置中添加。",
       "translateHint": "文本将翻译为{{language}}",
       "translation": "翻译",
       "translationDisabled": "启用听写翻译以测试此提示词",
@@ -1239,35 +1141,17 @@
       }
     },
     "aiModels": {
-      "customSetup": "自定义设置",
-      "customSetupDescription": "使用你自己的服务商和 API Key。",
       "description": "整理转录文本、处理指令、修正错误，同时保留你的语气风格。",
       "enableTextCleanup": "启用文本整理",
       "enableTextCleanupDescription": "AI 去除语气词，修正语法和标点",
       "modes": {
-        "providers": "云服务商",
         "local": "本地",
         "selfHosted": "自托管",
-        "providersDesc": "使用你自己的 API Key。",
         "localDesc": "设备端模型，完全私密。",
         "selfHostedDesc": "你的服务器，在你的网络上。"
       },
-      "openwhisprCloud": "OpenWhispr Cloud",
-      "openwhisprCloudDescription": "准确可靠，无需设置。",
       "title": "AI 文本增强",
       "toasts": {
-        "switchedCloud": {
-          "description": "文本增强将使用 OpenWhispr 云端服务。",
-          "title": "已切换到 OpenWhispr 云端"
-        },
-        "switchedCustom": {
-          "description": "请配置你的服务商和 API Key。",
-          "title": "已切换到自定义设置"
-        },
-        "switchedProviders": {
-          "title": "云服务商",
-          "description": "使用你自己的 API Key。"
-        },
         "switchedLocal": {
           "title": "本地运行",
           "description": "AI 在你的设备上本地运行。"
@@ -1275,10 +1159,6 @@
         "switchedSelfHosted": {
           "title": "自托管",
           "description": "使用你自己的服务器。"
-        },
-        "switchedEnterprise": {
-          "title": "企业级",
-          "description": "正在使用你组织的云账号。"
         }
       }
     },
@@ -1692,61 +1572,6 @@
         "medium": "高质量",
         "large": "最佳质量，最慢速度",
         "turbo": "快速且质量良好"
-      },
-      "cloud": {
-        "openai_gpt_5_2": "强大的推理模型",
-        "openai_gpt_5_mini": "快速且经济",
-        "openai_gpt_5_nano": "超快速、低延迟",
-        "openai_gpt_4_1": "稳定基准，1M 上下文",
-        "openai_gpt_4_1_mini": "精简版 GPT-4.1",
-        "openai_gpt_4_1_nano": "最低延迟 GPT-4.1",
-        "anthropic_claude_fable_5_1": "Anthropic 最强大的模型，Mythos 级",
-        "anthropic_claude_fable_5": "上一代 Mythos 级旗舰模型",
-        "anthropic_claude_sonnet_5": "快速且强大的助手模型，成本更低",
-        "anthropic_claude_sonnet_4_6": "均衡性能",
-        "anthropic_claude_sonnet_4_5": "上一代 Sonnet",
-        "anthropic_claude_haiku_4_5": "快速且接近前沿水平",
-        "gemini_gemini_3_5_flash": "最新、快速且高能力的 Gemini 模型",
-        "gemini_gemini_3_5_flash_lite": "最快、最经济的 3.5 模型",
-        "gemini_gemini_3_1_pro_preview": "新一代旗舰模型，擅长复杂推理",
-        "gemini_gemini_3_1_flash_lite": "前沿级性能，成本更低",
-        "gemini_gemini_3_flash_preview": "超快速、高能力的新一代模型",
-        "gemini_gemini_2_5_flash_lite": "最低延迟和成本",
-        "gemini_gemma_4_31b_it": "Google 最大的 Gemma 4，31B 稠密，256K 上下文",
-        "gemini_gemma_4_26b_a4b_it": "Google Gemma 4 MoE，4B 活跃参数，256K 上下文",
-        "groq_openai_gpt_oss_120b": "OpenAI 开源旗舰，500 T/秒",
-        "groq_openai_gpt_oss_20b": "快速开源模型，1000 T/秒",
-        "groq_compound": "Groq Compound 系统，450 T/秒",
-        "groq_compound_mini": "快速 Compound 系统，3x 更低延迟",
-        "openai_gpt_6_astra": "OpenAI 最强大的模型，适用于编码与研究",
-        "openai_gpt_5_6_sol": "旗舰 GPT-5.6，适用于复杂编码与研究",
-        "openai_gpt_5_6_terra": "均衡的 GPT-5.6，适合日常工作",
-        "openai_gpt_5_6_luna": "速度最快、成本最低的 GPT-5.6",
-        "openai_gpt_5_5": "复杂推理前沿模型",
-        "anthropic_claude_opus_5": "最强大的 Opus 模型，1M 上下文",
-        "anthropic_claude_opus_4_8": "强大的 Opus 模型，注重诚实与可靠",
-        "anthropic_claude_opus_4_7": "强大的 Opus 模型",
-        "anthropic_claude_opus_4_6": "上一代 Opus，1M 上下文",
-        "anthropic_claude_opus_4_5": "更早的 Opus 模型",
-        "tinfoil_glm_5_3": "安全飞地中的私密智能体编程模型，1M 上下文",
-        "tinfoil_gemma4_31b": "支持工具调用的私密多语言推理模型，256K 上下文",
-        "tinfoil_gpt_oss_120b": "支持工具使用的私密开源权重推理模型，131K 上下文",
-        "tinfoil_llama3_3_70b": "支持工具调用的私密对话模型，128K 上下文",
-        "corti_corti_s1_instant": "快速医疗模型，无推理过程",
-        "corti_corti_s1": "功能最强的临床模型，带推理",
-        "corti_corti_s1_mini_instant": "紧凑型医疗模型，最快且成本最低",
-        "corti_corti_s1_mini": "紧凑型临床模型，半价提供推理"
-      },
-      "enterprise": {
-        "bedrock_claude_fable_5": "最强大的 Claude 模型。最适合最具挑战性的助手任务。",
-        "bedrock_claude_haiku_4_5": "快速且低成本。适合文本清理。",
-        "bedrock_claude_sonnet_5": "均衡性能。推荐用作助手任务的默认模型。",
-        "bedrock_claude_opus_4_8": "最高智能。适用于复杂的助手任务。",
-        "bedrock_gpt_oss_120b": "OpenAI 开放权重模型。低成本下的强大推理能力。",
-        "bedrock_deepseek_v3_2": "开放权重前沿模型。助手任务的高性价比之选。",
-        "bedrock_qwen3_next_80b": "稀疏开放权重模型。快速且多语言。",
-        "vertex_gemini_2_5_flash": "通过 Vertex 提供的快速多模态模型",
-        "vertex_gemini_2_5_pro": "通过 Vertex 提供的高级推理模型"
       },
       "local": {
         "qwen_qwen3_5_9b_q4_k_m": "强大的混合模型",
@@ -2402,15 +2227,11 @@
       "enable": "共享屏幕上下文",
       "enableDescription": "语音助手开始录音时，截取光标所在的显示器。绝不保存，也不写入日志。",
       "unsupported": "Linux Wayland 不支持屏幕截图。",
-      "visionModel": "单独的视觉模型",
-      "visionModelDescription": "将带截图的命令转发给另一个支持图像的模型。",
       "permissionTitle": "屏幕录制",
       "permissionDescription": "macOS 需要屏幕录制权限才能截取屏幕。",
       "relaunchHint": "屏幕录制权限是在 OpenWhispr 运行期间授予的。请退出并重新打开 OpenWhispr 以开始捕获屏幕截图。"
     },
     "modes": {
-      "providers": "使用自己的 API Key",
-      "providersDesc": "用你自己的 API Key 连接 OpenAI、Anthropic、Gemini 或 Groq。",
       "local": "本地",
       "localDesc": "在你的设备上运行本地 LLM，完全私密。",
       "selfHosted": "自托管",
@@ -2427,10 +2248,8 @@
       "systemPromptDescription": "助手的自定义指令",
       "systemPromptPlaceholder": "输入自定义系统提示词...",
       "modes": {
-        "providers": "云服务商",
         "local": "本地",
         "selfHosted": "自托管",
-        "providersDesc": "使用自己的 API 密钥。",
         "localDesc": "设备端模型，完全私密。",
         "selfHostedDesc": "你自己网络上的服务器。"
       }

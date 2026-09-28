@@ -1,5 +1,4 @@
 import { create } from "zustand";
-import { API_ENDPOINTS } from "../config/constants";
 import i18n, { normalizeUiLanguage } from "../i18n";
 import { ensureAgentNameInDictionary } from "../utils/agentName";
 import { chooseDictionaryStartupAction } from "../helpers/dictionaryStartup";
@@ -15,12 +14,7 @@ import type {
 } from "../types/electron";
 import { PROMPT_KIND_LIST, type PromptKind } from "../config/prompts/registry";
 import { sweepRetiredPromptOverrides } from "../config/retiredPrompts";
-import { sweepRetiredCloudModelSelections } from "../config/retiredCloudModels";
-import {
-  deriveReasoningMode,
-  buildReasoningScopePatches,
-  inheritsFallbackEndpoint,
-} from "../helpers/reasoningRouting";
+import { buildReasoningScopePatches, inheritsFallbackEndpoint } from "../helpers/reasoningRouting";
 import { findStaleLocalModelKeys } from "../helpers/localModelSelections";
 import {
   INFERENCE_SCOPES,
@@ -29,13 +23,7 @@ import {
   type InferenceScopeStoreKeys,
 } from "../config/inferenceScopes";
 import { normalizeChineseScriptPreference } from "../utils/chineseScript";
-import { adjustBedrockModelForRegion } from "../utils/bedrockRegions";
 import modelRegistryData from "../models/modelRegistryData.json";
-import { pickDefaultModelId } from "../models/providerDefaultModel";
-// Both are leaves: tinfoilModelCache imports only a type from ModelRegistry and
-// the switch store only zustand, so neither reopens the ModelRegistry cycle.
-import { readCachedTinfoilModels } from "../models/tinfoilModelCache";
-import { recordTinfoilModelSwitch } from "./tinfoilModelSwitchStore";
 import type {
   TranscriptionSettings,
   CleanupSettings,
@@ -49,8 +37,6 @@ import type {
 } from "../hooks/useSettings";
 import type { Snippet } from "../utils/snippets";
 
-let _ReasoningService: typeof import("../services/ReasoningService").default | null = null;
-
 // Requires localStorage as well as window: the module-scope migrations below
 // dereference the bare localStorage global, and test harnesses import this
 // store with partial window stubs that don't define it.
@@ -62,29 +48,13 @@ const localLlmProviderIds = new Set(
   modelRegistryData.localProviders.map((provider) => provider.id)
 );
 
-function reasoningModelBelongsToProvider(providerId: string, modelId: string): boolean {
-  if (!modelId) return false;
-  // Custom and OpenRouter ids are free-form; any remembered id is valid.
-  // Tinfoil's registry entry is refreshed in place from its live catalog.
-  if (providerId === "custom" || providerId === "openrouter") return true;
-  return (
-    modelRegistryData.cloudProviders
-      .find((provider) => provider.id === providerId)
-      ?.models.some((model) => model.id === modelId) ?? false
-  );
-}
+// The default OpenAI base older builds stored for a "Custom" provider nobody
+// had pointed anywhere else. It is never adopted as a self-hosted server.
+const LEGACY_OPENAI_BASE = "https://api.openai.com/v1";
 
-function defaultLlmModel(mode: InferenceMode, providerId: string, bedrockRegion: string): string {
-  const providers =
-    mode === "local"
-      ? modelRegistryData.localProviders
-      : mode === "enterprise"
-        ? modelRegistryData.enterpriseProviders
-        : modelRegistryData.cloudProviders;
-  const defaultModel = pickDefaultModelId(providers.find(({ id }) => id === providerId));
-  return mode === "enterprise" && providerId === "bedrock"
-    ? adjustBedrockModelForRegion(defaultModel, bedrockRegion)
-    : defaultModel;
+function isLegacyOpenAIBase(url: string | null | undefined): boolean {
+  const trimmed = url?.trim().replace(/\/+$/, "") ?? "";
+  return trimmed === LEGACY_OPENAI_BASE;
 }
 
 function readString(key: string, fallback: string): string {
@@ -98,6 +68,10 @@ const DEFAULT_COHERE_MODEL = "cohere-transcribe-03-2026";
 
 // Anything but an explicit self-hosted choice reads as Local.
 function readTranscriptionMode(key: string): TranscriptionMode {
+  return readString(key, "local") === "self-hosted" ? "self-hosted" : "local";
+}
+
+function readInferenceMode(key: string): InferenceMode {
   return readString(key, "local") === "self-hosted" ? "self-hosted" : "local";
 }
 
@@ -239,7 +213,6 @@ const BOOLEAN_SETTINGS = new Set([
   "useCleanupModel",
   "useDictationAgent",
   "voiceAgentScreenContext",
-  "useDictationAgentVisionModel",
   "useDictationTranslation",
   "translationDisableThinking",
   "preferBuiltInMic",
@@ -260,7 +233,6 @@ const BOOLEAN_SETTINGS = new Set([
   "showTranscriptionPreview",
   "cleanupDisableThinking",
   "dictationAgentDisableThinking",
-  "dictationAgentVisionDisableThinking",
   "noteFormattingDisableThinking",
   "chatAgentDisableThinking",
   "notificationsEnabled",
@@ -322,7 +294,7 @@ function deriveTranscriptionMode(
   useLocalWhisper: boolean,
   cloudTranscriptionMode: string | null,
   cloudTranscriptionProvider: string | null
-): InferenceMode {
+): string {
   if (useLocalWhisper) return "local";
   if (cloudTranscriptionMode === "byok") {
     return cloudTranscriptionProvider === "custom" ? "self-hosted" : "providers";
@@ -330,15 +302,11 @@ function deriveTranscriptionMode(
   return "openwhispr";
 }
 
-// Map the legacy `cloudReasoningMode` + provider pair to the InferenceMode the
-// Settings tabs select on. Shared by the provider-settings and agent-mode
-// migrations and by healSkippedMeetingFollowModes(). Distinct from the imported
-// deriveReasoningMode(), which collapses local and enterprise into "providers"
-// on purpose for the cloud-only "use everywhere" action.
-function deriveLegacyReasoningMode(
-  cloudMode: string | null,
-  provider: string | null
-): InferenceMode {
+// Map the legacy `cloudReasoningMode` + provider pair to the mode the Settings
+// tabs selected on before this build. Shared by the provider-settings and
+// agent-mode migrations and by healSkippedMeetingFollowModes();
+// migrateInferenceScopesToLocalOnly() then settles every legacy mode.
+function deriveLegacyReasoningMode(cloudMode: string | null, provider: string | null): string {
   if (cloudMode !== "byok") return "openwhispr";
   if (provider === "custom") return "self-hosted";
   if (provider === "bedrock" || provider === "azure" || provider === "vertex") {
@@ -363,7 +331,7 @@ function migrateProviderSettings() {
     localStorage.setItem("remoteTranscriptionType", "openai-compatible");
     const legacyBaseUrl = localStorage.getItem("cloudTranscriptionBaseUrl");
     const existingRemoteUrl = localStorage.getItem("remoteTranscriptionUrl");
-    if (!existingRemoteUrl && legacyBaseUrl && legacyBaseUrl !== API_ENDPOINTS.TRANSCRIPTION_BASE) {
+    if (!existingRemoteUrl && legacyBaseUrl && !isLegacyOpenAIBase(legacyBaseUrl)) {
       localStorage.setItem("remoteTranscriptionUrl", legacyBaseUrl);
     }
   }
@@ -649,20 +617,19 @@ migrateLLMScopeKeys();
 // profile whose Chat runs local or BYOK would have its spoken commands move to
 // the cloud default silently. The scope's custom key is a secret, so
 // initializeSettings copies it once the secure store has loaded.
-const SEEDED_SCOPE_FIELDS = [
-  "mode",
-  "provider",
-  "model",
-  "cloudMode",
-  "cloudBaseUrl",
-  "remoteUrl",
-] as const;
+const SEEDED_SCOPE_KEYS: ReadonlyArray<[string, string]> = [
+  ["chatAgentMode", "dictationAgentMode"],
+  ["chatAgentProvider", "dictationAgentProvider"],
+  ["chatAgentModel", "dictationAgentModel"],
+  ["chatAgentCloudMode", "dictationAgentCloudMode"],
+  ["chatAgentCloudBaseUrl", "dictationAgentCloudBaseUrl"],
+  ["chatAgentRemoteUrl", "dictationAgentRemoteUrl"],
+];
 
 function seedDictationAgentScopeFromChat() {
   if (!isBrowser) return;
   if (localStorage.getItem("_dictationAgentSeeded") !== null) return;
 
-  const chat = INFERENCE_SCOPES.chatIntelligence.storeKeys;
   const agent = INFERENCE_SCOPES.dictationAgent.storeKeys;
   const configured = [agent.mode, agent.provider, agent.model].some(
     (key) => localStorage.getItem(key) !== null
@@ -671,9 +638,9 @@ function seedDictationAgentScopeFromChat() {
     localStorage.setItem("_dictationAgentSeeded", "1");
     return;
   }
-  for (const field of SEEDED_SCOPE_FIELDS) {
-    const value = localStorage.getItem(chat[field] as string);
-    if (value !== null) localStorage.setItem(agent[field] as string, value);
+  for (const [chatKey, agentKey] of SEEDED_SCOPE_KEYS) {
+    const value = localStorage.getItem(chatKey);
+    if (value !== null) localStorage.setItem(agentKey, value);
   }
   localStorage.setItem("_dictationAgentSeeded", "key-pending");
 }
@@ -691,14 +658,10 @@ seedDictationAgentScopeFromChat();
 // OpenWhispr Cloud, so every mode is reconstructed from the snapshot the copy
 // did write — with the same functions migrateProviderSettings() uses, not from
 // today's dictation keys, which the user may have changed since.
-// `noteFormattingMode` does have one: an absent mode reads "openwhispr", but
-// selectIsCloudNoteFormattingMode also requires cloudMode "openwhispr", and the
-// copied cloudMode is "byok", so buildNoteFormattingOverrides emits no provider
-// and processText dispatches from the dictation-cleanup scope. Note formatting
-// therefore follows cleanup rather than leaking, and the only cohort at risk is
-// one whose reasoning snapshot was local and whose cleanup has since moved
-// cloud-ward. So that mode is healed local-ward only: pinning a cloud snapshot
-// would override a since-local cleanup and send note text to a third party.
+// `noteFormattingMode` does have one: an absent mode follows dictation cleanup
+// (migrateInferenceScopesToLocalOnly), so the only cohort at risk is one whose
+// reasoning snapshot was local and whose cleanup has since moved elsewhere. So
+// that mode is healed local-ward only.
 //
 // Runs after migrateLLMScopeKeys() so a pre-1.7.0 profile's reasoning snapshot
 // is under its final `noteFormatting*` names. `noteFormattingCloudMode` is the
@@ -706,9 +669,9 @@ seedDictationAgentScopeFromChat();
 // ever writes cloudMode together with mode. Idempotent — writing a mode retires
 // its own guard — and it never touches `meetingUseLocalWhisper`, which no router
 // reads but which rule two below depends on.
-function healSkippedMeetingFollowModes(): Record<string, InferenceMode> {
+function healSkippedMeetingFollowModes(): Record<string, string> {
   if (!isBrowser) return {};
-  const healed: Record<string, InferenceMode> = {};
+  const healed: Record<string, string> = {};
 
   const meetingUseLocal = localStorage.getItem("meetingUseLocalWhisper");
   const meetingCloudMode = localStorage.getItem("meetingCloudTranscriptionMode");
@@ -762,60 +725,17 @@ if (Object.keys(healedMeetingFollowModes).length > 0) {
   );
 }
 
-// Resolved offline, so a retired model's name survives only in the user's own
-// catalog cache and a replacement's only if we seed it. The raw-id fallback is
-// what the live-catalog reconcile shows too.
-function tinfoilModelName(modelId: string): string {
-  const named =
-    readCachedTinfoilModels().models.find((model) => model.id === modelId) ??
-    modelRegistryData.cloudProviders
-      .find((provider) => provider.id === "tinfoil")
-      ?.models.find((model) => model.id === modelId);
-  return named?.name ?? modelId;
-}
-
-// A scope still pointing at a model its provider has retired 404s on every
-// request. Runs after migrateLLMScopeKeys so scope values live under their
-// final keys, and before the store reads them, so the first request of the
-// session already carries a model the provider serves.
-function migrateRetiredCloudModels() {
-  if (!isBrowser) return;
-  const swept = sweepRetiredCloudModelSelections(
-    localStorage,
-    Object.values(INFERENCE_SCOPES).map(({ storeKeys }) => storeKeys)
-  );
-  if (swept.length === 0) return;
-
-  logger.info(
-    "Repointed retired cloud model selections",
-    { scopes: swept.map(({ storeKey }) => storeKey) },
-    "settings"
-  );
-
-  // Tinfoil is the one provider that tells the user their model was switched
-  // out, and getting here first means reconcileSelectedModels no longer will.
-  const announced = new Set<string>();
-  for (const { provider, from, to } of swept) {
-    if (provider !== "tinfoil" || announced.has(from)) continue;
-    announced.add(from);
-    recordTinfoilModelSwitch({ from: tinfoilModelName(from), to: tinfoilModelName(to) });
-  }
-}
-
-migrateRetiredCloudModels();
-
-// One-time move off OpenWhispr Cloud, enterprise and third-party providers: this
-// build runs on-device or against the user's own self-hosted endpoints only.
+// One-time move off OpenWhispr Cloud, enterprise and third-party transcription:
+// this build runs on-device or against the user's own self-hosted server only.
 // Cloud and enterprise selections go local. A provider selection goes to the
-// scope's self-hosted endpoint when one is configured (a Custom provider's base
-// URL counts), else local. Runs last, over the keys every earlier migration has
+// scope's self-hosted server when one is configured (a Custom provider's base
+// URL counts), else local. Runs over the keys every earlier migration has
 // settled. Fresh installs have nothing persisted and read the local defaults.
 const LOCAL_ONLY_MODES_MIGRATED_KEY = "_localOnlyModesMigrated";
 
 const LOCAL_ONLY_TRANSCRIPTION_KEYS: ReadonlyArray<{
   mode: string;
   useLocal: string;
-  cloudMode: string;
   provider: string;
   baseUrl: string;
   // Note Recording has no self-hosted route, so it always goes local.
@@ -824,7 +744,6 @@ const LOCAL_ONLY_TRANSCRIPTION_KEYS: ReadonlyArray<{
   {
     mode: "transcriptionMode",
     useLocal: "useLocalWhisper",
-    cloudMode: "cloudTranscriptionMode",
     provider: "cloudTranscriptionProvider",
     baseUrl: "cloudTranscriptionBaseUrl",
     remoteUrl: "remoteTranscriptionUrl",
@@ -832,7 +751,6 @@ const LOCAL_ONLY_TRANSCRIPTION_KEYS: ReadonlyArray<{
   {
     mode: "meetingTranscriptionMode",
     useLocal: "meetingUseLocalWhisper",
-    cloudMode: "meetingCloudTranscriptionMode",
     provider: "meetingCloudTranscriptionProvider",
     baseUrl: "meetingCloudTranscriptionBaseUrl",
     remoteUrl: null,
@@ -840,7 +758,6 @@ const LOCAL_ONLY_TRANSCRIPTION_KEYS: ReadonlyArray<{
   {
     mode: "uploadTranscriptionMode",
     useLocal: "uploadUseLocalWhisper",
-    cloudMode: "uploadCloudTranscriptionMode",
     provider: "uploadCloudTranscriptionProvider",
     baseUrl: "uploadCloudTranscriptionBaseUrl",
     remoteUrl: "uploadRemoteTranscriptionUrl",
@@ -854,16 +771,17 @@ function selfHostedUrlFor(
 ): string {
   const configured = remoteUrl?.trim();
   if (configured) return configured;
-  return provider === "custom" ? (baseUrl?.trim() ?? "") : "";
+  if (provider !== "custom" || isLegacyOpenAIBase(baseUrl)) return "";
+  return baseUrl?.trim() ?? "";
 }
 
-function migrateToLocalOnlyModes(storage: Storage): void {
+function migrateTranscriptionToLocalOnly(storage: Storage): void {
   if (storage.getItem(LOCAL_ONLY_MODES_MIGRATED_KEY) === "1") return;
-  const get = (key: string | undefined) => (key ? storage.getItem(key) : null);
+  const get = (key: string) => storage.getItem(key);
 
   for (const keys of LOCAL_ONLY_TRANSCRIPTION_KEYS) {
     const mode = storage.getItem(keys.mode);
-    let target: InferenceMode | null = null;
+    let target: TranscriptionMode | null = null;
     if (mode === "openwhispr" || mode === "enterprise") target = "local";
     if (mode === "providers") {
       const provider = get(keys.provider) || get("cloudTranscriptionProvider");
@@ -877,77 +795,143 @@ function migrateToLocalOnlyModes(storage: Storage): void {
     if (target) storage.setItem(keys.mode, target);
     if ((target ?? mode) === "local") storage.setItem(keys.useLocal, "true");
     if (target === "self-hosted") storage.setItem(keys.useLocal, "false");
-    if (get(keys.cloudMode) === "openwhispr") storage.setItem(keys.cloudMode, "byok");
   }
 
-  const finalConfig: Partial<Record<InferenceScope, { mode: string }>> = {};
+  storage.setItem(LOCAL_ONLY_MODES_MIGRATED_KEY, "1");
+}
+
+// The keys older builds routed each LLM scope's OpenWhispr Cloud and provider
+// choices on. Read only here, to settle a leftover mode, then retired.
+const LEGACY_SCOPE_BASE_URL_KEYS: Record<InferenceScope, string> = {
+  dictationCleanup: "cleanupCloudBaseUrl",
+  dictationAgent: "dictationAgentCloudBaseUrl",
+  noteFormatting: "noteFormattingCloudBaseUrl",
+  chatIntelligence: "chatAgentCloudBaseUrl",
+  dictationTranslation: "translationCloudBaseUrl",
+};
+
+// Every LLM scope runs local or self-hosted. A scope left on OpenWhispr Cloud,
+// enterprise or a provider (by an older build, or by the provider picker that
+// shipped after the transcription move) is settled here on every launch, so it
+// needs no latch: a provider selection goes to the scope's self-hosted server
+// when one is configured (a Custom provider's base URL counts), anything else
+// goes local. A local scope forgets a model the local catalog doesn't own, and
+// a scope that follows another one keeps following it wherever it went.
+export function migrateInferenceScopesToLocalOnly(storage: Storage): void {
+  const get = (key: string) => storage.getItem(key);
+  const finalModes: Partial<Record<InferenceScope, string>> = {};
+
   for (const scope of Object.keys(INFERENCE_SCOPES) as InferenceScope[]) {
     const definition: InferenceScopeDefinition = INFERENCE_SCOPES[scope];
     const keys = definition.storeKeys;
     const mode = get(keys.mode);
     const provider = get(keys.provider) ?? "";
-    const model = get(keys.model) ?? "";
-    const fallback = definition.fallbackScope
-      ? finalConfig[definition.fallbackScope as InferenceScope]
-      : undefined;
 
-    let target: string | null = null;
-    if (mode === null || mode === "openwhispr" || mode === "enterprise") target = "local";
+    if (mode === "local" || mode === "self-hosted") {
+      if (mode === "local" && provider && !localLlmProviderIds.has(provider)) {
+        storage.setItem(keys.provider, "");
+        storage.setItem(keys.model, "");
+      }
+      if (mode === "self-hosted" && provider !== "lan") storage.setItem(keys.provider, "lan");
+      finalModes[scope] = mode;
+      continue;
+    }
+
+    let target = "local";
     if (mode === "providers") {
-      const url = selfHostedUrlFor(get(keys.remoteUrl), provider, get(keys.cloudBaseUrl));
-      target = url && keys.remoteUrl ? "self-hosted" : "local";
-      if (target === "self-hosted" && keys.remoteUrl && !get(keys.remoteUrl)?.trim()) {
-        storage.setItem(keys.remoteUrl, url);
+      const url = selfHostedUrlFor(
+        get(keys.remoteUrl),
+        provider,
+        get(LEGACY_SCOPE_BASE_URL_KEYS[scope])
+      );
+      if (url) {
+        target = "self-hosted";
+        if (!get(keys.remoteUrl)?.trim()) storage.setItem(keys.remoteUrl, url);
       }
     }
 
+    const fallback = definition.fallbackScope
+      ? finalModes[definition.fallbackScope as InferenceScope]
+      : undefined;
     if (target === "local" && !localLlmProviderIds.has(provider)) {
-      // A scope that follows another one keeps following it wherever it went;
-      // otherwise the picker asks again rather than pointing at a missing model.
-      if (fallback) target = fallback.mode;
+      // The picker asks again rather than pointing at a missing model.
+      if (fallback) target = fallback;
       storage.setItem(keys.provider, "");
       storage.setItem(keys.model, "");
     } else if (target === "self-hosted") {
       storage.setItem(keys.provider, "lan");
     }
 
-    // The vision override's mode is not persisted; it only ever runs a picked model.
-    if (target && !(definition.optional && mode === null)) storage.setItem(keys.mode, target);
-    if (keys.cloudMode && get(keys.cloudMode) === "openwhispr") {
-      storage.setItem(keys.cloudMode, "byok");
-    }
-    finalConfig[scope] = { mode: target ?? mode ?? "local" };
+    storage.setItem(keys.mode, target);
+    finalModes[scope] = target;
   }
-
-  storage.setItem(LOCAL_ONLY_MODES_MIGRATED_KEY, "1");
 }
 
-if (isBrowser) migrateToLocalOnlyModes(localStorage);
+if (isBrowser) {
+  migrateTranscriptionToLocalOnly(localStorage);
+  migrateInferenceScopesToLocalOnly(localStorage);
+}
 
-// Cloud and third-party transcription settings. Removed only after every
+// Cloud, enterprise and third-party settings. Removed only after every
 // migration above has read them to settle each scope's mode.
-const RETIRED_TRANSCRIPTION_KEYS = [
+const RETIRED_PROVIDER_KEYS = [
   "allowOpenAIFallback",
   "assemblyAiStreaming",
+  "azureApiVersion",
+  "azureDeploymentName",
+  "azureEndpoint",
+  "bedrockAuthMode",
+  "bedrockProfile",
+  "bedrockRegion",
+  "chatAgentCloudBaseUrl",
+  "chatAgentCloudMode",
+  "cleanupCloudBaseUrl",
+  "cleanupCloudMode",
   "cloudTranscriptionBaseUrl",
   "cloudTranscriptionMode",
   "cloudTranscriptionModel",
   "cloudTranscriptionProvider",
   "cortiEnvironment",
   "cortiTenant",
+  "dictationAgentCloudBaseUrl",
+  "dictationAgentCloudMode",
+  "dictationAgentVisionCloudBaseUrl",
+  "dictationAgentVisionCloudMode",
+  "dictationAgentVisionMode",
+  "dictationAgentVisionModel",
+  "dictationAgentVisionProvider",
   "meetingCloudTranscriptionBaseUrl",
   "meetingCloudTranscriptionMode",
   "meetingCloudTranscriptionModel",
   "meetingCloudTranscriptionProvider",
+  "noteFormattingCloudBaseUrl",
+  "noteFormattingCloudMode",
+  "openAiEndpointPreference",
+  "reasoningModelByProvider",
+  "tinfoilModels",
   "transcriptionModelByProvider",
+  "translationCloudBaseUrl",
+  "translationCloudMode",
   "uploadCloudTranscriptionBaseUrl",
   "uploadCloudTranscriptionMode",
   "uploadCloudTranscriptionModel",
   "uploadCloudTranscriptionProvider",
+  "vertexAuthMode",
+  "vertexLocation",
+  "vertexProject",
 ];
 
 if (isBrowser) {
-  for (const key of RETIRED_TRANSCRIPTION_KEYS) localStorage.removeItem(key);
+  for (const key of RETIRED_PROVIDER_KEYS) localStorage.removeItem(key);
+}
+
+/** One runtime choice for every LLM scope, as onboarding applies it. */
+export interface ReasoningSelection {
+  mode: InferenceMode;
+  provider?: string;
+  model?: string;
+  remoteUrl?: string;
+  customApiKey?: string;
 }
 
 export interface SettingsState
@@ -1012,22 +996,15 @@ export interface SettingsState
   uploadRemoteTranscriptionUrl: string;
   uploadRemoteTranscriptionModel: string;
 
-  /** Last model used per scope+provider (`"<scope>:<providerId>"`), so switching providers restores it. */
-  reasoningModelByProvider: Record<string, string>;
-
   noteFormattingMode: InferenceMode;
   noteFormattingProvider: string;
   noteFormattingModel: string;
-  noteFormattingCloudMode: string;
-  noteFormattingCloudBaseUrl: string;
   noteFormattingRemoteUrl: string;
   noteFormattingCustomApiKey: string;
 
   translationMode: InferenceMode;
   translationProvider: string;
   translationModel: string;
-  translationCloudMode: string;
-  translationCloudBaseUrl: string;
   translationRemoteUrl: string;
   translationCustomApiKey: string;
   translationDisableThinking: boolean;
@@ -1039,25 +1016,14 @@ export interface SettingsState
   dictationAgentMode: InferenceMode;
   dictationAgentProvider: string;
   dictationAgentModel: string;
-  dictationAgentCloudMode: string;
-  dictationAgentCloudBaseUrl: string;
   dictationAgentRemoteUrl: string;
   dictationAgentCustomApiKey: string;
 
-  // Voice-agent screen context: opt-in screenshot capture, plus an optional
-  // dedicated model used only when a screenshot is attached.
+  // Voice-agent screen context: opt-in screenshot capture.
   voiceAgentScreenContext: boolean;
-  useDictationAgentVisionModel: boolean;
-  dictationAgentVisionMode: InferenceMode;
-  dictationAgentVisionProvider: string;
-  dictationAgentVisionModel: string;
-  dictationAgentVisionCloudMode: string;
-  dictationAgentVisionCloudBaseUrl: string;
-  dictationAgentVisionCustomApiKey: string;
 
   cleanupDisableThinking: boolean;
   dictationAgentDisableThinking: boolean;
-  dictationAgentVisionDisableThinking: boolean;
   noteFormattingDisableThinking: boolean;
   chatAgentDisableThinking: boolean;
 
@@ -1067,19 +1033,10 @@ export interface SettingsState
   setDictationAgentMode: (mode: InferenceMode) => void;
   setDictationAgentProvider: (value: string) => void;
   setDictationAgentModel: (value: string) => void;
-  setDictationAgentCloudMode: (value: string) => void;
-  setDictationAgentCloudBaseUrl: (value: string) => void;
   setDictationAgentRemoteUrl: (url: string) => void;
   setDictationAgentCustomApiKey: (key: string) => void;
 
   setVoiceAgentScreenContext: (value: boolean) => void;
-  setUseDictationAgentVisionModel: (value: boolean) => void;
-  setDictationAgentVisionProvider: (value: string) => void;
-  setDictationAgentVisionModel: (value: string) => void;
-  setDictationAgentVisionCloudMode: (value: string) => void;
-  setDictationAgentVisionCloudBaseUrl: (value: string) => void;
-  setDictationAgentVisionCustomApiKey: (key: string) => void;
-  setDictationAgentVisionDisableThinking: (value: boolean) => void;
 
   setTranscriptionMode: (mode: TranscriptionMode) => void;
   setRemoteTranscriptionType: (type: SelfHostedType) => void;
@@ -1109,16 +1066,12 @@ export interface SettingsState
   setNoteFormattingMode: (mode: InferenceMode) => void;
   setNoteFormattingProvider: (value: string) => void;
   setNoteFormattingModel: (value: string) => void;
-  setNoteFormattingCloudMode: (value: string) => void;
-  setNoteFormattingCloudBaseUrl: (value: string) => void;
   setNoteFormattingRemoteUrl: (url: string) => void;
   setNoteFormattingCustomApiKey: (key: string) => void;
 
   setTranslationMode: (mode: InferenceMode) => void;
   setTranslationProvider: (value: string) => void;
   setTranslationModel: (value: string) => void;
-  setTranslationCloudMode: (value: string) => void;
-  setTranslationCloudBaseUrl: (value: string) => void;
   setTranslationRemoteUrl: (value: string) => void;
   setTranslationCustomApiKey: (value: string) => void;
   setTranslationDisableThinking: (value: boolean) => void;
@@ -1141,13 +1094,6 @@ export interface SettingsState
   setFallbackWhisperModel: (value: string) => void;
   setPreferredLanguage: (value: string) => void;
   setChineseScriptPreference: (value: ChineseScriptPreference) => void;
-  switchReasoningProvider: (
-    scope: InferenceScope,
-    providerId: string,
-    fallbackModel?: string
-  ) => void;
-  setCleanupCloudMode: (value: string) => void;
-  setCleanupCloudBaseUrl: (value: string) => void;
   setCustomDictionary: (words: string[]) => void;
   updateCustomDictionary: (changes: { add?: string[]; remove?: string[] }) => void;
   applyCustomDictionaryFromExternal: (words: string[]) => void;
@@ -1160,45 +1106,8 @@ export interface SettingsState
   setCleanupProvider: (value: string) => void;
   setUiLanguage: (language: string) => void;
 
-  setOpenaiApiKey: (key: string) => void;
-  setAnthropicApiKey: (key: string) => void;
-  setGeminiApiKey: (key: string) => void;
-  setGroqApiKey: (key: string) => void;
-  setOpenrouterApiKey: (key: string) => void;
-  setCortiApiKey: (key: string) => void;
-  setTinfoilApiKey: (key: string) => void;
   setCustomTranscriptionApiKey: (key: string) => void;
   setCleanupCustomApiKey: (key: string) => void;
-
-  // Enterprise providers
-  bedrockAuthMode: string;
-  bedrockRegion: string;
-  bedrockProfile: string;
-  bedrockAccessKeyId: string;
-  bedrockSecretAccessKey: string;
-  bedrockSessionToken: string;
-  azureEndpoint: string;
-  azureApiKey: string;
-  azureDeploymentName: string;
-  azureApiVersion: string;
-  vertexAuthMode: string;
-  vertexProject: string;
-  vertexLocation: string;
-  vertexApiKey: string;
-  setBedrockAuthMode: (value: string) => void;
-  setBedrockRegion: (value: string) => void;
-  setBedrockProfile: (value: string) => void;
-  setBedrockAccessKeyId: (key: string) => void;
-  setBedrockSecretAccessKey: (key: string) => void;
-  setBedrockSessionToken: (key: string) => void;
-  setAzureEndpoint: (value: string) => void;
-  setAzureApiKey: (key: string) => void;
-  setAzureDeploymentName: (value: string) => void;
-  setAzureApiVersion: (value: string) => void;
-  setVertexAuthMode: (value: string) => void;
-  setVertexProject: (value: string) => void;
-  setVertexLocation: (value: string) => void;
-  setVertexApiKey: (key: string) => void;
 
   setDictationKey: (key: string) => void;
   setMeetingKey: (key: string) => void;
@@ -1249,18 +1158,14 @@ export interface SettingsState
 
   setChatAgentModel: (value: string) => void;
   setChatAgentProvider: (value: string) => void;
-  setChatAgentCloudMode: (value: string) => void;
   setChatAgentMode: (mode: InferenceMode) => void;
-  setChatAgentCloudBaseUrl: (value: string) => void;
   setChatAgentRemoteUrl: (url: string) => void;
   setChatAgentCustomApiKey: (key: string) => void;
 
   updateTranscriptionSettings: (settings: Partial<TranscriptionSettings>) => void;
   setTranscriptionModeForAllScopes: (mode: TranscriptionMode) => void;
   updateCleanupSettings: (settings: Partial<CleanupSettings>) => void;
-  setCloudReasoningForAllScopes: (
-    settings: Partial<CleanupSettings & Pick<ApiKeySettings, "cleanupCustomApiKey">>
-  ) => void;
+  setReasoningForAllScopes: (config: ReasoningSelection) => void;
   updateApiKeys: (keys: Partial<ApiKeySettings>) => void;
   updateChatAgentSettings: (settings: Partial<ChatAgentSettings>) => void;
 }
@@ -1270,22 +1175,6 @@ function createStringSetter(key: string) {
     if (isBrowser) localStorage.setItem(key, value);
     useSettingsStore.setState({ [key]: value });
   };
-}
-
-function persistReasoningModelMemory(memory: Record<string, string>) {
-  if (isBrowser) localStorage.setItem("reasoningModelByProvider", JSON.stringify(memory));
-  useSettingsStore.setState({ reasoningModelByProvider: memory });
-}
-
-function readModelMemory(key: string): Record<string, string> {
-  try {
-    const parsed = JSON.parse(readString(key, "{}"));
-    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
-      ? (parsed as Record<string, string>)
-      : {};
-  } catch {
-    return {};
-  }
 }
 
 /** Writes a string setting whose key is computed rather than known up front. */
@@ -1372,25 +1261,12 @@ function debouncedPersistToEnv() {
 }
 
 const SECRET_IPC_SAVERS = {
-  openai: "saveOpenAIKey",
-  anthropic: "saveAnthropicKey",
-  gemini: "saveGeminiKey",
-  groq: "saveGroqKey",
-  openrouter: "saveOpenrouterKey",
-  cortiApiKey: "saveCortiKey",
-  tinfoil: "saveTinfoilKey",
   customTranscription: "saveCustomTranscriptionKey",
   cleanupCustom: "saveCleanupCustomKey",
   noteFormattingCustom: "saveNoteFormattingCustomKey",
   translationCustom: "saveTranslationCustomKey",
   dictationAgentCustom: "saveDictationAgentCustomKey",
-  dictationAgentVisionCustom: "saveDictationAgentVisionCustomKey",
   chatAgentCustom: "saveChatAgentCustomKey",
-  bedrockAccessKeyId: "saveBedrockAccessKeyId",
-  bedrockSecretAccessKey: "saveBedrockSecretAccessKey",
-  bedrockSessionToken: "saveBedrockSessionToken",
-  azureApiKey: "saveAzureApiKey",
-  vertexApiKey: "saveVertexApiKey",
 } as const;
 
 type SecretProvider = keyof typeof SECRET_IPC_SAVERS;
@@ -1443,46 +1319,18 @@ const STALE_SECRET_LOCALSTORAGE_KEYS = [
   "vertexApiKey",
 ] as const;
 
-function invalidateApiKeyCaches(
-  provider?:
-    | "openai"
-    | "anthropic"
-    | "gemini"
-    | "groq"
-    | "mistral"
-    | "tinfoil"
-    | "custom"
-    | "openrouter"
-    | "corti"
-) {
-  if (provider) {
-    if (_ReasoningService) {
-      _ReasoningService.clearApiKeyCache(provider);
-    } else {
-      import("../services/ReasoningService")
-        .then((mod) => {
-          _ReasoningService = mod.default;
-          _ReasoningService.clearApiKeyCache(provider);
-        })
-        .catch(() => {});
-    }
-  }
+function notifyApiKeyChanged() {
   if (isBrowser) window.dispatchEvent(new Event("api-key-changed"));
   debouncedPersistToEnv();
 }
 
-// Uniform BYOK key setter: persist to the secure store (debounced) and clear
-// the provider's cached key. cacheProvider is omitted where there is no scoped
-// cache to clear (xai), preserving prior behavior.
-function createSecretSetter(
-  storeKey: string,
-  saver: SecretProvider,
-  cacheProvider?: Parameters<typeof invalidateApiKeyCaches>[0]
-) {
+// Uniform secret setter: persist to the secure store (debounced) and tell
+// listeners a key changed.
+function createSecretSetter(storeKey: string, saver: SecretProvider) {
   return (key: string) => {
     useSettingsStore.setState({ [storeKey]: key });
     debouncedSaveSecret(saver, key);
-    invalidateApiKeyCaches(cacheProvider);
+    notifyApiKeyChanged();
   };
 }
 
@@ -1503,9 +1351,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   chineseScriptPreference: normalizeChineseScriptPreference(
     readString("chineseScriptPreference", "as-transcribed")
   ),
-  reasoningModelByProvider: readModelMemory("reasoningModelByProvider"),
-  cleanupCloudMode: readString("cleanupCloudMode", "byok"),
-  cleanupCloudBaseUrl: readString("cleanupCloudBaseUrl", API_ENDPOINTS.OPENAI_BASE),
   customDictionary: readStringArray("customDictionary", []),
   snippets: (() => {
     try {
@@ -1523,31 +1368,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   cleanupProvider: readString("cleanupProvider", ""),
 
   // Secrets hydrate from main process in initializeSettings, never from localStorage.
-  openaiApiKey: "",
-  anthropicApiKey: "",
-  geminiApiKey: "",
-  groqApiKey: "",
-  openrouterApiKey: "",
-  cortiApiKey: "",
-  tinfoilApiKey: "",
   customTranscriptionApiKey: "",
   cleanupCustomApiKey: "",
-
-  // Enterprise providers
-  bedrockAuthMode: readString("bedrockAuthMode", "sso"),
-  bedrockRegion: readString("bedrockRegion", "us-east-1"),
-  bedrockProfile: readString("bedrockProfile", ""),
-  bedrockAccessKeyId: "",
-  bedrockSecretAccessKey: "",
-  bedrockSessionToken: "",
-  azureEndpoint: readString("azureEndpoint", ""),
-  azureApiKey: "",
-  azureDeploymentName: readString("azureDeploymentName", ""),
-  azureApiVersion: readString("azureApiVersion", "2024-10-21"),
-  vertexAuthMode: readString("vertexAuthMode", "adc"),
-  vertexProject: readString("vertexProject", ""),
-  vertexLocation: readString("vertexLocation", "us-central1"),
-  vertexApiKey: "",
 
   dictationKey: readString("dictationKey", ""),
   activeDictationKey: null,
@@ -1634,18 +1456,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   })(),
   remoteTranscriptionUrl: readString("remoteTranscriptionUrl", ""),
   remoteTranscriptionModel: readString("remoteTranscriptionModel", ""),
-  cleanupMode: (() => {
-    const v = readString("cleanupMode", "local");
-    if (
-      v === "openwhispr" ||
-      v === "providers" ||
-      v === "local" ||
-      v === "self-hosted" ||
-      v === "enterprise"
-    )
-      return v;
-    return "local" as InferenceMode;
-  })(),
+  cleanupMode: readInferenceMode("cleanupMode"),
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
 
   meetingTranscriptionMode: readTranscriptionMode("meetingTranscriptionMode"),
@@ -1669,41 +1480,15 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   uploadRemoteTranscriptionUrl: readString("uploadRemoteTranscriptionUrl", ""),
   uploadRemoteTranscriptionModel: readString("uploadRemoteTranscriptionModel", ""),
 
-  noteFormattingMode: (() => {
-    const v = readString("noteFormattingMode", "local");
-    if (
-      v === "openwhispr" ||
-      v === "providers" ||
-      v === "local" ||
-      v === "self-hosted" ||
-      v === "enterprise"
-    )
-      return v;
-    return "local" as InferenceMode;
-  })(),
+  noteFormattingMode: readInferenceMode("noteFormattingMode"),
   noteFormattingProvider: readString("noteFormattingProvider", ""),
   noteFormattingModel: readString("noteFormattingModel", ""),
-  noteFormattingCloudMode: readString("noteFormattingCloudMode", ""),
-  noteFormattingCloudBaseUrl: readString("noteFormattingCloudBaseUrl", ""),
   noteFormattingRemoteUrl: readString("noteFormattingRemoteUrl", ""),
   noteFormattingCustomApiKey: readString("noteFormattingCustomApiKey", ""),
 
-  translationMode: (() => {
-    const v = readString("translationMode", "local");
-    if (
-      v === "openwhispr" ||
-      v === "providers" ||
-      v === "local" ||
-      v === "self-hosted" ||
-      v === "enterprise"
-    )
-      return v;
-    return "local" as InferenceMode;
-  })(),
+  translationMode: readInferenceMode("translationMode"),
   translationProvider: readString("translationProvider", ""),
   translationModel: readString("translationModel", ""),
-  translationCloudMode: readString("translationCloudMode", "byok"),
-  translationCloudBaseUrl: readString("translationCloudBaseUrl", ""),
   translationRemoteUrl: readString("translationRemoteUrl", ""),
   translationCustomApiKey: readString("translationCustomApiKey", ""),
   translationDisableThinking: readBoolean("translationDisableThinking", true),
@@ -1762,26 +1547,17 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setNoteFormattingMode: createStringSetter("noteFormattingMode") as (mode: InferenceMode) => void,
   setNoteFormattingProvider: createStringSetter("noteFormattingProvider"),
   setNoteFormattingModel: createStringSetter("noteFormattingModel"),
-  setNoteFormattingCloudMode: createStringSetter("noteFormattingCloudMode"),
-  setNoteFormattingCloudBaseUrl: createStringSetter("noteFormattingCloudBaseUrl"),
   setNoteFormattingRemoteUrl: createStringSetter("noteFormattingRemoteUrl"),
   setNoteFormattingCustomApiKey: createSecretSetter(
     "noteFormattingCustomApiKey",
-    "noteFormattingCustom",
-    "custom"
+    "noteFormattingCustom"
   ),
 
   setTranslationMode: createStringSetter("translationMode") as (mode: InferenceMode) => void,
   setTranslationProvider: createStringSetter("translationProvider"),
   setTranslationModel: createStringSetter("translationModel"),
-  setTranslationCloudMode: createStringSetter("translationCloudMode"),
-  setTranslationCloudBaseUrl: createStringSetter("translationCloudBaseUrl"),
   setTranslationRemoteUrl: createStringSetter("translationRemoteUrl"),
-  setTranslationCustomApiKey: createSecretSetter(
-    "translationCustomApiKey",
-    "translationCustom",
-    "custom"
-  ),
+  setTranslationCustomApiKey: createSecretSetter("translationCustomApiKey", "translationCustom"),
   setTranslationDisableThinking: createBooleanSetter("translationDisableThinking"),
   setUseDictationTranslation: createBooleanSetter("useDictationTranslation"),
   setTranslationSourceLanguage: createStringSetter("translationSourceLanguage"),
@@ -1796,55 +1572,20 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 
   chatAgentModel: readString("chatAgentModel", ""),
   chatAgentProvider: readString("chatAgentProvider", ""),
-  chatAgentCloudMode: readString("chatAgentCloudMode", "byok"),
-  chatAgentMode: (() => {
-    const v = readString("chatAgentMode", "local");
-    if (
-      v === "openwhispr" ||
-      v === "providers" ||
-      v === "local" ||
-      v === "self-hosted" ||
-      v === "enterprise"
-    )
-      return v;
-    return "local" as InferenceMode;
-  })(),
+  chatAgentMode: readInferenceMode("chatAgentMode"),
   chatAgentRemoteUrl: readString("chatAgentRemoteUrl", ""),
-  chatAgentCloudBaseUrl: readString("chatAgentCloudBaseUrl", ""),
   chatAgentCustomApiKey: readString("chatAgentCustomApiKey", ""),
 
-  dictationAgentMode: (() => {
-    const v = readString("dictationAgentMode", "local");
-    if (
-      v === "openwhispr" ||
-      v === "providers" ||
-      v === "local" ||
-      v === "self-hosted" ||
-      v === "enterprise"
-    )
-      return v;
-    return "local" as InferenceMode;
-  })(),
+  dictationAgentMode: readInferenceMode("dictationAgentMode"),
   dictationAgentProvider: readString("dictationAgentProvider", ""),
   dictationAgentModel: readString("dictationAgentModel", ""),
-  dictationAgentCloudMode: readString("dictationAgentCloudMode", "byok"),
-  dictationAgentCloudBaseUrl: readString("dictationAgentCloudBaseUrl", ""),
   dictationAgentRemoteUrl: readString("dictationAgentRemoteUrl", ""),
   dictationAgentCustomApiKey: readString("dictationAgentCustomApiKey", ""),
 
   voiceAgentScreenContext: readBoolean("voiceAgentScreenContext", false),
-  useDictationAgentVisionModel: readBoolean("useDictationAgentVisionModel", false),
-  // Cloud already vision-routes screenshot commands, so the override is BYOK-only.
-  dictationAgentVisionMode: "providers" as InferenceMode,
-  dictationAgentVisionProvider: readString("dictationAgentVisionProvider", ""),
-  dictationAgentVisionModel: readString("dictationAgentVisionModel", ""),
-  dictationAgentVisionCloudMode: readString("dictationAgentVisionCloudMode", "byok"),
-  dictationAgentVisionCloudBaseUrl: readString("dictationAgentVisionCloudBaseUrl", ""),
-  dictationAgentVisionCustomApiKey: readString("dictationAgentVisionCustomApiKey", ""),
 
   cleanupDisableThinking: readBoolean("cleanupDisableThinking", true),
   dictationAgentDisableThinking: readBoolean("dictationAgentDisableThinking", true),
-  dictationAgentVisionDisableThinking: readBoolean("dictationAgentVisionDisableThinking", true),
   noteFormattingDisableThinking: readBoolean("noteFormattingDisableThinking", true),
   chatAgentDisableThinking: readBoolean("chatAgentDisableThinking", true),
 
@@ -1862,32 +1603,16 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setDictationAgentMode: createStringSetter("dictationAgentMode") as (mode: InferenceMode) => void,
   setDictationAgentProvider: createStringSetter("dictationAgentProvider"),
   setDictationAgentModel: createStringSetter("dictationAgentModel"),
-  setDictationAgentCloudMode: createStringSetter("dictationAgentCloudMode"),
-  setDictationAgentCloudBaseUrl: createStringSetter("dictationAgentCloudBaseUrl"),
   setDictationAgentRemoteUrl: createStringSetter("dictationAgentRemoteUrl"),
   setDictationAgentCustomApiKey: createSecretSetter(
     "dictationAgentCustomApiKey",
-    "dictationAgentCustom",
-    "custom"
+    "dictationAgentCustom"
   ),
 
   setVoiceAgentScreenContext: createBooleanSetter("voiceAgentScreenContext"),
-  setUseDictationAgentVisionModel: createBooleanSetter("useDictationAgentVisionModel"),
-  setDictationAgentVisionProvider: createStringSetter("dictationAgentVisionProvider"),
-  setDictationAgentVisionModel: createStringSetter("dictationAgentVisionModel"),
-  setDictationAgentVisionCloudMode: createStringSetter("dictationAgentVisionCloudMode"),
-  setDictationAgentVisionCloudBaseUrl: createStringSetter("dictationAgentVisionCloudBaseUrl"),
-  setDictationAgentVisionCustomApiKey: createSecretSetter(
-    "dictationAgentVisionCustomApiKey",
-    "dictationAgentVisionCustom",
-    "custom"
-  ),
 
   setCleanupDisableThinking: createBooleanSetter("cleanupDisableThinking"),
   setDictationAgentDisableThinking: createBooleanSetter("dictationAgentDisableThinking"),
-  setDictationAgentVisionDisableThinking: createBooleanSetter(
-    "dictationAgentVisionDisableThinking"
-  ),
   setNoteFormattingDisableThinking: createBooleanSetter("noteFormattingDisableThinking"),
   setChatAgentDisableThinking: createBooleanSetter("chatAgentDisableThinking"),
 
@@ -1904,37 +1629,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setPreferredLanguage: createStringSetter("preferredLanguage"),
   setChineseScriptPreference: (value: ChineseScriptPreference) =>
     createStringSetter("chineseScriptPreference")(normalizeChineseScriptPreference(value)),
-  // Every provider shares one model slot per scope, so a plain provider write
-  // would destroy the outgoing provider's model. This remembers the outgoing
-  // model and restores the incoming provider's last one. The caller supplies the
-  // provider's default model because dynamic catalogs (Tinfoil) live in the UI.
-  switchReasoningProvider: (scope, providerId, fallbackModel = "") => {
-    const s = useSettingsStore.getState();
-    const cfg = selectResolvedLLMConfig(s, scope);
-    const memory = { ...s.reasoningModelByProvider };
-    // Only remember a model the outgoing provider actually owns — after a
-    // local/cloud mode round-trip the shared slot can hold a foreign id.
-    if (cfg.provider && cfg.provider !== providerId) {
-      if (reasoningModelBelongsToProvider(cfg.provider, cfg.model)) {
-        memory[`${scope}:${cfg.provider}`] = cfg.model;
-        persistReasoningModelMemory(memory);
-      }
-    } else if (reasoningModelBelongsToProvider(providerId, cfg.model)) {
-      // Reselecting the current provider with a model it owns: keep it.
-      setResolvedLLMConfig(scope, { provider: providerId });
-      return;
-    }
-    const remembered = memory[`${scope}:${providerId}`];
-    setResolvedLLMConfig(scope, {
-      provider: providerId,
-      model:
-        remembered && reasoningModelBelongsToProvider(providerId, remembered)
-          ? remembered
-          : fallbackModel,
-    });
-  },
-  setCleanupCloudMode: createStringSetter("cleanupCloudMode"),
-  setCleanupCloudBaseUrl: createStringSetter("cleanupCloudBaseUrl"),
   setAutoGenerateNoteTitle: createBooleanSetter("autoGenerateNoteTitle"),
   setUseCleanupModel: createBooleanSetter("useCleanupModel"),
   setUseDictationAgent: createBooleanSetter("useDictationAgent"),
@@ -2034,100 +1728,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     }
   },
 
-  setOpenaiApiKey: createSecretSetter("openaiApiKey", "openai", "openai"),
-  setAnthropicApiKey: createSecretSetter("anthropicApiKey", "anthropic", "anthropic"),
-  setGeminiApiKey: createSecretSetter("geminiApiKey", "gemini", "gemini"),
-  setGroqApiKey: createSecretSetter("groqApiKey", "groq", "groq"),
-  setOpenrouterApiKey: createSecretSetter("openrouterApiKey", "openrouter", "openrouter"),
-  setCortiApiKey: createSecretSetter("cortiApiKey", "cortiApiKey", "corti"),
-  setTinfoilApiKey: createSecretSetter("tinfoilApiKey", "tinfoil", "tinfoil"),
-  setCustomTranscriptionApiKey: (key: string) => {
-    set({ customTranscriptionApiKey: key });
-    debouncedSaveSecret("customTranscription", key);
-    invalidateApiKeyCaches("custom");
-  },
-  setCleanupCustomApiKey: (key: string) => {
-    set({ cleanupCustomApiKey: key });
-    debouncedSaveSecret("cleanupCustom", key);
-    invalidateApiKeyCaches("custom");
-  },
-
-  // Enterprise provider setters
-  setBedrockAuthMode: (value: string) => {
-    if (isBrowser) localStorage.setItem("bedrockAuthMode", value);
-    set({ bedrockAuthMode: value });
-  },
-  setBedrockRegion: (value: string) => {
-    if (isBrowser) localStorage.setItem("bedrockRegion", value);
-    set({ bedrockRegion: value });
-    window.electronAPI?.saveBedrockRegion?.(value);
-    debouncedPersistToEnv();
-  },
-  setBedrockProfile: (value: string) => {
-    if (isBrowser) localStorage.setItem("bedrockProfile", value);
-    set({ bedrockProfile: value });
-    window.electronAPI?.saveBedrockProfile?.(value);
-    debouncedPersistToEnv();
-  },
-  setBedrockAccessKeyId: (key: string) => {
-    set({ bedrockAccessKeyId: key });
-    debouncedSaveSecret("bedrockAccessKeyId", key);
-    debouncedPersistToEnv();
-  },
-  setBedrockSecretAccessKey: (key: string) => {
-    set({ bedrockSecretAccessKey: key });
-    debouncedSaveSecret("bedrockSecretAccessKey", key);
-    debouncedPersistToEnv();
-  },
-  setBedrockSessionToken: (key: string) => {
-    set({ bedrockSessionToken: key });
-    debouncedSaveSecret("bedrockSessionToken", key);
-    debouncedPersistToEnv();
-  },
-  setAzureEndpoint: (value: string) => {
-    if (isBrowser) localStorage.setItem("azureEndpoint", value);
-    set({ azureEndpoint: value });
-    window.electronAPI?.saveAzureEndpoint?.(value);
-    debouncedPersistToEnv();
-  },
-  setAzureApiKey: (key: string) => {
-    set({ azureApiKey: key });
-    debouncedSaveSecret("azureApiKey", key);
-    debouncedPersistToEnv();
-  },
-  setAzureDeploymentName: (value: string) => {
-    if (isBrowser) localStorage.setItem("azureDeploymentName", value);
-    set({ azureDeploymentName: value });
-    window.electronAPI?.saveAzureDeployment?.(value);
-    debouncedPersistToEnv();
-  },
-  setAzureApiVersion: (value: string) => {
-    if (isBrowser) localStorage.setItem("azureApiVersion", value);
-    set({ azureApiVersion: value });
-    window.electronAPI?.saveAzureApiVersion?.(value);
-    debouncedPersistToEnv();
-  },
-  setVertexAuthMode: (value: string) => {
-    if (isBrowser) localStorage.setItem("vertexAuthMode", value);
-    set({ vertexAuthMode: value });
-  },
-  setVertexProject: (value: string) => {
-    if (isBrowser) localStorage.setItem("vertexProject", value);
-    set({ vertexProject: value });
-    window.electronAPI?.saveVertexProject?.(value);
-    debouncedPersistToEnv();
-  },
-  setVertexLocation: (value: string) => {
-    if (isBrowser) localStorage.setItem("vertexLocation", value);
-    set({ vertexLocation: value });
-    window.electronAPI?.saveVertexLocation?.(value);
-    debouncedPersistToEnv();
-  },
-  setVertexApiKey: (key: string) => {
-    set({ vertexApiKey: key });
-    debouncedSaveSecret("vertexApiKey", key);
-    debouncedPersistToEnv();
-  },
+  setCustomTranscriptionApiKey: createSecretSetter(
+    "customTranscriptionApiKey",
+    "customTranscription"
+  ),
+  setCleanupCustomApiKey: createSecretSetter("cleanupCustomApiKey", "cleanupCustom"),
 
   setDictationKey: (key: string) => {
     if (isBrowser) localStorage.setItem("dictationKey", key);
@@ -2346,15 +1951,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
 
   setChatAgentModel: createStringSetter("chatAgentModel"),
   setChatAgentProvider: createStringSetter("chatAgentProvider"),
-  setChatAgentCloudMode: createStringSetter("chatAgentCloudMode"),
   setChatAgentMode: createStringSetter("chatAgentMode") as (mode: InferenceMode) => void,
-  setChatAgentCloudBaseUrl: createStringSetter("chatAgentCloudBaseUrl"),
   setChatAgentRemoteUrl: createStringSetter("chatAgentRemoteUrl"),
-  setChatAgentCustomApiKey: createSecretSetter(
-    "chatAgentCustomApiKey",
-    "chatAgentCustom",
-    "custom"
-  ),
+  setChatAgentCustomApiKey: createSecretSetter("chatAgentCustomApiKey", "chatAgentCustom"),
 
   updateTranscriptionSettings: (settings: Partial<TranscriptionSettings>) => {
     const s = useSettingsStore.getState();
@@ -2406,57 +2005,19 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       s.setUseDictationAgent(settings.useDictationAgent);
     if (settings.cleanupModel !== undefined) s.setCleanupModel(settings.cleanupModel);
     if (settings.cleanupProvider !== undefined) s.setCleanupProvider(settings.cleanupProvider);
-    if (settings.cleanupCloudBaseUrl !== undefined)
-      s.setCleanupCloudBaseUrl(settings.cleanupCloudBaseUrl);
-    if (settings.cleanupCloudMode !== undefined) s.setCleanupCloudMode(settings.cleanupCloudMode);
+    if (settings.cleanupMode !== undefined) s.setCleanupMode(settings.cleanupMode);
     if (settings.cleanupRemoteUrl !== undefined) s.setCleanupRemoteUrl(settings.cleanupRemoteUrl);
   },
 
-  // Apply a cleanup config to dictation, then mirror its cloud routing to the
-  // other three LLM scopes — used when onboarding routes every reasoning scope to
-  // one provider so PHI never reaches a second LLM (e.g. Corti for medical providers).
-  setCloudReasoningForAllScopes: (settings) => {
-    const s = useSettingsStore.getState();
-    // Onboarding routes every scope to the local runtime or the enterprise
-    // provider by passing "local"/"enterprise" as cleanupCloudMode. Those are
-    // InferenceModes of their own, not cloud routings — deriveReasoningMode
-    // collapses everything non-byok to "openwhispr", which would misroute
-    // privacy-local and manual-enterprise setups to the managed cloud. Map them
-    // straight through and keep them out of the *CloudMode fields, which only
-    // ever hold real cloud routings ("openwhispr"/"byok").
-    const requestedCloudMode = settings.cleanupCloudMode ?? s.cleanupCloudMode;
-    const isDirectMode = requestedCloudMode === "local" || requestedCloudMode === "enterprise";
-    // Derive the mode from the incoming patch (falling back to current state) so
-    // the helper patches are the single source of truth for every scope's mode.
-    const mode = isDirectMode
-      ? requestedCloudMode
-      : deriveReasoningMode(requestedCloudMode, settings.cleanupProvider ?? s.cleanupProvider);
-    const { dictationCleanup, ...mirrored } = buildReasoningScopePatches(
-      isDirectMode ? { ...settings, cleanupCloudMode: undefined } : settings,
-      mode
-    );
-    s.updateCleanupSettings(dictationCleanup);
-    s.setCleanupMode(dictationCleanup.cleanupMode);
-    if (dictationCleanup.cleanupCustomApiKey !== undefined) {
-      s.setCleanupCustomApiKey(dictationCleanup.cleanupCustomApiKey);
-    }
-    // Each Settings tab selects on its own mode field, so every scope gets the
-    // mode even when the routing fields are absent — otherwise the tab keeps
-    // showing the previous provider despite the new cloud routing.
-    for (const [scope, patch] of Object.entries(mirrored)) {
+  // Point every LLM scope at one runtime, as onboarding does.
+  setReasoningForAllScopes: (config: ReasoningSelection) => {
+    for (const [scope, patch] of Object.entries(buildReasoningScopePatches(config))) {
       setResolvedLLMConfig(scope as InferenceScope, patch);
     }
   },
 
   updateApiKeys: (keys: Partial<ApiKeySettings>) => {
     const s = useSettingsStore.getState();
-    if (keys.openaiApiKey !== undefined) s.setOpenaiApiKey(keys.openaiApiKey);
-    if (keys.anthropicApiKey !== undefined) s.setAnthropicApiKey(keys.anthropicApiKey);
-    if (keys.geminiApiKey !== undefined) s.setGeminiApiKey(keys.geminiApiKey);
-    if (keys.groqApiKey !== undefined) s.setGroqApiKey(keys.groqApiKey);
-    if (keys.openrouterApiKey !== undefined) s.setOpenrouterApiKey(keys.openrouterApiKey);
-    if (keys.cortiApiKey !== undefined) s.setCortiApiKey(keys.cortiApiKey);
-    if (keys.tinfoilApiKey !== undefined) s.setTinfoilApiKey(keys.tinfoilApiKey);
     if (keys.customTranscriptionApiKey !== undefined)
       s.setCustomTranscriptionApiKey(keys.customTranscriptionApiKey);
     if (keys.cleanupCustomApiKey !== undefined) s.setCleanupCustomApiKey(keys.cleanupCustomApiKey);
@@ -2467,26 +2028,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     if (settings.chatAgentModel !== undefined) s.setChatAgentModel(settings.chatAgentModel);
     if (settings.chatAgentProvider !== undefined)
       s.setChatAgentProvider(settings.chatAgentProvider);
-    if (settings.chatAgentCloudMode !== undefined)
-      s.setChatAgentCloudMode(settings.chatAgentCloudMode);
   },
 }));
 
 // --- Selectors (derived state, not stored) ---
-
-// OpenWhispr Cloud modes need an OpenWhispr account, which this build does not
-// have, so no scope ever resolves to the cloud.
-export const selectIsCloudCleanupMode = (_state: SettingsState) => false;
-
-export const selectEffectiveCleanupProvider = (state: SettingsState) => state.cleanupProvider;
-
-export const selectIsCloudChatAgentMode = (_state: SettingsState) => false;
-
-export const selectIsCloudDictationAgentMode = (_state: SettingsState) => false;
-
-export const selectIsCloudTranslationMode = (_state: SettingsState) => false;
-
-export const selectIsCloudNoteFormattingMode = (_state: SettingsState) => false;
 
 export interface ResolvedMeetingTranscription {
   useLocalWhisper: boolean;
@@ -2544,8 +2089,6 @@ export interface ResolvedNoteFormatting {
   provider: string;
   model: string;
   mode: InferenceMode;
-  cloudMode: string;
-  cloudBaseUrl: string;
   remoteUrl: string;
   customApiKey: string;
 }
@@ -2556,19 +2099,13 @@ export const selectResolvedNoteFormatting = (state: SettingsState): ResolvedNote
   // The endpoint falls back to dictation cleanup, so the key that opens it must too,
   // or an inherited endpoint gets called with no credential.
   const borrowsEndpoint = inheritsFallbackEndpoint(
-    {
-      mode: cfg.mode,
-      cloudBaseUrl: state.noteFormattingCloudBaseUrl,
-      remoteUrl: state.noteFormattingRemoteUrl,
-    },
+    { mode: cfg.mode, remoteUrl: state.noteFormattingRemoteUrl },
     cleanup.mode
   );
   return {
     provider: cfg.provider,
     model: cfg.model,
     mode: cfg.mode,
-    cloudMode: cfg.cloudMode || "",
-    cloudBaseUrl: cfg.cloudBaseUrl || "",
     remoteUrl: cfg.remoteUrl || "",
     customApiKey: cfg.customApiKey || (borrowsEndpoint ? cleanup.customApiKey || "" : ""),
   };
@@ -2579,8 +2116,6 @@ export interface ResolvedLLMConfig {
   mode: InferenceMode;
   provider: string;
   model: string;
-  cloudMode?: string;
-  cloudBaseUrl?: string;
   remoteUrl?: string;
   customApiKey?: string;
   disableThinking: boolean;
@@ -2609,8 +2144,6 @@ export const selectResolvedLLMConfig = (
     mode: state[def.storeKeys.mode] as InferenceMode,
     provider: read("provider") || fallback?.provider || "",
     model: read("model") || fallback?.model || "",
-    cloudMode: read("cloudMode") || fallback?.cloudMode,
-    cloudBaseUrl: read("cloudBaseUrl") || fallback?.cloudBaseUrl,
     remoteUrl: read("remoteUrl") || fallback?.remoteUrl,
     // Not inherited here: the settings editor renders this field, and a borrowed key
     // in it would be committed to this scope's storage by an idle edit. Inheritance
@@ -2628,7 +2161,6 @@ const SECRET_SCOPE_KEY_SETTERS = {
   noteFormattingCustomApiKey: "setNoteFormattingCustomApiKey",
   translationCustomApiKey: "setTranslationCustomApiKey",
   dictationAgentCustomApiKey: "setDictationAgentCustomApiKey",
-  dictationAgentVisionCustomApiKey: "setDictationAgentVisionCustomApiKey",
   chatAgentCustomApiKey: "setChatAgentCustomApiKey",
 } as const;
 
@@ -2659,13 +2191,9 @@ export function setResolvedLLMConfig(
   if (Object.keys(updates).length > 0) useSettingsStore.setState(updates);
 }
 
-export function isCloudChatAgentMode() {
-  return selectIsCloudChatAgentMode(getSettings());
-}
-
 // What resolveLocalServerNeeds (main process) decides the shared llama-server
-// from. The resolved configs carry fallback inheritance and enterprise
-// overrides, so they match what requests run on.
+// from. The resolved configs carry fallback inheritance, so they match what
+// requests run on.
 export function selectLocalServerPrefs(state: SettingsState): LocalServerPrefs {
   const cleanup = selectResolvedLLMConfig(state, "dictationCleanup");
   const dictationAgent = selectResolvedLLMConfig(state, "dictationAgent");
@@ -2695,6 +2223,10 @@ export function getSettings(): SettingsState {
   return useSettingsStore.getState();
 }
 
+export function getEffectiveCleanupModel() {
+  return selectResolvedLLMConfig(getSettings(), "dictationCleanup").model;
+}
+
 /**
  * Drops any local model selection the model cache no longer backs — a scope left
  * pointing at a deleted model fails at inference time with an error the user has
@@ -2719,52 +2251,6 @@ export async function reconcileLocalModelSelections(): Promise<void> {
   const models = await window.electronAPI.modelGetAll();
   const installed = new Set(models.filter((model) => model.isDownloaded).map((model) => model.id));
   clearMissingLocalModelSelections((modelId) => installed.has(modelId));
-}
-
-/**
- * Repoints any scope still selecting a cloud model the registry no longer ships
- * (e.g. a retired Groq id) at that provider's current default — otherwise every
- * request 404s with an error the user can't act on. Custom, OpenRouter and
- * Tinfoil ids are skipped: they're free-form or reconciled from the live
- * catalog in tinfoilModels.ts.
- */
-export function reconcileRetiredCloudModelSelections(): void {
-  const state = useSettingsStore.getState() as unknown as Record<string, unknown>;
-  for (const scope of Object.values(INFERENCE_SCOPES)) {
-    const provider = state[scope.storeKeys.provider] as string;
-    const model = state[scope.storeKeys.model] as string;
-    if (!provider || !model || provider === "tinfoil") continue;
-    const providerDef = modelRegistryData.cloudProviders.find((p) => p.id === provider);
-    if (!providerDef || reasoningModelBelongsToProvider(provider, model)) continue;
-    const replacement = pickDefaultModelId(providerDef);
-    if (!replacement) continue;
-    setStringSetting(scope.storeKeys.model as keyof SettingsState, replacement);
-    logger.info(
-      "Repointed retired cloud model selection",
-      { scope: scope.storeKeys.model, from: model, to: replacement },
-      "settings"
-    );
-  }
-}
-
-export function getEffectiveCleanupModel() {
-  const state = getSettings();
-  if (selectIsCloudCleanupMode(state)) {
-    return "";
-  }
-  return selectResolvedLLMConfig(state, "dictationCleanup").model;
-}
-
-export function isCloudCleanupMode() {
-  return selectIsCloudCleanupMode(getSettings());
-}
-
-export function isCloudDictationAgentMode() {
-  return selectIsCloudDictationAgentMode(getSettings());
-}
-
-export function isCloudTranslationMode() {
-  return selectIsCloudTranslationMode(getSettings());
 }
 
 // --- Initialization ---
@@ -2822,73 +2308,30 @@ export async function initializeSettings(): Promise<void> {
 
     try {
       const [
-        openai,
-        anthropic,
-        gemini,
-        groq,
-        openrouter,
-        cortiApiKey,
-        tinfoil,
         customTx,
         customRx,
         noteFormattingCustom,
         translationCustom,
         dictationAgentCustom,
-        dictationAgentVisionCustom,
         chatAgentCustom,
-        bedrockAccessKeyId,
-        bedrockSecretAccessKey,
-        bedrockSessionToken,
-        azureApiKey,
-        vertexApiKey,
       ] = await Promise.all([
-        window.electronAPI.getOpenAIKey?.(),
-        window.electronAPI.getAnthropicKey?.(),
-        window.electronAPI.getGeminiKey?.(),
-        window.electronAPI.getGroqKey?.(),
-        window.electronAPI.getOpenrouterKey?.(),
-        window.electronAPI.getCortiKey?.(),
-        window.electronAPI.getTinfoilKey?.(),
         window.electronAPI.getCustomTranscriptionKey?.(),
         window.electronAPI.getCleanupCustomKey?.(),
         window.electronAPI.getNoteFormattingCustomKey?.(),
         window.electronAPI.getTranslationCustomKey?.(),
         window.electronAPI.getDictationAgentCustomKey?.(),
-        window.electronAPI.getDictationAgentVisionCustomKey?.(),
         window.electronAPI.getChatAgentCustomKey?.(),
-        window.electronAPI.getBedrockAccessKeyId?.(),
-        window.electronAPI.getBedrockSecretAccessKey?.(),
-        window.electronAPI.getBedrockSessionToken?.(),
-        window.electronAPI.getAzureApiKey?.(),
-        window.electronAPI.getVertexApiKey?.(),
       ]);
 
       useSettingsStore.setState({
-        openaiApiKey: openai || "",
-        anthropicApiKey: anthropic || "",
-        geminiApiKey: gemini || "",
-        groqApiKey: groq || "",
-        openrouterApiKey: openrouter || "",
-        cortiApiKey: cortiApiKey || "",
-        tinfoilApiKey: tinfoil || "",
         customTranscriptionApiKey: customTx || "",
         cleanupCustomApiKey: customRx || "",
-        bedrockAccessKeyId: bedrockAccessKeyId || "",
         ...(await migrateScopeCustomKeys([
           ["noteFormattingCustomApiKey", noteFormattingCustom, "saveNoteFormattingCustomKey"],
           ["translationCustomApiKey", translationCustom, "saveTranslationCustomKey"],
           ["dictationAgentCustomApiKey", dictationAgentCustom, "saveDictationAgentCustomKey"],
-          [
-            "dictationAgentVisionCustomApiKey",
-            dictationAgentVisionCustom,
-            "saveDictationAgentVisionCustomKey",
-          ],
           ["chatAgentCustomApiKey", chatAgentCustom, "saveChatAgentCustomKey"],
         ])),
-        bedrockSecretAccessKey: bedrockSecretAccessKey || "",
-        bedrockSessionToken: bedrockSessionToken || "",
-        azureApiKey: azureApiKey || "",
-        vertexApiKey: vertexApiKey || "",
       });
 
       if (localStorage.getItem("_dictationAgentSeeded") === "key-pending") {
@@ -2903,21 +2346,6 @@ export async function initializeSettings(): Promise<void> {
       }
       // Latch for the one-time semantic reindex that no longer exists (#2143).
       localStorage.removeItem("semanticReindexVersion");
-
-      // Users who configured OpenRouter through the Custom tab keep their key
-      // in the shared custom slot — seed the dedicated slot from it once.
-      if (!openrouter && customRx) {
-        const hydrated = useSettingsStore.getState();
-        const usesOpenRouterViaCustom = (Object.keys(INFERENCE_SCOPES) as InferenceScope[]).some(
-          (scope) => {
-            const cfg = selectResolvedLLMConfig(hydrated, scope);
-            return cfg.provider === "custom" && (cfg.cloudBaseUrl || "").includes("openrouter.ai");
-          }
-        );
-        if (usesOpenRouterViaCustom) {
-          hydrated.setOpenrouterApiKey(customRx);
-        }
-      }
     } catch (err) {
       logger.warn(
         "Failed to hydrate secrets from main process",
@@ -3121,8 +2549,6 @@ export async function initializeSettings(): Promise<void> {
         "settings"
       );
     }
-
-    reconcileRetiredCloudModelSelections();
 
     try {
       await reconcileLocalModelSelections();

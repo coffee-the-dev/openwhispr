@@ -5,17 +5,12 @@ const { app } = require("electron");
 const debugLogger = require("./debugLogger");
 const { normalizeUiLanguage } = require("./i18nMain");
 const secretCrypto = require("./secretCrypto");
-const { BYOK_API_KEYS } = require("../config/secretKeys");
+const { SCOPE_API_KEYS } = require("../config/secretKeys");
 
 const SECRET_KEYS = [
-  ...BYOK_API_KEYS.map((k) => k.env),
+  ...SCOPE_API_KEYS.map((k) => k.env),
   "CUSTOM_TRANSCRIPTION_API_KEY",
   "CUSTOM_CLEANUP_API_KEY",
-  "BEDROCK_ACCESS_KEY_ID",
-  "BEDROCK_SECRET_ACCESS_KEY",
-  "BEDROCK_SESSION_TOKEN",
-  "AZURE_OPENAI_API_KEY",
-  "VERTEX_API_KEY",
 ];
 
 const SECRET_KEY_SET = new Set(SECRET_KEYS);
@@ -23,12 +18,25 @@ const SECRET_KEY_SET = new Set(SECRET_KEYS);
 // Secrets for providers this build no longer has. Their encrypted files are
 // deleted at startup rather than left behind in userData.
 const RETIRED_SECRET_KEYS = [
+  "OPENAI_API_KEY",
+  "ANTHROPIC_API_KEY",
+  "GEMINI_API_KEY",
+  "GROQ_API_KEY",
+  "OPENROUTER_API_KEY",
+  "TINFOIL_API_KEY",
+  "CORTI_API_KEY",
   "XAI_API_KEY",
   "MISTRAL_API_KEY",
   "DEEPGRAM_API_KEY",
   "ASSEMBLYAI_API_KEY",
   "CORTI_CLIENT_ID",
   "CORTI_CLIENT_SECRET",
+  "DICTATION_AGENT_VISION_CUSTOM_API_KEY",
+  "BEDROCK_ACCESS_KEY_ID",
+  "BEDROCK_SECRET_ACCESS_KEY",
+  "BEDROCK_SESSION_TOKEN",
+  "AZURE_OPENAI_API_KEY",
+  "VERTEX_API_KEY",
 ];
 
 const PERSISTED_KEYS = [
@@ -59,13 +67,6 @@ const PERSISTED_KEYS = [
   "WHISPER_THREADS",
   "TRANSCRIPTION_GPU_UUID",
   "INTELLIGENCE_GPU_UUID",
-  "BEDROCK_REGION",
-  "BEDROCK_PROFILE",
-  "AZURE_OPENAI_ENDPOINT",
-  "AZURE_OPENAI_DEPLOYMENT",
-  "AZURE_OPENAI_API_VERSION",
-  "VERTEX_PROJECT",
-  "VERTEX_LOCATION",
 ];
 
 // Module-level so writes are serialized across all instances — hotkeyManager
@@ -291,84 +292,6 @@ class EnvironmentManager {
     return this._saveKey("CUSTOM_CLEANUP_API_KEY", key);
   }
 
-  // Enterprise providers — AWS Bedrock
-  getBedrockRegion() {
-    return this._getKey("BEDROCK_REGION");
-  }
-  saveBedrockRegion(value) {
-    return this._saveKey("BEDROCK_REGION", value);
-  }
-  getBedrockProfile() {
-    return this._getKey("BEDROCK_PROFILE");
-  }
-  saveBedrockProfile(value) {
-    return this._saveKey("BEDROCK_PROFILE", value);
-  }
-  getBedrockAccessKeyId() {
-    return this._getKey("BEDROCK_ACCESS_KEY_ID");
-  }
-  saveBedrockAccessKeyId(key) {
-    return this._saveKey("BEDROCK_ACCESS_KEY_ID", key);
-  }
-  getBedrockSecretAccessKey() {
-    return this._getKey("BEDROCK_SECRET_ACCESS_KEY");
-  }
-  saveBedrockSecretAccessKey(key) {
-    return this._saveKey("BEDROCK_SECRET_ACCESS_KEY", key);
-  }
-  getBedrockSessionToken() {
-    return this._getKey("BEDROCK_SESSION_TOKEN");
-  }
-  saveBedrockSessionToken(key) {
-    return this._saveKey("BEDROCK_SESSION_TOKEN", key);
-  }
-
-  // Enterprise providers — Azure OpenAI
-  getAzureEndpoint() {
-    return this._getKey("AZURE_OPENAI_ENDPOINT");
-  }
-  saveAzureEndpoint(value) {
-    return this._saveKey("AZURE_OPENAI_ENDPOINT", value);
-  }
-  getAzureApiKey() {
-    return this._getKey("AZURE_OPENAI_API_KEY");
-  }
-  saveAzureApiKey(key) {
-    return this._saveKey("AZURE_OPENAI_API_KEY", key);
-  }
-  getAzureDeployment() {
-    return this._getKey("AZURE_OPENAI_DEPLOYMENT");
-  }
-  saveAzureDeployment(value) {
-    return this._saveKey("AZURE_OPENAI_DEPLOYMENT", value);
-  }
-  getAzureApiVersion() {
-    return this._getKey("AZURE_OPENAI_API_VERSION");
-  }
-  saveAzureApiVersion(value) {
-    return this._saveKey("AZURE_OPENAI_API_VERSION", value);
-  }
-
-  // Enterprise providers — GCP Vertex AI
-  getVertexProject() {
-    return this._getKey("VERTEX_PROJECT");
-  }
-  saveVertexProject(value) {
-    return this._saveKey("VERTEX_PROJECT", value);
-  }
-  getVertexLocation() {
-    return this._getKey("VERTEX_LOCATION");
-  }
-  saveVertexLocation(value) {
-    return this._saveKey("VERTEX_LOCATION", value);
-  }
-  getVertexApiKey() {
-    return this._getKey("VERTEX_API_KEY");
-  }
-  saveVertexApiKey(key) {
-    return this._saveKey("VERTEX_API_KEY", key);
-  }
-
   getDictationKey() {
     return this._getKey("DICTATION_KEY");
   }
@@ -520,9 +443,9 @@ class EnvironmentManager {
   }
 }
 
-// Generate the uniform BYOK key accessors (getOpenAIKey/saveOpenAIKey/…) from
-// the shared manifest so each provider is defined in exactly one place.
-for (const k of BYOK_API_KEYS) {
+// Generate the uniform per-scope key accessors (getChatAgentCustomKey/…) from
+// the shared manifest so each scope is defined in exactly one place.
+for (const k of SCOPE_API_KEYS) {
   EnvironmentManager.prototype[k.get] = function () {
     return this._getKey(k.env);
   };

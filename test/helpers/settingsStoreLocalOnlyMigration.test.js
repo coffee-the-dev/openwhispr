@@ -2,8 +2,9 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { createRendererServer, installBrowserGlobals } = require("../lib/rendererTestHarness");
 
-// Pins migrateToLocalOnlyModes() in settingsStore.ts: cloud, enterprise and
-// provider selections leave OpenWhispr Cloud and third parties exactly once.
+// Pins the local-only migrations in settingsStore.ts: cloud, enterprise and
+// provider selections leave OpenWhispr Cloud and third parties. Transcription
+// moves once; LLM scopes are settled on every launch.
 //
 // The earlier one-shot migrations are seeded done so each case exercises this
 // migration alone.
@@ -121,7 +122,6 @@ test("persisted cloud and provider modes move to local or self-hosted once", asy
       cleanupModel: "gpt-5-mini",
     });
     assert.equal(state.cleanupMode, "local");
-    assert.equal(state.cleanupCloudMode, "byok");
     assert.equal(state.cleanupProvider, "");
     assert.equal(state.cleanupModel, "");
   });
@@ -182,7 +182,46 @@ test("persisted cloud and provider modes move to local or self-hosted once", asy
     for (const key of Object.keys(retired)) assert.equal(storage.getItem(key), null, key);
   });
 
-  await t.test("the migration runs once", async () => {
+  await t.test("a provider picked after the transcription move is settled too", async () => {
+    const state = await load({
+      _localOnlyModesMigrated: "1",
+      dictationAgentMode: "providers",
+      dictationAgentProvider: "anthropic",
+      dictationAgentModel: "claude-sonnet-4-6",
+      translationMode: "providers",
+      translationProvider: "openai",
+      translationRemoteUrl: "https://vllm.lan/v1",
+    });
+    assert.equal(state.dictationAgentMode, "local");
+    assert.equal(state.dictationAgentProvider, "");
+    assert.equal(state.dictationAgentModel, "");
+    assert.equal(state.translationMode, "self-hosted");
+    assert.equal(state.translationProvider, "lan");
+    assert.equal(storage.getItem("dictationAgentCloudMode"), null);
+  });
+
+  await t.test("a Custom provider left on OpenAI's default base is not adopted", async () => {
+    const state = await load({
+      cleanupMode: "providers",
+      cleanupProvider: "custom",
+      cleanupCloudBaseUrl: "https://api.openai.com/v1",
+    });
+    assert.equal(state.cleanupMode, "local");
+    assert.equal(state.cleanupRemoteUrl, "");
+  });
+
+  await t.test("a local scope forgets a provider the local catalog does not own", async () => {
+    const state = await load({
+      chatAgentMode: "local",
+      chatAgentProvider: "groq",
+      chatAgentModel: "llama-3.3-70b-versatile",
+    });
+    assert.equal(state.chatAgentMode, "local");
+    assert.equal(state.chatAgentProvider, "");
+    assert.equal(state.chatAgentModel, "");
+  });
+
+  await t.test("the transcription migration runs once", async () => {
     const state = await load({
       _localOnlyModesMigrated: "1",
       transcriptionMode: "providers",

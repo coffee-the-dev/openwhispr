@@ -285,10 +285,6 @@
         "titleLineOne": "Choisissez votre",
         "titleLineTwo": "configuration OpenWhispr",
         "description": "Choisissez l’option qui correspond à votre façon de travailler.",
-        "byok": {
-          "title": "Fournisseur d’API",
-          "description": "Utilisez votre propre clé API."
-        },
         "local": {
           "title": "Sur votre appareil",
           "description": "Transcription privée hors ligne. Nécessite au moins {{minimumSpace}} Go d’espace libre.",
@@ -302,16 +298,6 @@
           }
         },
         "warnings": {
-          "byok": {
-            "title": "Votre fournisseur traite vos données",
-            "description": "Vous ajouterez des identifiants pour des fournisseurs distincts de dictée et d’Assistant. Les tarifs et les politiques de conservation du fournisseur s’appliquent.",
-            "continue": "Configurer le fournisseur d’API",
-            "steps": {
-              "1": "Choisir des fournisseurs pour la dictée et l’Assistant",
-              "2": "Ajouter les identifiants via le stockage sécurisé",
-              "3": "Tester chaque connexion avant l’activation"
-            }
-          },
           "local": {
             "title": "La configuration locale demande quelques étapes supplémentaires",
             "description": "Le traitement local garde votre voix sur cet appareil, mais nécessite une configuration initiale et au moins {{minimumSpace}} Go d’espace libre.",
@@ -324,36 +310,30 @@
           }
         },
         "continueSetup": "Poursuivre la configuration",
-        "showMore": "Afficher plus d’options",
-        "moreOptions": {
-          "title": "Choisissez votre configuration d’API",
-          "description": "Ajoutez une clé API ou connectez un modèle auto-hébergé.",
-          "selfHosted": {
-            "title": "Auto-hébergé",
-            "description": "Connectez votre propre modèle hébergé."
-          }
+        "selfHosted": {
+          "title": "Auto-hébergé",
+          "description": "Connectez des serveurs compatibles OpenAI sur votre réseau.",
+          "features": {
+            "network": "Fonctionne sur votre réseau",
+            "key": "Clé API facultative",
+            "models": "Utilisez n’importe quel modèle de votre serveur"
+          },
+          "connect": "Connecter un serveur"
         }
       },
       "provider": {
         "progress": "Progression de la configuration du fournisseur",
         "dictation": "Dictée",
         "assistant": "Assistant",
-        "title": "Connectez votre fournisseur d’IA",
-        "description": "Choisissez un fournisseur, ajoutez vos identifiants et testez la connexion.",
-        "descriptionLineOne": "Choisissez un fournisseur et ajoutez",
-        "descriptionLineTwo": "votre clé API.",
-        "selfHosted": "J’ai une clé de modèle auto-hébergé",
-        "providerLabel": "Fournisseur",
-        "providerPlaceholder": "Choisir le fournisseur du modèle",
-        "modelLabel": "Modèle",
-        "modelPlaceholder": "Choisir le modèle",
+        "title": "Connectez votre serveur",
+        "description": "Saisissez l’adresse de votre serveur et une clé API facultative, puis testez la connexion.",
+        "descriptionLineOne": "Saisissez l’adresse de votre serveur",
+        "descriptionLineTwo": "et une clé API facultative.",
         "apiKey": "Clé API",
-        "apiKeyPlaceholder": "Collez votre clé API",
         "endpointUrl": "URL de l’endpoint",
         "endpointPlaceholder": "Collez l’URL de votre endpoint",
         "optional": "Facultatif",
         "modelId": "ID du modèle",
-        "modelIdPlaceholder": "Saisissez l’ID de votre modèle",
         "testConnection": "Tester la connexion",
         "proceed": "Continuer",
         "runTest": "Lancer le test",
@@ -364,8 +344,6 @@
           "endpointRequired": "Saisissez l’URL de l’endpoint avant de lancer le test.",
           "invalidUrl": "L’endpoint doit être une URL HTTP ou HTTPS valide.",
           "httpsRequired": "Les points de terminaison publics doivent utiliser HTTPS. HTTP n’est autorisé que sur les adresses privées.",
-          "unsupportedProvider": "Le test de connexion n’est pas disponible pour ce fournisseur.",
-          "apiKeyRequired": "Ajoutez une clé API avant de lancer le test.",
           "credentialsRejected": "Le fournisseur a rejeté ces identifiants.",
           "endpointNotFound": "L’endpoint n’expose pas de liste de modèles compatible OpenAI.",
           "modelNotFound": "Le modèle sélectionné n’est pas disponible auprès de ce fournisseur.",
@@ -493,27 +471,6 @@
       "hotkeyLabel": "Raccourci réunion",
       "hotkeyHint": "Facultatif — appuyez dessus pendant une réunion pour démarrer une note instantanément."
     },
-    "finish": {
-      "title": "Tout est prêt",
-      "cloudDescription": "Vous êtes sur OpenWhispr Cloud : rapide, précis, zéro conservation des données et 2 000 mots gratuits par semaine. Vous préférez tout garder sur votre appareil ? Passez au traitement local dans les Réglages.",
-      "localDescription": "Vous êtes configuré avec le traitement local ou votre propre clé. Ajustez le traitement de votre audio à tout moment dans les Réglages.",
-      "cleanupNote": "Le nettoyage de texte par IA utilise des réglages par défaut raisonnables. Vous pouvez l'ajuster dans les Réglages.",
-      "openSettings": "Ouvrir les Réglages",
-      "skipForNow": "Plus tard",
-      "corti": {
-        "title": "Vous nous avez dit être ici pour la transcription clinique",
-        "description": "Nous sommes partenaires de Corti — reconnaissance vocale de niveau clinique, la plus précise, et conforme à la HIPAA.",
-        "createAccount": "Créez votre compte Corti",
-        "creditBadge": "50 $ de crédit offert",
-        "regionHint": "Choisissez où votre audio est traité — États-Unis ou UE.",
-        "llmHint": "Les fonctionnalités de modèle de langage s'exécuteront aussi sur les modèles Corti.",
-        "useCorti": "Utiliser Corti",
-        "skip": "Pas maintenant",
-        "step1": "Inscrivez-vous sur corti.ai",
-        "step2": "Ouvrez la console Corti et créez des identifiants API",
-        "step3": "Collez votre Client ID et votre Secret ci-dessous"
-      }
-    },
     "welcomeSubtitle": "Le pouvoir de votre voix. À vos conditions."
   },
   "streaming": {
@@ -611,25 +568,15 @@
     }
   },
   "reasoning": {
-    "mode": {
-      "cloud": "Cloud",
-      "local": "Local",
-      "enterprise": "Entreprise",
-      "localDescription": "S'exécute sur votre appareil. Confidentialité totale et fonctionnement hors ligne.",
-      "cloudDescription": "Modèles avancés via API. Rapides et puissants, nécessitent internet.",
-      "enterpriseDescription": "Utilisez les identifiants cloud de votre organisation."
-    },
     "custom": {
       "endpointWithProtocol": "Saisissez une URL de base complète avec protocole (ex : https://server/v1).",
       "httpsRequired": "HTTPS requis (HTTP autorisé seulement en réseau local).",
-      "endpointInvalid": "Le point de terminaison personnalisé est invalide ou non configuré. Vérifiez l'URL du point de terminaison dans Réglages → Modèles d'IA.",
       "endpointUnauthorized": "Le endpoint a rejeté la requête (401/403). Ajoutez une clé API ou ajustez l'authentification du serveur.",
       "endpointTitle": "URL du endpoint",
-      "endpointExamples": "Exemples :",
       "ollama": "(Ollama)",
       "localAi": "(LocalAI)",
       "apiKeyOptional": "Clé API (optionnelle)",
-      "apiKeyHelp": "Optionnelle. Envoyée comme token Bearer pour l'authentification. Séparée de votre clé API OpenAI.",
+      "apiKeyHelp": "Optionnelle. Envoyée comme token Bearer pour l'authentification.",
       "applyAndRefresh": "Appliquer et actualiser",
       "queryPrefix": "Nous interrogerons",
       "querySuffix": "pour les modèles disponibles.",
@@ -637,18 +584,14 @@
       "enterEndpoint": "Saisissez ci-dessus une URL de endpoint pour charger les modèles.",
       "fetchingModels": "Récupération de la liste des modèles...",
       "noModels": "Aucun modèle renvoyé. Vérifiez l'URL du endpoint.",
-      "providerName": "Personnalisé",
       "ownerLabel": "Propriétaire : {{owner}}",
       "unableToLoadModels": "Impossible de charger les modèles depuis le endpoint.",
       "searchPlaceholder": "Rechercher des modèles…",
       "selectedGroup": "Sélectionné",
       "otherGroup": "Autre",
       "noSearchResults": "Aucun modèle ne correspond à « {{query}} »",
-      "selectModelHint": "Aucun modèle sélectionné — choisissez-en un dans la liste ci-dessous.",
-      "keyRequiredHint": "Une clé API est requise pour l'inférence — ajoutez-en une pour utiliser ce fournisseur."
+      "selectModelHint": "Aucun modèle sélectionné — choisissez-en un dans la liste ci-dessous."
     },
-    "getApiKey": "Obtenir la clé API ->",
-    "selectModel": "Sélectionner un modèle",
     "availableModels": "Modèles disponibles",
     "disableThinking": {
       "label": "Désactiver la sortie de raisonnement",
@@ -656,43 +599,6 @@
     },
     "selfHosted": {
       "endpointHelp": "Pointez vers un serveur compatible OpenAI sur votre réseau local (par ex. Ollama, LM Studio, vLLM ou llama-server)."
-    },
-    "enterprise": {
-      "errors": {
-        "bedrock": {
-          "ssoExpired": "La session SSO AWS a expiré.",
-          "credentialsRejected": "Les identifiants AWS ont été refusés. Vérifiez l’ID de clé d’accès, le secret et le jeton de session.",
-          "accessDenied": "AWS Bedrock a refusé cette requête. Demandez à votre administrateur AWS l’autorisation d’appeler le modèle sélectionné dans la région {{region}}.",
-          "modelNotFound": "AWS Bedrock n’a pas trouvé le modèle sélectionné dans la région {{region}}. Vérifiez l’ID du modèle et sa disponibilité dans cette région.",
-          "configurationRejected": "AWS Bedrock a refusé la configuration du modèle pour la région {{region}}. Vérifiez l’ID du modèle, le profil d’inférence et la région.",
-          "notConfigured": "AWS Bedrock n’est pas configuré correctement. Vérifiez la région et les identifiants AWS.",
-          "serviceUnavailable": "AWS Bedrock est temporairement indisponible en raison d’une forte demande. Il s’agit d’un problème du service AWS, et non d’une panne d’OpenWhispr. Réessayez dans quelques minutes.",
-          "throttled": "AWS Bedrock limite temporairement les requêtes car il en reçoit trop. Patientez un instant et réessayez. Si le problème persiste, demandez à votre administrateur AWS de vérifier l’utilisation et les quotas Bedrock.",
-          "timeout": "AWS Bedrock n’a pas répondu à temps. Réessayez. Si le problème persiste, vérifiez votre connexion Internet et l’état du service AWS Bedrock.",
-          "network": "AWS Bedrock est inaccessible. Vérifiez votre connexion Internet et réessayez.",
-          "unknown": "Erreur AWS Bedrock : {{error}}",
-          "actions": {
-            "reauthenticate": "Exécutez la commande suivante dans votre terminal pour vous réauthentifier :"
-          }
-        }
-      },
-      "technicalDetails": {
-        "title": "Détails techniques",
-        "httpStatus": "État HTTP",
-        "awsException": "Exception AWS",
-        "awsRequestId": "ID de requête AWS",
-        "underlyingError": "Erreur sous-jacente",
-        "copy": "Copier les détails techniques",
-        "copyCommand": "Copier la commande de récupération"
-      }
-    },
-    "tinfoil": {
-      "modelRetiredTitle": "Modèle non disponible",
-      "modelRetired": "Tinfoil a retiré {{from}}. Basculé vers {{to}}.",
-      "refreshingModels": "Actualisation des modèles…"
-    },
-    "corti": {
-      "euOnly": "Les modèles Corti ne sont disponibles que dans la région UE."
     }
   },
   "transcription": {
@@ -1190,7 +1096,6 @@
     "test": {
       "addressHint": "Essayez d'interpeller « {{agentName}} » pour tester le mode instruction",
       "aiModels": "Modèles IA",
-      "baseUrlMissing": "URL de base {{provider}} manquante. Ajoutez-la dans les paramètres Modèles IA.",
       "cleanup": "Correction",
       "disabledInSettingsPrefix": "L'amélioration de texte par IA est désactivée.",
       "disabledInSettingsSuffix": "Activez-la dans Modèles IA pour tester les prompts.",
@@ -1204,11 +1109,8 @@
       "none": "Aucun",
       "outputLabel": "Sortie",
       "processing": "Traitement...",
-      "openwhisprCloud": "OpenWhispr Cloud",
       "providerLabel": "Fournisseur",
       "run": "Lancer le test",
-      "customEndpoint": "Endpoint personnalisé",
-      "apiKeyMissing": "Clé API {{provider}} non configurée. Ajoutez-la dans les paramètres Modèles IA.",
       "translateHint": "Le texte sera traduit en {{language}}",
       "translation": "Traduction",
       "translationDisabled": "Activez la traduction de dictée pour tester ce prompt",
@@ -1279,35 +1181,17 @@
       }
     },
     "aiModels": {
-      "customSetup": "Configuration personnalisée",
-      "customSetupDescription": "Utilisez votre propre fournisseur et clé API.",
       "description": "Corrige les transcriptions, gère les commandes et corrige les erreurs tout en préservant votre ton.",
       "enableTextCleanup": "Activer la correction de texte",
       "enableTextCleanupDescription": "L'IA supprime les mots de remplissage, corrige la grammaire et la ponctuation",
       "modes": {
-        "providers": "Fournisseurs cloud",
         "local": "Local",
         "selfHosted": "Auto-hébergé",
-        "providersDesc": "Utilisez votre propre clé API.",
         "localDesc": "Modèles sur l'appareil. 100 % privé.",
         "selfHostedDesc": "Votre serveur sur votre réseau."
       },
-      "openwhisprCloud": "OpenWhispr Cloud",
-      "openwhisprCloudDescription": "Résultats fiables. Aucune configuration requise.",
       "title": "Amélioration du texte par IA",
       "toasts": {
-        "switchedCloud": {
-          "description": "L'amélioration de texte utilisera le service cloud OpenWhispr.",
-          "title": "Basculé vers OpenWhispr Cloud"
-        },
-        "switchedCustom": {
-          "description": "Configurez votre propre fournisseur et clé API.",
-          "title": "Basculé vers la configuration personnalisée"
-        },
-        "switchedProviders": {
-          "title": "Fournisseurs cloud",
-          "description": "Utilisation de vos propres clés API."
-        },
         "switchedLocal": {
           "title": "Sur l'appareil",
           "description": "L'IA s'exécute localement sur votre machine."
@@ -1315,10 +1199,6 @@
         "switchedSelfHosted": {
           "title": "Auto-hébergé",
           "description": "Utilisation de votre propre serveur."
-        },
-        "switchedEnterprise": {
-          "title": "Enterprise",
-          "description": "Utilise le compte cloud de votre organisation."
         }
       }
     },
@@ -1736,61 +1616,6 @@
         "medium": "Haute qualité",
         "large": "Qualité maximale, le plus lent",
         "turbo": "Rapide avec une bonne qualité"
-      },
-      "cloud": {
-        "openai_gpt_5_2": "Modèle de raisonnement performant",
-        "openai_gpt_5_mini": "Rapide et économique",
-        "openai_gpt_5_nano": "Ultra-rapide, faible latence",
-        "openai_gpt_4_1": "Base solide, contexte 1M",
-        "openai_gpt_4_1_mini": "Modèle GPT-4.1 plus petit",
-        "openai_gpt_4_1_nano": "GPT-4.1 à la latence la plus faible",
-        "anthropic_claude_fable_5_1": "Le modèle le plus performant d'Anthropic, classe Mythos",
-        "anthropic_claude_fable_5": "Ancien modèle phare de classe Mythos",
-        "anthropic_claude_sonnet_5": "Modèle assistant rapide et performant à moindre coût",
-        "anthropic_claude_sonnet_4_6": "Performances équilibrées",
-        "anthropic_claude_sonnet_4_5": "Génération Sonnet précédente",
-        "anthropic_claude_haiku_4_5": "Rapide avec une intelligence de pointe",
-        "gemini_gemini_3_5_flash": "Dernier modèle Gemini rapide et très performant",
-        "gemini_gemini_3_5_flash_lite": "Le modèle 3.5 le plus rapide et économique",
-        "gemini_gemini_3_1_pro_preview": "Modèle phare nouvelle génération pour le raisonnement complexe",
-        "gemini_gemini_3_1_flash_lite": "Performances de pointe à faible coût",
-        "gemini_gemini_3_flash_preview": "Modèle nouvelle génération ultra-rapide et très performant",
-        "gemini_gemini_2_5_flash_lite": "Latence et coût les plus faibles",
-        "gemini_gemma_4_31b_it": "Le plus grand Gemma 4 de Google, 31B dense, contexte 256K",
-        "gemini_gemma_4_26b_a4b_it": "Gemma 4 MoE de Google, 4B paramètres actifs, contexte 256K",
-        "groq_openai_gpt_oss_120b": "Modèle phare open source d'OpenAI, 500 T/s",
-        "groq_openai_gpt_oss_20b": "Modèle open source rapide, 1000 T/s",
-        "groq_compound": "Système compound de Groq, 450 T/s",
-        "groq_compound_mini": "Système compound rapide, 3x latence réduite",
-        "openai_gpt_6_astra": "Le modèle le plus performant d'OpenAI pour le codage et la recherche",
-        "openai_gpt_5_6_sol": "GPT-5.6 phare pour le codage et la recherche complexes",
-        "openai_gpt_5_6_terra": "GPT-5.6 équilibré pour le travail quotidien",
-        "openai_gpt_5_6_luna": "Le GPT-5.6 le plus rapide et le plus économique",
-        "openai_gpt_5_5": "Modèle frontier pour le raisonnement complexe",
-        "anthropic_claude_opus_5": "Le modèle Opus le plus performant, contexte 1M",
-        "anthropic_claude_opus_4_8": "Modèle Opus puissant axé sur l'honnêteté et la fiabilité",
-        "anthropic_claude_opus_4_7": "Modèle Opus puissant",
-        "anthropic_claude_opus_4_6": "Génération Opus précédente, contexte 1M",
-        "anthropic_claude_opus_4_5": "Modèle Opus antérieur",
-        "tinfoil_glm_5_3": "Modèle privé de codage agentique dans des enclaves sécurisées, contexte 1M",
-        "tinfoil_gemma4_31b": "Modèle privé de raisonnement multilingue avec appel d'outils, contexte 256K",
-        "tinfoil_gpt_oss_120b": "Modèle privé de raisonnement à poids ouverts avec usage d'outils, contexte 131K",
-        "tinfoil_llama3_3_70b": "Modèle privé conversationnel avec appel d'outils, contexte 128K",
-        "corti_corti_s1_instant": "Modèle de santé rapide, sans trace de raisonnement",
-        "corti_corti_s1": "Modèle clinique le plus performant avec raisonnement",
-        "corti_corti_s1_mini_instant": "Modèle de santé compact, le plus rapide et le moins cher",
-        "corti_corti_s1_mini": "Modèle clinique compact avec raisonnement à moitié prix"
-      },
-      "enterprise": {
-        "bedrock_claude_fable_5": "Le modèle Claude le plus performant. Idéal pour les tâches d'assistant les plus difficiles.",
-        "bedrock_claude_haiku_4_5": "Rapide et économique. Parfait pour nettoyer le texte.",
-        "bedrock_claude_sonnet_5": "Équilibré. Choix par défaut pour les tâches d'assistant.",
-        "bedrock_claude_opus_4_8": "Intelligence maximale. Pour les tâches d'assistant complexes.",
-        "bedrock_gpt_oss_120b": "Modèle ouvert d'OpenAI. Raisonnement solide à faible coût.",
-        "bedrock_deepseek_v3_2": "Modèle frontière à poids ouverts. Excellent rapport qualité-prix pour les tâches d'assistant.",
-        "bedrock_qwen3_next_80b": "Modèle ouvert épars. Rapide et multilingue.",
-        "vertex_gemini_2_5_flash": "Fast multimodal model via Vertex",
-        "vertex_gemini_2_5_pro": "Advanced reasoning via Vertex"
       },
       "local": {
         "qwen_qwen3_5_9b_q4_k_m": "Modèle hybride puissant",
@@ -2442,15 +2267,11 @@
       "enable": "Partager le contexte d'écran",
       "enableDescription": "Capture l'écran où se trouve le curseur au démarrage d'un enregistrement de l'assistant vocal. Jamais enregistrée ni journalisée.",
       "unsupported": "La capture d'écran n'est pas disponible sous Linux Wayland.",
-      "visionModel": "Modèle de vision distinct",
-      "visionModelDescription": "Envoie les commandes incluant une capture vers un autre modèle capable de vision.",
       "permissionTitle": "Enregistrement de l'écran",
       "permissionDescription": "macOS exige l'autorisation d'enregistrement de l'écran pour capturer votre écran.",
       "relaunchHint": "L'enregistrement d'écran a été autorisé pendant qu'OpenWhispr était en cours d'exécution. Quittez et rouvrez OpenWhispr pour commencer à capturer des captures d'écran."
     },
     "modes": {
-      "providers": "Utilisez votre propre clé API",
-      "providersDesc": "Connectez-vous à OpenAI, Anthropic, Gemini ou Groq avec votre propre clé API.",
       "local": "Local",
       "localDesc": "Exécutez un LLM local sur votre appareil, 100 % privé.",
       "selfHosted": "Auto-hébergé",
@@ -2467,10 +2288,8 @@
       "systemPromptDescription": "Instructions personnalisées pour l'assistant",
       "systemPromptPlaceholder": "Entrez un prompt système personnalisé...",
       "modes": {
-        "providers": "Fournisseurs Cloud",
         "local": "Local",
         "selfHosted": "Auto-hébergé",
-        "providersDesc": "Apportez votre propre clé API.",
         "localDesc": "Modèles sur l'appareil. Entièrement privé.",
         "selfHostedDesc": "Votre propre serveur sur votre réseau."
       }

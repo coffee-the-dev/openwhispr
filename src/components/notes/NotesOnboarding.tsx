@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
-import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "react-i18next";
 import { Sparkles, Plus, ChevronRight, Zap, Loader2, Check, Monitor } from "../icons";
 import { Button } from "../ui/button";
 import { cn } from "../lib/utils";
-import { selectResolvedLLMConfig, useSettingsStore } from "../../stores/settingsStore";
 import { useNotesOnboarding } from "../../hooks/useNotesOnboarding";
 import {
   useActions,
@@ -15,7 +13,7 @@ import {
 import { notesInputClass, notesTextareaClass } from "./shared";
 import { useDialogs } from "../../hooks/useDialogs";
 import { AlertDialog } from "../ui/dialog";
-import ReasoningModelSelector from "../ReasoningModelSelector";
+import InferenceConfigEditor from "../settings/InferenceConfigEditor";
 import { useSystemAudioPermission } from "../../hooks/useSystemAudioPermission";
 import { canManageSystemAudioInApp } from "../../utils/systemAudioAccess";
 
@@ -34,15 +32,6 @@ export default function NotesOnboarding({ onComplete }: NotesOnboardingProps) {
   const [actionPrompt, setActionPrompt] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [justCreated, setJustCreated] = useState(false);
-
-  const cleanupConfig = useSettingsStore(
-    useShallow((settings) => selectResolvedLLMConfig(settings, "dictationCleanup"))
-  );
-  const setCleanupModel = useSettingsStore((s) => s.setCleanupModel);
-  const setCleanupProvider = useSettingsStore((s) => s.setCleanupProvider);
-  const setCleanupMode = useSettingsStore((s) => s.setCleanupMode);
-  const setCleanupCloudBaseUrl = useSettingsStore((s) => s.setCleanupCloudBaseUrl);
-  const setCleanupCustomApiKey = useSettingsStore((s) => s.setCleanupCustomApiKey);
 
   const { alertDialog, hideAlertDialog } = useDialogs();
   const {
@@ -157,17 +146,7 @@ export default function NotesOnboarding({ onComplete }: NotesOnboardingProps) {
                 {t("notes.onboarding.llm.description")}
               </p>
 
-              <ReasoningModelSelector
-                reasoningModel={cleanupConfig.model}
-                setReasoningModel={setCleanupModel}
-                localReasoningProvider={cleanupConfig.provider}
-                setLocalReasoningProvider={setCleanupProvider}
-                cloudReasoningBaseUrl={cleanupConfig.cloudBaseUrl ?? ""}
-                setCloudReasoningBaseUrl={setCleanupCloudBaseUrl}
-                customReasoningApiKey={cleanupConfig.customApiKey ?? ""}
-                setCustomReasoningApiKey={setCleanupCustomApiKey}
-                setReasoningMode={setCleanupMode}
-              />
+              <InferenceConfigEditor scope="dictationCleanup" />
             </div>
           )}
         </div>

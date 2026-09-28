@@ -1,7 +1,6 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import ReasoningService from "../../services/ReasoningService";
-import { isEnterpriseProvider } from "../../models/ModelRegistry";
 import { providerSupportsImages } from "../../services/ai/inferenceProviders";
 import { getSettings, useSettingsStore } from "../../stores/settingsStore";
 import { resolveChatStreamingInference } from "../../helpers/dictationAgentInference.js";
@@ -240,25 +239,12 @@ export function useChatStreaming({
         isProviderImageWired: providerSupportsImages,
       });
       const requestedAttachment = attachScreenContext ? (options?.attachment ?? null) : null;
-      const llmMode = llmConfig.mode || "openwhispr";
+      const llmMode = llmConfig.mode;
       setAgentState("thinking");
-      const isLanAgent = llmMode === "self-hosted" && !!llmConfig.remoteUrl;
-      const isCustomAgent = llmMode === "providers" && llmConfig.provider === "custom";
-      const isLocalProvider =
-        !isEnterpriseProvider(llmConfig.provider) &&
-        ![
-          "openai",
-          "groq",
-          "custom",
-          "anthropic",
-          "gemini",
-          "tinfoil",
-          "openrouter",
-          "corti",
-        ].includes(llmConfig.provider);
-      const localModelCanUseTool =
-        isLocalProvider && estimateModelSizeB(llmConfig.model) >= LOCAL_TOOL_MIN_PARAMS_B;
-      const supportsTools = !isLocalProvider || localModelCanUseTool;
+      const isLanAgent = llmMode === "self-hosted";
+      // Small models answer tool schemas with noise, so only a model whose id
+      // names a size large enough to call tools reliably gets them.
+      const supportsTools = estimateModelSizeB(llmConfig.model) >= LOCAL_TOOL_MIN_PARAMS_B;
 
       const scope = searchScopeRef.current;
       let registry: ToolRegistry | null = null;
@@ -371,18 +357,14 @@ export function useChatStreaming({
         const stream = ReasoningService.processTextStreamingAI(
           llmMessages,
           llmConfig.model,
-          llmConfig.provider,
+          isLanAgent ? "lan" : "local",
           {
             systemPrompt,
-            // Requests are judged by the scope that actually answers: the
-            // panel's Chat fallback as Chat, and the vision override as the
-            // agent scope whose image lane it is.
-            inferenceScope:
-              llmConfig.scope === "dictationAgentVision" ? "dictationAgent" : llmConfig.scope,
+            // Requests are judged by the scope that actually answers, so the
+            // panel's Chat fallback counts as Chat.
+            inferenceScope: llmConfig.scope,
             lanUrl: isLanAgent ? llmConfig.remoteUrl : undefined,
-            baseUrl: isCustomAgent ? llmConfig.cloudBaseUrl || undefined : undefined,
-            customApiKey:
-              isCustomAgent || isLanAgent ? llmConfig.customApiKey || undefined : undefined,
+            customApiKey: isLanAgent ? llmConfig.customApiKey || undefined : undefined,
             disableThinking: llmConfig.disableThinking,
           },
           aiTools

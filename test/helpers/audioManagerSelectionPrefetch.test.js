@@ -14,10 +14,7 @@ async function loadAudioManager(t, { cachePrefix, settingsKey }) {
         "export default { debug() {}, info() {}, warn() {}, error() {}, logReasoning() {} };",
       "/stores/settingsStore": `
         export const getSettings = () => globalThis.${settingsKey};
-        export const getEffectiveCleanupModel = () => null;
-        export const isCloudCleanupMode = () => false;
-        export const isCloudDictationAgentMode = () => false;
-        export const isCloudTranslationMode = () => false;
+        export const selectResolvedLLMConfig = () => ({ mode: "local", model: null });
       `,
       "/services/ReasoningService": 'export default { processText: async () => "" };',
       "/utils/permissions": "export const isAccessibilitySkipped = () => false;",

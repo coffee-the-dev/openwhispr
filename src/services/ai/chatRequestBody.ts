@@ -1,58 +1,35 @@
 import type { ReasoningConfig } from "../BaseReasoningService";
-import { getOpenAiApiConfig } from "../../models/ModelRegistry";
-import { detectEndpointDialect } from "./thinkingSuppressionDialects";
 import { getModelFamilyConstraints } from "./modelFamilyConstraints";
 import { applyThinkingSuppression } from "./thinkingSuppression";
+import type { ThinkingDialect } from "./thinkingSuppressionDialects";
 
 /**
- * Providers whose OpenAI-compat chat endpoints speak the legacy shape: always
- * `max_tokens`, always `temperature`. Groq's registry entries carry no
- * tokenParam and its ids don't match the OpenAI fallback heuristics; Tinfoil's
- * catalog is dynamic (models outside the registry must not fall through to
- * `max_completion_tokens`); local/lan are llama.cpp-style servers.
- */
-const LEGACY_CHAT_COMPLETIONS_PROVIDERS = new Set(["local", "lan", "groq", "tinfoil", "corti"]);
-
-/**
- * Single place that turns (model, provider, endpoint, config) into the
- * parameter set of an OpenAI-compatible chat-completions body: token-limit
- * param, temperature, family reasoning effort, and thinking suppression.
- * Callers own `model`/`messages`/`stream`; this owns every tunable param, so
- * a family or provider fact changed in the data tables reaches all transports
- * at once instead of one call site at a time (#1611).
+ * Single place that turns (model, runtime, config) into the parameter set of
+ * an OpenAI-compatible chat-completions body: token limit, temperature, family
+ * reasoning effort, and thinking suppression. Callers own
+ * `model`/`messages`/`stream`; this owns every tunable param, so a family fact
+ * changed in the data tables reaches all transports at once (#1611). Both the
+ * on-device llama.cpp server and self-hosted servers speak the classic shape:
+ * `max_tokens` plus `temperature`.
  */
 export function applyChatCompletionsParams(
   requestBody: Record<string, unknown>,
   {
     model,
-    provider,
-    endpoint,
+    dialect,
     config,
     maxTokens,
   }: {
     model: string;
-    provider: string;
-    endpoint?: string | null;
+    dialect: ThinkingDialect;
     config: ReasoningConfig;
     maxTokens: number;
   }
 ): void {
-  const providerKey = provider.toLowerCase();
   // No systemPrompt override means the default cleanup path: a deterministic
   // transform, so zero temperature.
-  const defaultTemperature = config.systemPrompt ? 0.3 : 0;
-
-  if (LEGACY_CHAT_COMPLETIONS_PROVIDERS.has(providerKey)) {
-    requestBody.max_tokens = maxTokens;
-    requestBody.temperature = config.temperature ?? defaultTemperature;
-  } else {
-    // A known endpoint host knows its own request shape better than the model id does.
-    const apiConfig = detectEndpointDialect(endpoint) ?? getOpenAiApiConfig(model, providerKey);
-    requestBody[apiConfig.tokenParam] = maxTokens;
-    if (apiConfig.supportsTemperature) {
-      requestBody.temperature = config.temperature ?? defaultTemperature;
-    }
-  }
+  requestBody.max_tokens = maxTokens;
+  requestBody.temperature = config.temperature ?? (config.systemPrompt ? 0.3 : 0);
 
   // Deterministic transforms (cleanup, selection edits) pin the family's
   // preferred effort — see modelFamilyConstraints for the gpt-oss rationale.
@@ -62,31 +39,30 @@ export function applyChatCompletionsParams(
     requestBody.reasoning_effort = familyEffort.cleanupValue;
   }
 
-  applyThinkingSuppression(requestBody, model, provider, config, endpoint ?? undefined);
+  applyThinkingSuppression(requestBody, model, dialect, config);
 }
 
-/** Finish reasons that mean the output hit the token cap, across providers. */
+/** Finish reasons that mean the output hit the token cap. */
 export function isTruncatedFinishReason(reason: unknown): boolean {
   return reason === "length" || reason === "max_tokens";
 }
 
 /**
  * Dictation cleanup renders these errors as the toast title, so they carry the key
- * the renderer translates. Anthropic and enterprise attach the same key on the
- * main-process side; local llama reports a code that localInferenceError.ts maps.
+ * the renderer translates. Local llama reports a code that localInferenceError.ts maps.
  */
 export const TRUNCATED_OUTPUT_MESSAGE_KEY =
   "hooks.audioRecording.errorDescriptions.cleanupTruncated";
 const EMPTY_OUTPUT_MESSAGE_KEY = "hooks.audioRecording.errorDescriptions.cleanupEmptyReply";
 
-/** Output cut off at the token cap; providers may pass their own wording for the logs. */
+/** Output cut off at the token cap; callers may pass their own wording for the logs. */
 export function truncatedOutputError(
   message = "Model output was truncated"
 ): Error & { messageKey: string } {
   return Object.assign(new Error(message), { messageKey: TRUNCATED_OUTPUT_MESSAGE_KEY });
 }
 
-/** A reply with no text at all; providers pass their own wording for the logs. */
+/** A reply with no text at all; callers may pass their own wording for the logs. */
 export function emptyOutputError(
   message = "Model returned an empty response"
 ): Error & { messageKey: string } {

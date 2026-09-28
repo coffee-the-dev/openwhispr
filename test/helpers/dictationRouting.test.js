@@ -120,84 +120,43 @@ test("skips reasoning when nothing is reachable", async () => {
   );
 });
 
-test("agent is reachable in cloud mode without an explicit model", async () => {
+test("a local agent is reachable only with a model", async () => {
   const { resolveDictationAgentReachability } = await load();
+  const base = { useDictationAgent: true, dictationAgentMode: "local" };
 
+  assert.equal(resolveDictationAgentReachability({ ...base, dictationAgentModel: "" }), false);
   assert.equal(
-    resolveDictationAgentReachability({
-      useDictationAgent: true,
-      dictationAgentMode: "openwhispr",
-      dictationAgentProvider: undefined,
-      dictationAgentModel: "",
-      isCloudAgent: true,
-      isSelfHostedAgent: false,
-    }),
+    resolveDictationAgentReachability({ ...base, dictationAgentModel: "qwen3.5-9b-q4_k_m" }),
     true
   );
 });
 
-test("agent is reachable in self-hosted mode without an explicit model", async () => {
+test("a self-hosted agent is reachable once its server is set, model or not", async () => {
   const { resolveDictationAgentReachability } = await load();
+  const base = { useDictationAgent: true, dictationAgentMode: "self-hosted" };
 
-  assert.equal(
-    resolveDictationAgentReachability({
-      useDictationAgent: true,
-      dictationAgentMode: "self-hosted",
-      dictationAgentProvider: undefined,
-      dictationAgentModel: "",
-      isCloudAgent: false,
-      isSelfHostedAgent: true,
-    }),
-    true
-  );
+  assert.equal(resolveDictationAgentReachability({ ...base, isSelfHostedAgent: false }), false);
+  assert.equal(resolveDictationAgentReachability({ ...base, isSelfHostedAgent: true }), true);
 });
 
-test("agent is unreachable with an empty model on a model-required provider", async () => {
-  const { resolveDictationAgentReachability } = await load();
-
-  assert.equal(
-    resolveDictationAgentReachability({
-      useDictationAgent: true,
-      dictationAgentMode: "providers",
-      dictationAgentProvider: "openai",
-      dictationAgentModel: "   ",
-      isCloudAgent: false,
-      isSelfHostedAgent: false,
-    }),
-    false
-  );
-});
-
-test("agent is reachable with an explicit model (BYOK/local/enterprise)", async () => {
-  const { resolveDictationAgentReachability } = await load();
-
-  assert.equal(
-    resolveDictationAgentReachability({
-      useDictationAgent: true,
-      dictationAgentMode: "providers",
-      dictationAgentProvider: "openai",
-      dictationAgentModel: "gpt-5.5",
-      isCloudAgent: false,
-      isSelfHostedAgent: false,
-    }),
-    true
-  );
-});
-
-test("disabling the dictation agent overrides cloud reachability", async () => {
+test("disabling the dictation agent overrides reachability", async () => {
   const { resolveDictationAgentReachability } = await load();
 
   assert.equal(
     resolveDictationAgentReachability({
       useDictationAgent: false,
-      dictationAgentMode: "openwhispr",
-      dictationAgentProvider: undefined,
-      dictationAgentModel: "",
-      isCloudAgent: true,
+      dictationAgentMode: "self-hosted",
       isSelfHostedAgent: true,
     }),
     false
   );
+});
+
+test("a retired mode is never reachable", async () => {
+  const { resolveModeReachability } = await load();
+  for (const mode of ["openwhispr", "providers", "enterprise", undefined]) {
+    assert.equal(resolveModeReachability({ mode, model: "gpt-5", isSelfHosted: true }), false);
+  }
 });
 
 test("translation hotkey routes to translation when reachable", async () => {
@@ -289,11 +248,9 @@ test("translation is unreachable when disabled", async () => {
     resolveDictationTranslationReachability({
       useDictationTranslation: false,
       translationTargetLanguage: "it",
-      translationMode: "openwhispr",
-      translationProvider: undefined,
-      translationModel: "gpt-5-mini",
-      isCloudTranslation: true,
-      isSelfHostedTranslation: false,
+      translationMode: "self-hosted",
+      translationModel: "",
+      isSelfHostedTranslation: true,
     }),
     false
   );
@@ -306,409 +263,65 @@ test("translation is unreachable without a target language", async () => {
     resolveDictationTranslationReachability({
       useDictationTranslation: true,
       translationTargetLanguage: "   ",
-      translationMode: "openwhispr",
-      translationProvider: undefined,
-      translationModel: "gpt-5-mini",
-      isCloudTranslation: true,
-      isSelfHostedTranslation: false,
+      translationMode: "self-hosted",
+      translationModel: "",
+      isSelfHostedTranslation: true,
     }),
     false
   );
 });
 
-test("translation is reachable in cloud mode without an explicit model", async () => {
+test("self-hosted translation is reachable without an explicit model", async () => {
   const { resolveDictationTranslationReachability } = await load();
 
   assert.equal(
     resolveDictationTranslationReachability({
       useDictationTranslation: true,
-      translationTargetLanguage: "it",
-      translationMode: "openwhispr",
-      translationProvider: undefined,
-      translationModel: "",
-      isCloudTranslation: true,
-      isSelfHostedTranslation: false,
-    }),
-    true
-  );
-});
-
-test("translation is reachable in self-hosted mode without an explicit model", async () => {
-  const { resolveDictationTranslationReachability } = await load();
-
-  assert.equal(
-    resolveDictationTranslationReachability({
-      useDictationTranslation: true,
-      translationTargetLanguage: "it",
+      translationTargetLanguage: "fr",
       translationMode: "self-hosted",
-      translationProvider: undefined,
       translationModel: "",
-      isCloudTranslation: false,
       isSelfHostedTranslation: true,
     }),
     true
   );
 });
 
-test("translation needs a model on model-required providers", async () => {
+test("local translation needs a model", async () => {
   const { resolveDictationTranslationReachability } = await load();
+  const base = {
+    useDictationTranslation: true,
+    translationTargetLanguage: "fr",
+    translationMode: "local",
+  };
 
+  assert.equal(resolveDictationTranslationReachability({ ...base, translationModel: "" }), false);
   assert.equal(
-    resolveDictationTranslationReachability({
-      useDictationTranslation: true,
-      translationTargetLanguage: "it",
-      translationMode: "providers",
-      translationProvider: "openai",
-      translationModel: "  ",
-      isCloudTranslation: false,
-      isSelfHostedTranslation: false,
-    }),
-    false
-  );
-
-  assert.equal(
-    resolveDictationTranslationReachability({
-      useDictationTranslation: true,
-      translationTargetLanguage: "it",
-      translationMode: "providers",
-      translationProvider: "openai",
-      translationModel: "qwen3:8b",
-      isCloudTranslation: false,
-      isSelfHostedTranslation: false,
-    }),
+    resolveDictationTranslationReachability({ ...base, translationModel: "qwen3.5-9b-q4_k_m" }),
     true
   );
 });
 
-test("available managed mode resolves the OpenWhispr provider", async () => {
-  const { resolveDictationAgentProvider } = await load();
+test("local mode pins the local provider; self-hosted routes by its URL instead", async () => {
+  const { resolveModeProvider, resolveModeDisplayProvider } = await load();
 
-  assert.equal(
-    resolveDictationAgentProvider({
-      isCloudAgent: true,
-      dictationAgentMode: "openwhispr",
-      dictationAgentProvider: "anthropic",
-    }),
-    "openwhispr"
-  );
+  assert.equal(resolveModeProvider("local"), "local");
+  assert.equal(resolveModeProvider("self-hosted"), undefined);
+  assert.equal(resolveModeDisplayProvider("local"), "local");
+  assert.equal(resolveModeDisplayProvider("self-hosted"), "self-hosted");
 });
 
-test("local mode resolves the local provider, not stale provider state", async () => {
-  const { resolveDictationAgentProvider } = await load();
+test("a screenshot attaches only to an image-wired provider", async () => {
+  const { resolveAgentImageTarget } = await load();
 
   assert.equal(
-    resolveDictationAgentProvider({
-      isCloudAgent: false,
-      dictationAgentMode: "local",
-      dictationAgentProvider: "qwen",
-    }),
-    "local"
-  );
-});
-
-test("BYOK providers mode passes the stored provider through", async () => {
-  const { resolveDictationAgentProvider } = await load();
-
-  assert.equal(
-    resolveDictationAgentProvider({
-      isCloudAgent: false,
-      dictationAgentMode: "providers",
-      dictationAgentProvider: "anthropic",
-    }),
-    "anthropic"
-  );
-});
-
-test("blank stored provider resolves to undefined outside local mode", async () => {
-  const { resolveDictationAgentProvider } = await load();
-
-  assert.equal(
-    resolveDictationAgentProvider({
-      isCloudAgent: false,
-      dictationAgentMode: "providers",
-      dictationAgentProvider: "  ",
-    }),
-    undefined
-  );
-});
-
-test("managed mode fails closed when its cloud session is unavailable", async () => {
-  const { resolveDictationAgentProvider } = await load();
-
-  assert.equal(
-    resolveDictationAgentProvider({
-      isCloudAgent: false,
-      dictationAgentMode: "openwhispr",
-      dictationAgentProvider: "openai",
-    }),
-    undefined
-  );
-});
-
-test("local mode wins over an inconsistent cloud flag", async () => {
-  const { resolveDictationAgentProvider } = await load();
-
-  assert.equal(
-    resolveDictationAgentProvider({
-      isCloudAgent: true,
-      dictationAgentMode: "local",
-      dictationAgentProvider: "openai",
-    }),
-    "local"
-  );
-});
-
-test("self-hosted mode clears stale providers", async () => {
-  const { resolveDictationAgentProvider } = await load();
-
-  assert.equal(
-    resolveDictationAgentProvider({
-      isCloudAgent: false,
-      dictationAgentMode: "self-hosted",
-      dictationAgentProvider: "openai",
-    }),
-    undefined
-  );
-});
-
-test("self-hosted mode is unreachable without its endpoint", async () => {
-  const { resolveDictationAgentReachability } = await load();
-
-  assert.equal(
-    resolveDictationAgentReachability({
-      useDictationAgent: true,
-      dictationAgentMode: "self-hosted",
-      dictationAgentProvider: undefined,
-      dictationAgentModel: "gpt-5-mini",
-      isCloudAgent: false,
-      isSelfHostedAgent: false,
-    }),
+    resolveAgentImageTarget({ hasScreenContext: false, providerImageWired: true }),
     false
   );
-});
-
-test("provider and enterprise modes require an explicit provider", async () => {
-  const { resolveDictationAgentReachability } = await load();
-
-  for (const dictationAgentMode of ["providers", "enterprise"]) {
-    assert.equal(
-      resolveDictationAgentReachability({
-        useDictationAgent: true,
-        dictationAgentMode,
-        dictationAgentProvider: undefined,
-        dictationAgentModel: "gpt-5-mini",
-        isCloudAgent: false,
-        isSelfHostedAgent: false,
-      }),
-      false
-    );
-  }
-});
-
-test("display provider follows the active mode instead of stale state", async () => {
-  const { resolveDictationAgentDisplayProvider } = await load();
-
   assert.equal(
-    resolveDictationAgentDisplayProvider({
-      dictationAgentMode: "local",
-      dictationAgentProvider: "openai",
-    }),
-    "local"
+    resolveAgentImageTarget({ hasScreenContext: true, providerImageWired: false }),
+    false
   );
-  assert.equal(
-    resolveDictationAgentDisplayProvider({
-      dictationAgentMode: "self-hosted",
-      dictationAgentProvider: "openai",
-    }),
-    "self-hosted"
-  );
-});
-
-test("translation provider: available managed mode routes to openwhispr", async () => {
-  const { resolveTranslationProviderId } = await load();
-
-  assert.equal(
-    resolveTranslationProviderId({
-      isCloudTranslation: true,
-      translationMode: "openwhispr",
-      translationProvider: "openai",
-    }),
-    "openwhispr"
-  );
-});
-
-test("translation provider: mode wins over stale provider and cloud state", async () => {
-  const { resolveTranslationProviderId } = await load();
-
-  for (const [translationMode, translationProvider, expected] of [
-    ["providers", " groq ", "groq"],
-    ["local", "qwen", "local"],
-    ["local", "openai", "local"],
-    ["self-hosted", "openai", undefined],
-  ]) {
-    assert.equal(
-      resolveTranslationProviderId({
-        isCloudTranslation: translationMode === "local",
-        translationMode,
-        translationProvider,
-      }),
-      expected
-    );
-  }
-});
-
-test("translation provider: empty local provider routes to llama.cpp", async () => {
-  const { resolveTranslationProviderId } = await load();
-
-  assert.equal(
-    resolveTranslationProviderId({
-      isCloudTranslation: false,
-      translationMode: "local",
-      translationProvider: "",
-    }),
-    "local"
-  );
-});
-
-test("translation provider: incomplete managed and provider modes fail closed", async () => {
-  const { resolveTranslationProviderId } = await load();
-
-  for (const translationMode of ["openwhispr", "providers", "enterprise"]) {
-    assert.equal(
-      resolveTranslationProviderId({
-        isCloudTranslation: false,
-        translationMode,
-        translationProvider: "  ",
-      }),
-      undefined
-    );
-  }
-});
-
-// Screen-context image routing on the agent route.
-const imageTarget = {
-  hasScreenContext: true,
-  visionOverrideActive: false,
-  visionProviderImageWired: false,
-  baseProviderImageWired: true,
-  isCloudAgent: false,
-  baseModelSupportsVision: false,
-};
-
-test("no captured screenshot never attaches", async () => {
-  const { resolveAgentImageTarget } = await load();
-
-  assert.deepEqual(
-    resolveAgentImageTarget({
-      ...imageTarget,
-      hasScreenContext: false,
-      visionOverrideActive: true,
-      visionProviderImageWired: true,
-      isCloudAgent: true,
-      baseModelSupportsVision: true,
-    }),
-    { attach: false, useVisionOverride: false }
-  );
-});
-
-test("cloud agent attaches to the base model (server picks the vision model)", async () => {
-  const { resolveAgentImageTarget } = await load();
-
-  assert.deepEqual(resolveAgentImageTarget({ ...imageTarget, isCloudAgent: true }), {
-    attach: true,
-    useVisionOverride: false,
-  });
-});
-
-test("BYOK base model attaches only when the registry marks it vision-capable", async () => {
-  const { resolveAgentImageTarget } = await load();
-
-  assert.deepEqual(resolveAgentImageTarget({ ...imageTarget, baseModelSupportsVision: true }), {
-    attach: true,
-    useVisionOverride: false,
-  });
-  assert.deepEqual(resolveAgentImageTarget(imageTarget), {
-    attach: false,
-    useVisionOverride: false,
-  });
-});
-
-test("an unwired base provider never gets the image", async () => {
-  const { resolveAgentImageTarget } = await load();
-
-  assert.deepEqual(
-    resolveAgentImageTarget({
-      ...imageTarget,
-      baseProviderImageWired: false,
-      isCloudAgent: true,
-      baseModelSupportsVision: true,
-    }),
-    { attach: false, useVisionOverride: false }
-  );
-});
-
-test("an active vision override wins over the base model", async () => {
-  const { resolveAgentImageTarget } = await load();
-
-  assert.deepEqual(
-    resolveAgentImageTarget({
-      ...imageTarget,
-      visionOverrideActive: true,
-      visionProviderImageWired: true,
-      baseModelSupportsVision: true,
-    }),
-    { attach: true, useVisionOverride: true }
-  );
-});
-
-test("an active override lets a text-only base agent still get screen context", async () => {
-  const { resolveAgentImageTarget } = await load();
-
-  assert.deepEqual(
-    resolveAgentImageTarget({
-      ...imageTarget,
-      visionOverrideActive: true,
-      visionProviderImageWired: true,
-      baseProviderImageWired: false,
-    }),
-    { attach: true, useVisionOverride: true }
-  );
-});
-
-test("an override on a provider that can't send images drops the screenshot", async () => {
-  const { resolveAgentImageTarget } = await load();
-
-  // The user pointed the override at a provider whose client has no image
-  // path; quietly using the base model instead would ignore that choice.
-  assert.deepEqual(
-    resolveAgentImageTarget({
-      ...imageTarget,
-      visionOverrideActive: true,
-      visionProviderImageWired: false,
-      isCloudAgent: true,
-    }),
-    { attach: false, useVisionOverride: false }
-  );
-});
-
-test("an override toggled on but never configured falls back to the base rules", async () => {
-  const { resolveAgentImageTarget } = await load();
-
-  // Unconfigured, the vision scope just inherits the agent's own config, so
-  // the base capability checks decide — never force an image onto a
-  // text-only model.
-  assert.deepEqual(
-    resolveAgentImageTarget({
-      ...imageTarget,
-      visionOverrideActive: false,
-      baseModelSupportsVision: true,
-    }),
-    { attach: true, useVisionOverride: false }
-  );
-  assert.deepEqual(resolveAgentImageTarget({ ...imageTarget, visionOverrideActive: false }), {
-    attach: false,
-    useVisionOverride: false,
-  });
+  assert.equal(resolveAgentImageTarget({ hasScreenContext: true, providerImageWired: true }), true);
 });
 
 test("wake-word language follows the dictation language when it is explicit", async () => {

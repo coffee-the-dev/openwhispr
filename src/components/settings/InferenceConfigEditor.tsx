@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
 import { useTranslation } from "react-i18next";
-import { Key, Cpu, Network } from "../icons";
+import { Cpu, Network } from "../icons";
 import {
   useSettingsStore,
   selectResolvedLLMConfig,
@@ -14,18 +14,13 @@ import ReasoningModelSelector from "../ReasoningModelSelector";
 import OpenAICompatiblePanel from "../OpenAICompatiblePanel";
 import { Toggle } from "../ui/toggle";
 import type { InferenceMode } from "../../types/electron";
-import {
-  INFERENCE_SCOPES,
-  type InferenceScope,
-  type InferenceScopeDefinition,
-} from "../../config/inferenceScopes";
-import { isProviderValidForMode, getCloudModel, getLocalModel } from "../../models/ModelRegistry";
+import type { InferenceScope } from "../../config/inferenceScopes";
+import { isProviderValidForMode, getLocalModel } from "../../models/ModelRegistry";
 
 const MODE_LABEL_PREFIX: Record<InferenceScope, string> = {
   dictationCleanup: "settingsPage.aiModels.modes",
   noteFormatting: "settingsPage.aiModels.modes",
   dictationAgent: "dictationAgent.modes",
-  dictationAgentVision: "dictationAgent.modes",
   chatIntelligence: "agentMode.settings.modes",
   dictationTranslation: "settingsPage.aiModels.modes",
 };
@@ -33,51 +28,29 @@ const MODE_LABEL_PREFIX: Record<InferenceScope, string> = {
 interface InferenceConfigEditorProps {
   scope: InferenceScope;
   onModeChange?: (mode: InferenceMode) => void;
-  /** Restrict the selectable modes (e.g. vision override offers cloud/BYOK only). */
-  allowedModes?: InferenceMode[];
 }
 
-export default function InferenceConfigEditor({
-  scope,
-  onModeChange,
-  allowedModes,
-}: InferenceConfigEditorProps) {
+export default function InferenceConfigEditor({ scope, onModeChange }: InferenceConfigEditorProps) {
   const { t } = useTranslation();
   const config = useSettingsStore(
-    useShallow((settings): ResolvedLLMConfig => {
-      const effective = settings;
-      const resolved = selectResolvedLLMConfig(effective, scope);
-      const definition: InferenceScopeDefinition = INFERENCE_SCOPES[scope];
-      // Inherited runtime defaults are not an explicit selection in an optional picker.
-      return definition.optional
-        ? { ...resolved, model: effective[definition.storeKeys.model] as string }
-        : resolved;
-    })
+    useShallow((settings): ResolvedLLMConfig => selectResolvedLLMConfig(settings, scope))
   );
 
   const prefix = MODE_LABEL_PREFIX[scope];
-  const modes = (
-    [
-      {
-        id: "providers",
-        label: t(`${prefix}.providers`),
-        description: t(`${prefix}.providersDesc`),
-        icon: <Key className="w-4 h-4" />,
-      },
-      {
-        id: "local",
-        label: t(`${prefix}.local`),
-        description: t(`${prefix}.localDesc`),
-        icon: <Cpu className="w-4 h-4" />,
-      },
-      {
-        id: "self-hosted",
-        label: t(`${prefix}.selfHosted`),
-        description: t(`${prefix}.selfHostedDesc`),
-        icon: <Network className="w-4 h-4" />,
-      },
-    ] as InferenceModeOption[]
-  ).filter((mode) => !allowedModes || allowedModes.includes(mode.id));
+  const modes: InferenceModeOption[] = [
+    {
+      id: "local",
+      label: t(`${prefix}.local`),
+      description: t(`${prefix}.localDesc`),
+      icon: <Cpu className="w-4 h-4" />,
+    },
+    {
+      id: "self-hosted",
+      label: t(`${prefix}.selfHosted`),
+      description: t(`${prefix}.selfHostedDesc`),
+      icon: <Network className="w-4 h-4" />,
+    },
+  ];
   const effectiveMode = config.mode;
 
   const setField = useCallback(
@@ -92,11 +65,11 @@ export default function InferenceConfigEditor({
     (mode: InferenceMode) => {
       if (mode === effectiveMode) return;
 
-      const patch: Parameters<typeof setResolvedLLMConfig>[1] = {
-        mode,
-        cloudMode: mode === "openwhispr" ? "openwhispr" : "byok",
-      };
-      if (!isProviderValidForMode(config.provider, mode)) {
+      const patch: Parameters<typeof setResolvedLLMConfig>[1] = { mode };
+      if (mode === "self-hosted") {
+        patch.provider = "lan";
+        patch.model = "";
+      } else if (!isProviderValidForMode(config.provider, mode)) {
         patch.provider = "";
         patch.model = "";
       }
@@ -106,45 +79,24 @@ export default function InferenceConfigEditor({
     [scope, config.provider, effectiveMode, onModeChange]
   );
 
-  const setMode = setField("mode");
-  const setProvider = setField("provider");
   const setModel = setField("model");
-
-  const renderModelSelector = (mode?: "cloud" | "local") => (
-    <ReasoningModelSelector
-      reasoningModel={config.model}
-      setReasoningModel={setModel}
-      localReasoningProvider={config.provider}
-      setLocalReasoningProvider={setProvider}
-      cloudReasoningBaseUrl={config.cloudBaseUrl ?? ""}
-      setCloudReasoningBaseUrl={setField("cloudBaseUrl")}
-      customReasoningApiKey={config.customApiKey ?? ""}
-      setCustomReasoningApiKey={setField("customApiKey")}
-      setReasoningMode={setMode}
-      mode={mode}
-    />
-  );
 
   const showThinkingToggle =
     effectiveMode === "self-hosted" ||
-    (effectiveMode === "providers" &&
-      (config.provider === "custom" ||
-        config.provider === "openrouter" ||
-        !!getCloudModel(config.model)?.supportsThinking)) ||
     (effectiveMode === "local" && !!getLocalModel(config.model)?.supportsThinking);
 
   return (
     <div className="space-y-3">
-      {modes.length > 1 && (
-        <InferenceModeSelector
-          modes={modes}
-          activeMode={effectiveMode}
-          onSelect={handleModeSelect}
+      <InferenceModeSelector modes={modes} activeMode={effectiveMode} onSelect={handleModeSelect} />
+
+      {effectiveMode === "local" && (
+        <ReasoningModelSelector
+          reasoningModel={config.model}
+          setReasoningModel={setModel}
+          localReasoningProvider={config.provider}
+          setLocalReasoningProvider={setField("provider")}
         />
       )}
-
-      {effectiveMode === "providers" && renderModelSelector("cloud")}
-      {effectiveMode === "local" && renderModelSelector("local")}
 
       {effectiveMode === "self-hosted" && (
         <OpenAICompatiblePanel

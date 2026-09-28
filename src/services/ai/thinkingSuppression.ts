@@ -1,30 +1,19 @@
 import type { ReasoningConfig } from "../BaseReasoningService";
-import { getCloudModel, getLocalModel } from "../../models/ModelRegistry";
-import { detectEndpointDialect, suppressThinking } from "./thinkingSuppressionDialects";
+import { getLocalModel } from "../../models/ModelRegistry";
+import { suppressThinking, type ThinkingDialect } from "./thinkingSuppressionDialects";
 
 export function applyThinkingSuppression(
   requestBody: Record<string, unknown>,
   model: string,
-  provider: string,
-  config: ReasoningConfig,
-  baseUrl?: string
+  dialect: ThinkingDialect,
+  config: ReasoningConfig
 ): void {
-  // A known endpoint host wins over the generic provider dialect.
-  const providerKey = detectEndpointDialect(baseUrl)?.key ?? provider.toLowerCase();
-  const cloudModel = getCloudModel(model);
-
-  // A registry model flagged disableThinking is force-suppressed on every
-  // provider — scoping this to one provider is the #1611 bug pattern.
-  if (cloudModel?.disableThinking) {
-    suppressThinking(requestBody, providerKey, model);
-    return;
-  }
-
   if (config.disableThinking !== true) return;
 
+  // A catalog model that cannot think needs no suppression; a self-hosted id
+  // is unknown, so it always gets the switch.
   const localModel = getLocalModel(model);
-  const knownModel = cloudModel || localModel;
-  if (knownModel && !knownModel.supportsThinking) return;
+  if (localModel && !localModel.supportsThinking) return;
 
-  suppressThinking(requestBody, providerKey, model);
+  suppressThinking(requestBody, dialect, model);
 }

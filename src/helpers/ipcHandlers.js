@@ -11,9 +11,7 @@ const { getModelType, isSherpaLocalProvider } = require("./parakeetModelInfo");
 const { broadcastToWindows } = require("./windowBroadcast");
 const { openExternalUrl } = require("./externalUrlOpener");
 const { resolveFailedGpuBackends } = require("./whisper");
-const { BYOK_API_KEYS } = require("../config/secretKeys");
-const { extractAnthropicText, describeMissingAnthropicText } = require("./anthropicResponse");
-const { readCloudResponseError, toCloudFailure } = require("./cloudResponseError");
+const { SCOPE_API_KEYS } = require("../config/secretKeys");
 const { resolveSystemDefaultMicrophone } = require("./systemDefaultMicrophone");
 const { resolveLocalServerNeeds, shouldStopLocalServer } = require("./localServerPolicy");
 const autoStart = require("./autoStart");
@@ -22,10 +20,8 @@ const HyprlandShortcutManager = require("./hyprlandShortcut");
 const { i18nMain, changeLanguage } = require("./i18nMain");
 const { ONBOARDING_DEMO_KINDS, ONBOARDING_DEMO_STATUSES } = require("./onboardingInputPolicy");
 const { focusWindowsHotkeyCaptureWindow } = require("./hotkeyCaptureFocus");
-const { getTinfoilChatModels } = require("./tinfoilCatalog");
 const AudioStorageManager = require("./audioStorage");
 const LocalModelDownloadStatus = require("./localModelDownloadStatus");
-const AgentStreamRequestRegistry = require("./agentStreamRequestRegistry");
 const createMeetingTranscriptionLifecycle = require("./meetingTranscriptionLifecycle");
 const liveSpeakerIdentifier = require("./liveSpeakerIdentifier");
 const { supportsLiveSpeakerIdentification } = require("./liveSpeakerIdPolicy");
@@ -86,10 +82,6 @@ const WAV_UPLOAD_LIMIT_BYTES = 25 * 1024 * 1024;
 
 // Debounce delay: wait for user to stop typing before processing corrections
 const AUTO_LEARN_DEBOUNCE_MS = 1500;
-
-// The enterprise "Test Connection" probe only needs one word back, but the
-// Azure Responses API rejects max_output_tokens below 16.
-const CONNECTION_TEST_MAX_OUTPUT_TOKENS = 16;
 
 const { testProviderConnection } = require("./providerConnectionTest");
 const { createUploadCancelRegistry } = require("./uploadCancelRegistry");
@@ -195,11 +187,6 @@ async function postMultipart(
   }
 }
 
-// Cleanup toast wording for replies the main-process providers reject; mirror
-// TRUNCATED_/EMPTY_OUTPUT_MESSAGE_KEY in services/ai/chatRequestBody.ts (#2091).
-const CLEANUP_TRUNCATED_MESSAGE_KEY = "hooks.audioRecording.errorDescriptions.cleanupTruncated";
-const CLEANUP_EMPTY_REPLY_MESSAGE_KEY = "hooks.audioRecording.errorDescriptions.cleanupEmptyReply";
-
 class IPCHandlers {
   constructor(managers) {
     this.environmentManager = managers.environmentManager;
@@ -228,9 +215,6 @@ class IPCHandlers {
     // upload, or local transcription + diarization sharing one id), so a
     // cancel can abort the exact job.
     this._uploadCancelRegistry = createUploadCancelRegistry();
-    this._agentStreamRequests = new AgentStreamRequestRegistry();
-    this._cloudReasonRequests = new AgentStreamRequestRegistry();
-    this._enterpriseReasoningRequests = new AgentStreamRequestRegistry();
     // webContents id -> its release listener, for renderers holding the mic open.
     this._micHoldSenders = new Map();
     this._hotkeyCaptureMode = false;
@@ -1026,7 +1010,7 @@ class IPCHandlers {
       return this.windowManager.resizeDictationErrorWindowToContent(surfaceHeight);
     });
 
-    for (const k of BYOK_API_KEYS) {
+    for (const k of SCOPE_API_KEYS) {
       ipcMain.handle(`get-${k.base}-key`, () => this.environmentManager[k.get]());
       ipcMain.handle(`save-${k.base}-key`, (event, key) => this.environmentManager[k.save](key));
     }
@@ -1432,7 +1416,7 @@ class IPCHandlers {
             ({ noteId, score }) => score > 0.3 && scopedIds.has(noteId)
           );
 
-          // Reciprocal Rank Fusion (K=60, matching cloud implementation)
+          // Reciprocal Rank Fusion (K=60)
           const scores = new Map();
           ftsResults.forEach((note, i) => {
             scores.set(note.id, (scores.get(note.id) || 0) + 1 / (60 + i));
@@ -3408,10 +3392,6 @@ class IPCHandlers {
       }
     });
 
-    ipcMain.handle("get-tinfoil-chat-models", async () => {
-      return getTinfoilChatModels();
-    });
-
     ipcMain.handle("get-custom-transcription-key", async () => {
       return this.environmentManager.getCustomTranscriptionKey();
     });
@@ -3426,416 +3406,6 @@ class IPCHandlers {
 
     ipcMain.handle("save-cleanup-custom-key", async (event, key) => {
       return this.environmentManager.saveCleanupCustomKey(key);
-    });
-
-    // Enterprise provider key handlers
-    ipcMain.handle("get-bedrock-region", async () => {
-      return this.environmentManager.getBedrockRegion();
-    });
-    ipcMain.handle("save-bedrock-region", async (event, value) => {
-      return this.environmentManager.saveBedrockRegion(value);
-    });
-    ipcMain.handle("get-bedrock-profile", async () => {
-      return this.environmentManager.getBedrockProfile();
-    });
-    ipcMain.handle("save-bedrock-profile", async (event, value) => {
-      return this.environmentManager.saveBedrockProfile(value);
-    });
-    ipcMain.handle("get-bedrock-access-key-id", async () => {
-      return this.environmentManager.getBedrockAccessKeyId();
-    });
-    ipcMain.handle("save-bedrock-access-key-id", async (event, key) => {
-      return this.environmentManager.saveBedrockAccessKeyId(key);
-    });
-    ipcMain.handle("get-bedrock-secret-access-key", async () => {
-      return this.environmentManager.getBedrockSecretAccessKey();
-    });
-    ipcMain.handle("save-bedrock-secret-access-key", async (event, key) => {
-      return this.environmentManager.saveBedrockSecretAccessKey(key);
-    });
-    ipcMain.handle("get-bedrock-session-token", async () => {
-      return this.environmentManager.getBedrockSessionToken();
-    });
-    ipcMain.handle("save-bedrock-session-token", async (event, key) => {
-      return this.environmentManager.saveBedrockSessionToken(key);
-    });
-    ipcMain.handle("get-azure-endpoint", async () => {
-      return this.environmentManager.getAzureEndpoint();
-    });
-    ipcMain.handle("save-azure-endpoint", async (event, value) => {
-      return this.environmentManager.saveAzureEndpoint(value);
-    });
-    ipcMain.handle("get-azure-api-key", async () => {
-      return this.environmentManager.getAzureApiKey();
-    });
-    ipcMain.handle("save-azure-api-key", async (event, key) => {
-      return this.environmentManager.saveAzureApiKey(key);
-    });
-    ipcMain.handle("get-azure-deployment", async () => {
-      return this.environmentManager.getAzureDeployment();
-    });
-    ipcMain.handle("save-azure-deployment", async (event, value) => {
-      return this.environmentManager.saveAzureDeployment(value);
-    });
-    ipcMain.handle("get-azure-api-version", async () => {
-      return this.environmentManager.getAzureApiVersion();
-    });
-    ipcMain.handle("save-azure-api-version", async (event, value) => {
-      return this.environmentManager.saveAzureApiVersion(value);
-    });
-    ipcMain.handle("get-vertex-project", async () => {
-      return this.environmentManager.getVertexProject();
-    });
-    ipcMain.handle("save-vertex-project", async (event, value) => {
-      return this.environmentManager.saveVertexProject(value);
-    });
-    ipcMain.handle("get-vertex-location", async () => {
-      return this.environmentManager.getVertexLocation();
-    });
-    ipcMain.handle("save-vertex-location", async (event, value) => {
-      return this.environmentManager.saveVertexLocation(value);
-    });
-    ipcMain.handle("get-vertex-api-key", async () => {
-      return this.environmentManager.getVertexApiKey();
-    });
-    ipcMain.handle("save-vertex-api-key", async (event, key) => {
-      return this.environmentManager.saveVertexApiKey(key);
-    });
-
-    // Enterprise provider test connection
-    ipcMain.handle("test-enterprise-connection", async (event, provider, config) => {
-      const {
-        mapEnterpriseError,
-        runAbortableOperation,
-        runBedrockRequest,
-        validateEnterpriseEndpoint,
-      } = require("./enterpriseProviderErrors");
-      let runtime;
-      try {
-        const { generateText } = require("ai");
-        const { getEnterpriseAIModel } = require("./enterpriseAiProviders");
-
-        const resolveModel = (abortSignal) =>
-          runAbortableOperation(async () => {
-            runtime = resolveEnterpriseRuntime(provider, config?.model || "test", config);
-            abortSignal?.throwIfAborted();
-            validateEnterpriseEndpoint(runtime.enterprise.azureEndpoint);
-            return getEnterpriseAIModel(
-              runtime.provider,
-              runtime.model,
-              runtime.apiKey,
-              runtime.enterprise
-            );
-          }, abortSignal);
-
-        if (provider === "bedrock") {
-          await runBedrockRequest(async () => {
-            const abortSignal = AbortSignal.timeout(config?.timeoutMs || 30_000);
-            const model = await resolveModel(abortSignal);
-            return generateText({
-              model,
-              prompt: "Say hello in one word.",
-              maxOutputTokens: CONNECTION_TEST_MAX_OUTPUT_TOKENS,
-              abortSignal,
-              maxRetries: 0,
-            });
-          });
-        } else {
-          const model = await resolveModel();
-          await generateText({
-            model,
-            prompt: "Say hello in one word.",
-            maxOutputTokens: CONNECTION_TEST_MAX_OUTPUT_TOKENS,
-          });
-        }
-
-        return { success: true };
-      } catch (err) {
-        const mappingConfig =
-          runtime?.provider === "bedrock" && runtime.enterprise?.bedrockRegion
-            ? { ...(config || {}), bedrockRegion: runtime.enterprise.bedrockRegion }
-            : config;
-        const mapped = mapEnterpriseError(provider, err, mappingConfig);
-        return {
-          success: false,
-          error: mapped.message,
-          messageKey: mapped.messageKey,
-          messageParams: mapped.messageParams,
-          action: mapped.action,
-          actionKey: mapped.actionKey,
-          copyCommand: mapped.copyCommand,
-          retryable: mapped.retryable,
-          technicalDetails: mapped.technicalDetails,
-        };
-      }
-    });
-
-    ipcMain.handle(
-      "process-enterprise-reasoning",
-      async (event, text, modelId, _agentName, config) => {
-        const {
-          isEnterpriseProvider,
-          mapEnterpriseError,
-          runAbortableOperation,
-          runBedrockRequest,
-          validateEnterpriseEndpoint,
-        } = require("./enterpriseProviderErrors");
-        const provider = config?.provider;
-        let runtime;
-        try {
-          if (!isEnterpriseProvider(provider)) {
-            throw new Error(`Unsupported enterprise provider: ${provider}`);
-          }
-          const isBedrockCleanup =
-            provider === "bedrock" && config?.inferenceScope === "dictationCleanup";
-          const sender = isBedrockCleanup ? event.sender : null;
-          const senderId = sender?.id;
-          const requestId = isBedrockCleanup ? crypto.randomUUID() : null;
-          const controller = isBedrockCleanup
-            ? this._enterpriseReasoningRequests.begin(senderId, requestId)
-            : null;
-          const cancelSenderRequests = () =>
-            this._enterpriseReasoningRequests.cancelSender(senderId);
-          try {
-            if (controller) {
-              sender.once("destroyed", cancelSenderRequests);
-              if (sender.isDestroyed()) controller.abort();
-            }
-            controller?.signal.throwIfAborted();
-
-            const { generateText } = require("ai");
-            const { getEnterpriseAIModel } = require("./enterpriseAiProviders");
-            const timeoutMs = config?.timeoutMs || 60000;
-            // Opus 4.7 / GPT-5 / o-series dropped `temperature`; renderer
-            // derives support from the model registry and we honor that here.
-            const useTemperature = config?.supportsTemperature !== false;
-            const resolveModel = (abortSignal) =>
-              runAbortableOperation(async () => {
-                runtime = resolveEnterpriseRuntime(provider, modelId, config || {});
-                abortSignal?.throwIfAborted();
-                if (!runtime.model) throw new Error("No model specified for enterprise reasoning");
-                validateEnterpriseEndpoint(runtime.enterprise.azureEndpoint);
-                return getEnterpriseAIModel(
-                  runtime.provider,
-                  runtime.model,
-                  runtime.apiKey,
-                  runtime.enterprise
-                );
-              }, abortSignal);
-            const generate = (model, abortSignal, disableNestedRetries = false) => {
-              return generateText({
-                model,
-                system: config?.systemPrompt || "",
-                prompt: text,
-                maxOutputTokens: config?.maxTokens || 4096,
-                ...(useTemperature ? { temperature: config?.temperature ?? 0.3 } : {}),
-                abortSignal,
-                ...(disableNestedRetries ? { maxRetries: 0 } : {}),
-              });
-            };
-            let result;
-            if (isBedrockCleanup) {
-              result = await runBedrockRequest(
-                async () => {
-                  const abortSignal = AbortSignal.any([
-                    controller.signal,
-                    AbortSignal.timeout(timeoutMs),
-                  ]);
-                  const model = await resolveModel(abortSignal);
-                  return generate(model, abortSignal, true);
-                },
-                { signal: controller.signal }
-              );
-            } else {
-              const model = await resolveModel();
-              result = await generate(model, AbortSignal.timeout(timeoutMs));
-            }
-            const { text: generated, finishReason } = result;
-
-            if (
-              config?.requireCompleteOutput &&
-              ["length", "max-tokens", "max_tokens"].includes(finishReason)
-            ) {
-              throw Object.assign(new Error("Model output was truncated"), {
-                messageKey: CLEANUP_TRUNCATED_MESSAGE_KEY,
-              });
-            }
-
-            return { success: true, text: (generated || "").trim() };
-          } finally {
-            if (controller) {
-              sender.removeListener("destroyed", cancelSenderRequests);
-              this._enterpriseReasoningRequests.complete(senderId, requestId, controller);
-            }
-          }
-        } catch (err) {
-          debugLogger.error("Enterprise reasoning error:", err);
-          const mappingConfig =
-            runtime?.provider === "bedrock" && runtime.enterprise?.bedrockRegion
-              ? { ...(config || {}), bedrockRegion: runtime.enterprise.bedrockRegion }
-              : config || {};
-          const mapped = mapEnterpriseError(provider, err, mappingConfig);
-          return {
-            success: false,
-            error: mapped.message,
-            // mapEnterpriseError matches provider failures, so a truncation falls through
-            // to its generic mapping — keep the key the throw site set.
-            messageKey: err.messageKey || mapped.messageKey,
-            messageParams: mapped.messageParams,
-            action: mapped.action,
-            actionKey: mapped.actionKey,
-            copyCommand: mapped.copyCommand,
-            retryable: mapped.retryable,
-            technicalDetails: mapped.technicalDetails,
-          };
-        }
-      }
-    );
-
-    ipcMain.on("enterprise-reasoning-cancel", (event) => {
-      this._enterpriseReasoningRequests.cancelSender(event.sender.id);
-    });
-
-    // Runs doStream for the renderer's enterprise chat model shim; parts are
-    // relayed verbatim over enterprise-stream-part, ending with {done}/{error}.
-    this.enterpriseStreamAborts = new Map();
-    ipcMain.handle("enterprise-stream-start", async (event, payload) => {
-      const {
-        isEnterpriseProvider,
-        mapEnterpriseError,
-        validateEnterpriseEndpoint,
-      } = require("./enterpriseProviderErrors");
-      const { streamId, provider, modelId, config, options } = payload || {};
-      let runtime;
-      const send = (message) => {
-        if (!event.sender.isDestroyed()) {
-          event.sender.send("enterprise-stream-part", { streamId, ...message });
-        }
-      };
-      const abortController = new AbortController();
-      this.enterpriseStreamAborts.set(streamId, abortController);
-      // isDestroyed() stays false across reload/navigation, which wipes the
-      // renderer listeners — abort so the provider request isn't billed for
-      // a generation nobody receives.
-      const abortOnGone = (_event, _url, isInPlace, isMainFrame) => {
-        if (isMainFrame && !isInPlace) abortController.abort();
-      };
-      const abortOnDestroyed = () => abortController.abort();
-      event.sender.on("did-start-navigation", abortOnGone);
-      event.sender.once("destroyed", abortOnDestroyed);
-      try {
-        if (!streamId || !isEnterpriseProvider(provider)) {
-          throw new Error(`Unsupported enterprise provider: ${provider}`);
-        }
-        runtime = resolveEnterpriseRuntime(provider, modelId, config || {});
-        if (!runtime.model) throw new Error("No model specified for enterprise streaming");
-        validateEnterpriseEndpoint(runtime.enterprise.azureEndpoint);
-
-        const { getEnterpriseAIModel } = require("./enterpriseAiProviders");
-        const model = await getEnterpriseAIModel(
-          runtime.provider,
-          runtime.model,
-          runtime.apiKey,
-          runtime.enterprise
-        );
-
-        const { stream } = await model.doStream({
-          ...options,
-          abortSignal: abortController.signal,
-        });
-        const reader = stream.getReader();
-        try {
-          for (;;) {
-            const { done, value } = await reader.read();
-            if (done) break;
-            if (event.sender.isDestroyed()) {
-              abortController.abort();
-              break;
-            }
-            send({ part: value });
-          }
-        } finally {
-          reader.releaseLock();
-        }
-        send({ done: true });
-        return { success: true };
-      } catch (err) {
-        debugLogger.error("Enterprise stream error:", err);
-        const mappingConfig =
-          runtime?.provider === "bedrock" && runtime.enterprise?.bedrockRegion
-            ? { ...(config || {}), bedrockRegion: runtime.enterprise.bedrockRegion }
-            : config || {};
-        const mapped = mapEnterpriseError(provider, err, mappingConfig);
-        send({ error: mapped.message });
-        return { success: false, error: mapped.message };
-      } finally {
-        this.enterpriseStreamAborts.delete(streamId);
-        if (!event.sender.isDestroyed()) {
-          event.sender.removeListener("did-start-navigation", abortOnGone);
-          event.sender.removeListener("destroyed", abortOnDestroyed);
-        }
-      }
-    });
-
-    ipcMain.handle("enterprise-stream-cancel", async (event, streamId) => {
-      this.enterpriseStreamAborts.get(streamId)?.abort();
-      this.enterpriseStreamAborts.delete(streamId);
-    });
-
-    // Lists the text models the account serves in the selected region,
-    // resolved to invocable IDs (bare on-demand or geo-scoped profile IDs).
-    ipcMain.handle("bedrock-list-models", async (event, config) => {
-      const { mapEnterpriseError } = require("./enterpriseProviderErrors");
-      try {
-        const runtime = resolveEnterpriseRuntime("bedrock", config?.model || "test", config);
-        const {
-          BedrockClient,
-          ListFoundationModelsCommand,
-          paginateListInferenceProfiles,
-        } = require("@aws-sdk/client-bedrock");
-        const { normalizeBedrockCatalog } = require("./bedrockCatalog");
-
-        const region = runtime.enterprise.bedrockRegion || "us-east-1";
-        let credentials;
-        if (runtime.enterprise.bedrockProfile) {
-          const { fromNodeProviderChain } = require("@aws-sdk/credential-providers");
-          credentials = fromNodeProviderChain({ profile: runtime.enterprise.bedrockProfile });
-        } else if (
-          runtime.enterprise.bedrockAccessKeyId &&
-          runtime.enterprise.bedrockSecretAccessKey
-        ) {
-          credentials = {
-            accessKeyId: runtime.enterprise.bedrockAccessKeyId,
-            secretAccessKey: runtime.enterprise.bedrockSecretAccessKey,
-            sessionToken: runtime.enterprise.bedrockSessionToken || undefined,
-          };
-        }
-        const client = new BedrockClient({ region, ...(credentials ? { credentials } : {}) });
-
-        const [foundationModels, profileSummaries] = await Promise.all([
-          client.send(new ListFoundationModelsCommand({ byOutputModality: "TEXT" })),
-          (async () => {
-            const summaries = [];
-            const paginator = paginateListInferenceProfiles(
-              { client },
-              { typeEquals: "SYSTEM_DEFINED" }
-            );
-            for await (const page of paginator) {
-              summaries.push(...(page.inferenceProfileSummaries || []));
-            }
-            return summaries;
-          })(),
-        ]);
-
-        return {
-          success: true,
-          models: normalizeBedrockCatalog(foundationModels.modelSummaries, profileSummaries),
-        };
-      } catch (err) {
-        debugLogger.error("Bedrock model listing error:", err);
-        const mapped = mapEnterpriseError("bedrock", err, config || {});
-        return { success: false, error: mapped.message };
-      }
     });
 
     ipcMain.handle("get-dictation-key", async () => {
@@ -3913,15 +3483,15 @@ class IPCHandlers {
         // Local mode enabled but no model selected - clear pre-warming vars
         clearVars.push("LOCAL_TRANSCRIPTION_PROVIDER", "PARAKEET_MODEL", "LOCAL_WHISPER_MODEL");
       } else {
-        // Cloud mode - stop local servers to free RAM
+        // Self-hosted mode - stop local servers to free RAM
         clearVars.push("LOCAL_TRANSCRIPTION_PROVIDER", "PARAKEET_MODEL", "LOCAL_WHISPER_MODEL");
         this.whisperManager.stopServer().catch((err) => {
-          debugLogger.error("Failed to stop whisper-server on cloud switch", {
+          debugLogger.error("Failed to stop whisper-server on self-hosted switch", {
             error: err.message,
           });
         });
         this.parakeetManager.stopServer().catch((err) => {
-          debugLogger.error("Failed to stop parakeet-server on cloud switch", {
+          debugLogger.error("Failed to stop parakeet-server on self-hosted switch", {
             error: err.message,
           });
         });
@@ -4006,94 +3576,6 @@ class IPCHandlers {
         return { success: false, error: error.message };
       }
     });
-
-    ipcMain.handle(
-      "process-anthropic-reasoning",
-      async (event, text, modelId, _agentName, config) => {
-        try {
-          const apiKey = this.environmentManager.getAnthropicKey();
-
-          if (!apiKey) {
-            throw new Error("Anthropic API key not configured");
-          }
-
-          const systemPrompt = config?.systemPrompt || "";
-          const userPrompt = text;
-
-          if (!modelId) {
-            throw new Error("No model specified for Anthropic API call");
-          }
-
-          const screenContext = config?.screenContext;
-          const userContent = screenContext
-            ? [
-                { type: "text", text: userPrompt },
-                {
-                  type: "image",
-                  source: {
-                    type: "base64",
-                    media_type: screenContext.mediaType,
-                    data: screenContext.data,
-                  },
-                },
-              ]
-            : userPrompt;
-
-          // Claude models from Opus 4.7 onward reject `temperature` with a 400;
-          // the renderer derives support from the model registry.
-          const useTemperature = config?.supportsTemperature === true;
-          const requestBody = {
-            model: modelId,
-            messages: [{ role: "user", content: userContent }],
-            system: systemPrompt,
-            max_tokens: config?.maxTokens || Math.max(100, Math.min(text.length * 2, 4096)),
-            ...(useTemperature ? { temperature: config?.temperature ?? 0.3 } : {}),
-          };
-
-          const response = await proxyFetch("https://api.anthropic.com/v1/messages", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              "X-API-Key": apiKey,
-              "anthropic-version": "2023-06-01",
-            },
-            body: JSON.stringify(requestBody),
-          });
-
-          if (!response.ok) {
-            const errorText = await response.text();
-            let errorData = { error: response.statusText };
-            try {
-              errorData = JSON.parse(errorText);
-            } catch {
-              errorData = { error: errorText || response.statusText };
-            }
-            throw new Error(
-              errorData.error?.message ||
-                errorData.error ||
-                `Anthropic API error: ${response.status}`
-            );
-          }
-
-          const data = await response.json();
-          if (config?.requireCompleteOutput && data.stop_reason === "max_tokens") {
-            throw Object.assign(new Error("Model output was truncated"), {
-              messageKey: CLEANUP_TRUNCATED_MESSAGE_KEY,
-            });
-          }
-          const outputText = extractAnthropicText(data);
-          if (outputText === null) {
-            throw Object.assign(new Error(describeMissingAnthropicText(data)), {
-              messageKey: CLEANUP_EMPTY_REPLY_MESSAGE_KEY,
-            });
-          }
-          return { success: true, text: outputText };
-        } catch (error) {
-          debugLogger.error("Anthropic reasoning error:", error);
-          return { success: false, error: error.message, messageKey: error.messageKey };
-        }
-      }
-    );
 
     ipcMain.handle("check-local-reasoning-available", async () => {
       try {
@@ -4626,28 +4108,6 @@ class IPCHandlers {
       });
     });
 
-    // In production, VITE_* env vars aren't available in the main process because
-    // Vite only inlines them into the renderer bundle at build time. Load the
-    // runtime-env.json that the Vite build writes to src/dist/ as a fallback.
-    const runtimeEnv = (() => {
-      const fs = require("fs");
-      const envPath = path.join(__dirname, "..", "dist", "runtime-env.json");
-      try {
-        if (fs.existsSync(envPath)) return JSON.parse(fs.readFileSync(envPath, "utf8"));
-      } catch {}
-      return {};
-    })();
-
-    const getApiUrl = () =>
-      process.env.OPENWHISPR_API_URL ||
-      process.env.VITE_OPENWHISPR_API_URL ||
-      runtimeEnv.VITE_OPENWHISPR_API_URL ||
-      "";
-
-    // This build has no OpenWhispr account, so every OpenWhispr Cloud request
-    // stops at its "Not authenticated" check before reaching the network.
-    const getAuthHeader = async () => ({});
-
     // Honors system proxy via Electron's net stack. useSessionCookies:false so
     // Electron doesn't auto-attach jar cookies on top of our explicit headers.
     const proxyFetch = (url, init = {}) => net.fetch(url, { ...init, useSessionCookies: false });
@@ -4657,13 +4117,6 @@ class IPCHandlers {
       const apiKey = this.environmentManager.getCustomTranscriptionKey();
       return apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
     };
-
-    const resolveEnterpriseRuntime = (provider, model, config = {}) => ({
-      provider,
-      model,
-      apiKey: config.apiKey || "",
-      enterprise: require("./enterpriseProviderErrors").pickEnterpriseConfig(config),
-    });
 
     ipcMain.handle("retry-transcription", async (_event, id, settings) => {
       const buffer = this.audioStorageManager.getAudioBuffer(id);
@@ -6515,229 +5968,6 @@ class IPCHandlers {
       }
     });
 
-    ipcMain.handle("cloud-reason", async (event, text, opts = {}) => {
-      const sender = event.sender;
-      const senderId = sender.id;
-      const requestId = crypto.randomUUID();
-      const controller = this._cloudReasonRequests.begin(senderId, requestId);
-      const cancelSenderRequests = () => this._cloudReasonRequests.cancelSender(senderId);
-      sender.once("destroyed", cancelSenderRequests);
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) throw new Error("Not authenticated");
-
-        debugLogger.debug(
-          "Cloud reason request",
-          {
-            model: opts.model || "(default)",
-            agentName: opts.agentName || "(none)",
-            textLength: text?.length || 0,
-            hasScreenContext: !!opts.screenContext,
-          },
-          "cloud-api"
-        );
-
-        const response = await proxyFetch(`${apiUrl}/api/reason`, {
-          method: "POST",
-          signal: controller.signal,
-          headers: {
-            "Content-Type": "application/json",
-            ...authHeader,
-          },
-          body: JSON.stringify({
-            text,
-            model: opts.model,
-            agentName: opts.agentName,
-            customDictionary: opts.customDictionary,
-            customPrompt: opts.customPrompt,
-            systemPrompt: opts.systemPrompt,
-            requestPurpose: opts.requestPurpose,
-            promptMode: opts.promptMode,
-            purpose: opts.purpose,
-            screenContext: opts.screenContext,
-            language: opts.language,
-            locale: opts.locale,
-            sessionId: this.sessionId,
-            clientType: "desktop",
-            appVersion: app.getVersion(),
-            clientVersion: app.getVersion(),
-            streamingFallbackReason: opts.streamingFallbackReason,
-            sttProvider: opts.sttProvider,
-            sttModel: opts.sttModel,
-            sttProcessingMs: opts.sttProcessingMs,
-            sttWordCount: opts.sttWordCount,
-            sttLanguage: opts.sttLanguage,
-            sttDetectedLanguage: opts.sttDetectedLanguage,
-            sttDetectedLanguageConfidence: opts.sttDetectedLanguageConfidence,
-            sttDetectedLanguageAudioSeconds: opts.sttDetectedLanguageAudioSeconds,
-            sttDetectedLanguageStatus: opts.sttDetectedLanguageStatus,
-            audioDurationMs: opts.audioDurationMs,
-            audioSizeBytes: opts.audioSizeBytes,
-            audioFormat: opts.audioFormat,
-            clientTotalMs: opts.clientTotalMs,
-          }),
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            return { success: false, error: "Session expired", code: "AUTH_EXPIRED" };
-          }
-          if (response.status === 503) {
-            return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
-          }
-          throw await readCloudResponseError(response, `API error: ${response.status}`);
-        }
-
-        const data = await response.json();
-        debugLogger.debug(
-          "Cloud reason response",
-          {
-            model: data.model,
-            provider: data.provider,
-            resultLength: data.text?.length || 0,
-            promptMode: data.promptMode,
-            matchType: data.matchType,
-            screenContextApplied: data.screenContextApplied,
-          },
-          "cloud-api"
-        );
-        return {
-          success: true,
-          text: data.text,
-          model: data.model,
-          provider: data.provider,
-          promptMode: data.promptMode,
-          matchType: data.matchType,
-          screenContextApplied: data.screenContextApplied,
-        };
-      } catch (error) {
-        if (controller.signal.aborted) {
-          return { success: false, error: "Cancelled", code: "REASON_CANCELLED" };
-        }
-        debugLogger.error("Cloud reasoning error:", error);
-        return toCloudFailure(error);
-      } finally {
-        sender.removeListener("destroyed", cancelSenderRequests);
-        this._cloudReasonRequests.complete(senderId, requestId, controller);
-      }
-    });
-
-    ipcMain.on("cloud-reason-cancel", (event) => {
-      this._cloudReasonRequests.cancelSender(event.sender.id);
-    });
-
-    ipcMain.on("cloud-agent-stream-start", async (event, requestId, messages, opts = {}) => {
-      if (typeof requestId !== "string" || !requestId.trim()) return;
-
-      const sender = event.sender;
-      const senderId = sender.id;
-      const controller = this._agentStreamRequests.begin(senderId, requestId);
-      const cancelSenderRequests = () => this._agentStreamRequests.cancelSender(senderId);
-      const sendToRenderer = (channel, payload) => {
-        if (!sender.isDestroyed()) sender.send(channel, payload);
-      };
-      sender.once("destroyed", cancelSenderRequests);
-
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) throw new Error("Not authenticated");
-
-        const response = await proxyFetch(`${apiUrl}/api/agent/stream`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...authHeader,
-          },
-          body: JSON.stringify({
-            messages,
-            systemPrompt: opts.systemPrompt,
-            tools: opts.tools,
-            ...(opts.screenContext ? { screenContext: opts.screenContext } : {}),
-            sessionId: this.sessionId,
-            clientType: "desktop",
-            appVersion: app.getVersion(),
-          }),
-          signal: controller.signal,
-        });
-
-        if (!response.ok) {
-          const error = await readCloudResponseError(response, `API error: ${response.status}`);
-          if (response.status === 401 && !error.code) error.code = "AUTH_EXPIRED";
-          if (response.status === 503 && !error.code) error.code = "SERVER_ERROR";
-          sendToRenderer("cloud-agent-stream-error", {
-            requestId,
-            ...toCloudFailure(error),
-          });
-          return;
-        }
-
-        const reader = response.body.getReader();
-        const decoder = new TextDecoder();
-        let buffer = "";
-
-        try {
-          while (true) {
-            const { done, value } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const lines = buffer.split("\n");
-            buffer = lines.pop() || "";
-
-            for (const line of lines) {
-              if (!line.trim()) continue;
-              try {
-                sendToRenderer("cloud-agent-stream-chunk", {
-                  requestId,
-                  chunk: JSON.parse(line),
-                });
-              } catch {
-                // skip malformed NDJSON line
-              }
-            }
-          }
-          if (buffer.trim()) {
-            try {
-              sendToRenderer("cloud-agent-stream-chunk", {
-                requestId,
-                chunk: JSON.parse(buffer),
-              });
-            } catch {
-              // skip malformed remainder
-            }
-          }
-        } finally {
-          reader.releaseLock();
-        }
-
-        sendToRenderer("cloud-agent-stream-end", { requestId });
-      } catch (error) {
-        if (controller.signal.aborted) {
-          sendToRenderer("cloud-agent-stream-end", { requestId });
-          return;
-        }
-        debugLogger.error("Cloud agent stream error:", error);
-        sendToRenderer("cloud-agent-stream-error", {
-          requestId,
-          ...toCloudFailure(error),
-        });
-      } finally {
-        sender.removeListener("destroyed", cancelSenderRequests);
-        this._agentStreamRequests.complete(senderId, requestId, controller);
-      }
-    });
-
-    ipcMain.on("cloud-agent-stream-cancel", (event, requestId) => {
-      if (typeof requestId !== "string" || !requestId.trim()) return;
-      this._agentStreamRequests.cancel(event.sender.id, requestId);
-    });
-
     ipcMain.handle("agent-open-note", async (_event, noteId) => {
       try {
         const note = this.databaseManager.getNote(noteId);
@@ -6751,82 +5981,6 @@ class IPCHandlers {
         return { success: false, error: error.message };
       }
     });
-
-    ipcMain.handle("agent-web-search", async (event, query, numResults = 5) => {
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) throw new Error("Not authenticated");
-
-        debugLogger.debug("Agent web search request", { query, numResults }, "cloud-api");
-
-        const response = await proxyFetch(`${apiUrl}/api/agent/web-search`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            ...authHeader,
-          },
-          body: JSON.stringify({ query, numResults }),
-        });
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            return { success: false, error: "Session expired", code: "AUTH_EXPIRED" };
-          }
-          if (response.status === 503) {
-            return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
-          }
-          const error = await readCloudResponseError(response, `API error: ${response.status}`);
-          return toCloudFailure(error);
-        }
-
-        const data = await response.json();
-        return { success: true, ...data };
-      } catch (error) {
-        debugLogger.error("Agent web search error:", error);
-        return toCloudFailure(error);
-      }
-    });
-
-    const fetchStripeUrl = async (event, endpoint, errorPrefix, body) => {
-      try {
-        const apiUrl = getApiUrl();
-        if (!apiUrl) throw new Error("OpenWhispr API URL not configured");
-
-        const authHeader = await getAuthHeader(event);
-        if (!Object.keys(authHeader).length) throw new Error("Not authenticated");
-
-        const headers = { ...authHeader };
-        const fetchOpts = { method: "POST", headers };
-        if (body) {
-          headers["Content-Type"] = "application/json";
-          fetchOpts.body = JSON.stringify(body);
-        }
-
-        const response = await proxyFetch(`${apiUrl}${endpoint}`, fetchOpts);
-
-        if (!response.ok) {
-          if (response.status === 401) {
-            return { success: false, error: "Session expired", code: "AUTH_EXPIRED" };
-          }
-          if (response.status === 503) {
-            return { success: false, error: "Request timed out", code: "SERVER_ERROR" };
-          }
-          const errorData = await response.json().catch(() => ({}));
-          const message = errorData.error || `API error: ${response.status}`;
-          debugLogger.error(`${errorPrefix}: ${message}`);
-          return { success: false, error: message, code: errorData.code };
-        }
-
-        const data = await response.json();
-        return { success: true, url: data.url };
-      } catch (error) {
-        debugLogger.error(`${errorPrefix}: ${error.message}`);
-        return { success: false, error: error.message };
-      }
-    };
 
     // Unknown ids are a no-op; the renderer fires this for every cancel.
     ipcMain.handle("cancel-upload-transcription", async (_event, requestId) => {

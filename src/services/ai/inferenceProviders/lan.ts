@@ -26,8 +26,7 @@ export const lanProvider: InferenceProvider = {
         resolvedModel,
         text,
         agentName,
-        config,
-        "LAN"
+        config
       );
     } catch (error) {
       logger.logReasoning("LAN_ERROR", {

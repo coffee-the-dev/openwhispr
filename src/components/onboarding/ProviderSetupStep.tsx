@@ -11,12 +11,7 @@ import type { ParakeetCheckResult } from "../../types/electron";
 import { useSettingsStore } from "../../stores/settingsStore";
 import { normalizeBaseUrl } from "../../config/constants";
 import { withHttpsScheme } from "../../utils/urlUtils";
-import {
-  getParakeetModels,
-  getWhisperModels,
-  modelRegistry,
-  type CloudProviderData,
-} from "../../models/ModelRegistry";
+import { getParakeetModels, getWhisperModels, modelRegistry } from "../../models/ModelRegistry";
 import {
   LOCAL_ASR_ORGANIZATIONS,
   getASRModelOrganization,
@@ -24,11 +19,11 @@ import {
   usesParakeetManager,
   DEFAULT_LOCAL_ASR_SELECTION,
 } from "../../helpers/localASROrganization";
-import { pickDefaultModelId } from "../../models/providerDefaultModel";
 import {
   RESUME_DRAFT_PERSIST_DELAY_MS,
-  type OnboardingByokDraft,
   type OnboardingLocalModelDraft,
+  type OnboardingSelfHostedDraft,
+  type OnboardingSelfHostedStepId,
   type OnboardingStepId,
 } from "./flow";
 import { useDebouncedCallback } from "../../hooks/useDebouncedCallback";
@@ -39,7 +34,8 @@ import {
   rememberPendingLocalModel,
 } from "./pendingLocalModels";
 import { isLocalStageDownloadActive } from "./localDownloadState";
-import { isBlankByokDraft, resolveSavedByokConfig } from "./savedByokConfig";
+import { isBlankSelfHostedDraft, resolveSavedSelfHostedDraft } from "./savedSelfHostedConfig";
+import OpenAICompatiblePanel from "../OpenAICompatiblePanel";
 
 export function SetupStageStepper({ stepId }: { stepId: OnboardingStepId }) {
   const { t } = useTranslation();
@@ -192,27 +188,6 @@ const SELECT_PANEL_CLASS =
 const SELECT_ITEM_CLASS =
   "onboarding-select-item gap-2.5 rounded-none py-2.5 ps-1.5 pe-8 text-sm font-normal leading-[1.4] hover:bg-transparent focus:bg-transparent data-highlighted:bg-transparent dark:hover:bg-transparent dark:focus:bg-transparent dark:data-highlighted:bg-transparent [&>span:nth-child(2)]:w-full";
 
-function providerCredential(provider: string, store: ReturnType<typeof useSettingsStore.getState>) {
-  switch (provider) {
-    case "openai":
-      return { value: store.openaiApiKey, set: store.setOpenaiApiKey };
-    case "anthropic":
-      return { value: store.anthropicApiKey, set: store.setAnthropicApiKey };
-    case "gemini":
-      return { value: store.geminiApiKey, set: store.setGeminiApiKey };
-    case "groq":
-      return { value: store.groqApiKey, set: store.setGroqApiKey };
-    case "openrouter":
-      return { value: store.openrouterApiKey, set: store.setOpenrouterApiKey };
-    case "tinfoil":
-      return { value: store.tinfoilApiKey, set: store.setTinfoilApiKey };
-    case "corti":
-      return { value: store.cortiApiKey, set: store.setCortiApiKey };
-    default:
-      return { value: "", set: (_value: string) => undefined };
-  }
-}
-
 /**
  * One server's variants — missing scheme, host case, trailing slash, pasted API path —
  * compare equal. Parsing lowercases the scheme and host; the path keeps its case.
@@ -289,195 +264,96 @@ function FieldLabel({ children }: { children: ReactNode }) {
   );
 }
 
-export function ByokProviderStep({
+export function SelfHostedSetupStep({
   stepId,
-  selfHostedRequested = false,
-  onSelfHostedChange,
-  onConnectionChange,
+  onReadinessChange,
   onProceed,
   resumeState,
   onResumeStateChange,
 }: {
-  stepId: "byok-dictation" | "byok-assistant";
-  /**
-   * Set when the user picked "Self-hosted" on setup-choice rather than BYOK. Dictation
-   * has no hosted providers, so its step is always the self-hosted card.
-   */
-  selfHostedRequested?: boolean;
-  onSelfHostedChange: (requested: boolean) => void;
-  onConnectionChange: (connected: boolean) => void;
+  stepId: OnboardingSelfHostedStepId;
+  onReadinessChange: (ready: boolean) => void;
   onProceed: () => void;
-  resumeState?: OnboardingByokDraft;
-  onResumeStateChange?: (state: OnboardingByokDraft) => void;
+  resumeState?: OnboardingSelfHostedDraft;
+  onResumeStateChange?: (state: OnboardingSelfHostedDraft) => void;
 }) {
   const { t } = useTranslation();
   const store = useSettingsStore();
-  const assistant = stepId === "byok-assistant";
-  const providers = useMemo<CloudProviderData[]>(
-    () => (assistant ? modelRegistry.getCloudProviders() : []),
-    [assistant]
-  );
-  // The session's draft wins; without one (onboarding was restarted, or an older build
-  // left it blank) the step reopens on what the user already saved, the same order
-  // LocalModelSetupStep uses. The draft never records keys, so the stored custom key is
-  // tracked by the endpoint it was saved under — the draft, and anything typed after it,
-  // can name a different server than the saved settings do.
+  const assistant = stepId === "self-hosted-assistant";
+  // The session's draft wins; without one (onboarding was restarted) the step
+  // reopens on what the user already saved. The draft never records keys, so the
+  // stored key is tracked by the server it was saved under — the draft, and
+  // anything typed after it, can name a different server than the settings do.
   const [seed] = useState(() => {
-    const saved = resolveSavedByokConfig(stepId, store);
-    const hasDraft = Boolean(resumeState && !isBlankByokDraft(resumeState));
-    const draft = hasDraft ? resumeState : saved?.draft;
-    const providerData = providers.find((provider) => provider.id === draft?.selectedProvider);
-    // After a restart the session only knows which setup-choice tile was clicked, so a
-    // saved endpoint opens its own card whichever tile that was; a draft carries the
-    // card the session recorded for it.
-    const selfHostedWanted =
-      hasDraft || !saved ? selfHostedRequested : Boolean(saved.draft.baseUrl);
-    const selfHosted = !assistant || selfHostedWanted;
+    const saved = resolveSavedSelfHostedDraft(stepId, store);
+    const draft = resumeState && !isBlankSelfHostedDraft(resumeState) ? resumeState : saved;
     return {
-      provider: providerData?.id ?? "",
-      model: providerData?.models?.some((model) => model.id === draft?.selectedModel)
-        ? (draft?.selectedModel ?? "")
-        : pickDefaultModelId(providerData),
       baseUrl: draft?.baseUrl ?? "",
-      customModel: draft?.customModel ?? "",
-      selfHosted,
-      cardDiffersFromSession: selfHosted !== selfHostedRequested,
-      keyedBaseUrl: saved?.usesCustomKey ? saved.draft.baseUrl : "",
+      model: draft?.model ?? "",
+      keyedBaseUrl: saved?.baseUrl ?? "",
     };
   });
-  // Hosted and self-hosted share the key field, so each mode shows its own saved key.
-  // The stored custom key belongs to the one endpoint it was saved under: offering it for
-  // a key-less server, a hosted provider, a first setup, or an endpoint the user has since
-  // typed would send a key they never typed to that server, and move the save onto the
-  // keyed route.
-  const credentialFor = (selfHostedMode: boolean, providerId: string, baseUrl: string) => {
-    if (!selfHostedMode) return providerCredential(providerId, store).value;
-    if (!isSameEndpoint(baseUrl, seed.keyedBaseUrl)) return "";
-    return assistant ? store.chatAgentCustomApiKey : store.customTranscriptionApiKey;
-  };
-  const [selfHosted, setSelfHosted] = useState(seed.selfHosted);
-  const [selectedProvider, setSelectedProvider] = useState(seed.provider);
-  const [selectedModel, setSelectedModel] = useState(seed.model);
-  const [draftApiKey, setDraftApiKey] = useState(() =>
-    credentialFor(seed.selfHosted, seed.provider, seed.baseUrl)
-  );
+  // The stored key belongs to the one server it was saved under: offering it for
+  // a first setup or a server the user has since typed would send a key they
+  // never typed to that server.
+  const storedKey = assistant ? store.chatAgentCustomApiKey : store.customTranscriptionApiKey;
+  const savedKeyFor = (baseUrl: string) =>
+    isSameEndpoint(baseUrl, seed.keyedBaseUrl) ? storedKey : "";
   const [draftBaseUrl, setDraftBaseUrl] = useState(seed.baseUrl);
-  const [draftCustomModel, setDraftCustomModel] = useState(seed.customModel);
+  const [draftApiKey, setDraftApiKey] = useState(() => savedKeyFor(seed.baseUrl));
+  const [draftModel, setDraftModel] = useState(seed.model);
   const [connected, setConnected] = useState(false);
 
-  useEffect(() => {
-    onConnectionChange(false);
-  }, [onConnectionChange]);
-
-  // The card the saved setup picked goes on the session once, at mount (both deps are
-  // stable), so the draft this visit writes reopens on it; later switches report
-  // through toggleSelfHosted.
-  useEffect(() => {
-    if (seed.cardDiffersFromSession) onSelfHostedChange(seed.selfHosted);
-  }, [onSelfHostedChange, seed]);
-
-  // Base URL and custom model are typed, so the write is debounced the way the
-  // auth draft is; the flush covers the pending write this card drops when the
-  // step advances and unmounts it.
-  const latestByokDraft = useRef<OnboardingByokDraft | null>(null);
-  const flushByokDraft = useCallback(() => {
-    if (latestByokDraft.current) onResumeStateChange?.(latestByokDraft.current);
+  // Base URL and model are typed, so the write is debounced; the flush covers
+  // the pending write this card drops when the step advances and unmounts it.
+  const latestDraft = useRef<OnboardingSelfHostedDraft | null>(null);
+  const flushDraft = useCallback(() => {
+    if (latestDraft.current) onResumeStateChange?.(latestDraft.current);
   }, [onResumeStateChange]);
-  const persistByokDraft = useDebouncedCallback(flushByokDraft, RESUME_DRAFT_PERSIST_DELAY_MS);
+  const persistDraft = useDebouncedCallback(flushDraft, RESUME_DRAFT_PERSIST_DELAY_MS);
 
   useEffect(() => {
-    latestByokDraft.current = {
-      selectedProvider,
-      selectedModel,
-      baseUrl: draftBaseUrl,
-      customModel: draftCustomModel,
-    };
-    persistByokDraft();
-  }, [draftBaseUrl, draftCustomModel, persistByokDraft, selectedModel, selectedProvider]);
+    latestDraft.current = { baseUrl: draftBaseUrl, model: draftModel };
+    persistDraft();
+  }, [draftBaseUrl, draftModel, persistDraft]);
 
-  useEffect(() => flushByokDraft, [flushByokDraft]);
+  useEffect(() => flushDraft, [flushDraft]);
 
-  // Saved keys load asynchronously (initializeSettings), so an empty field takes its key
-  // when it arrives; anything already in the field is kept.
-  const savedKey = credentialFor(selfHosted, selectedProvider, draftBaseUrl);
-  // Retyping the endpoint strands the copy of the stored key this card prefilled, so it is
-  // taken back out. Only a byte-identical copy goes — never a key the user typed, and
-  // never while the field still names the endpoint the key was saved under.
-  const strandedKey =
-    selfHosted && !savedKey
-      ? assistant
-        ? store.chatAgentCustomApiKey
-        : store.customTranscriptionApiKey
-      : "";
+  // Saved keys load asynchronously (initializeSettings), so an empty field takes
+  // its key when it arrives; anything already in the field is kept. Retyping the
+  // server takes a prefilled copy of the stored key back out — never a key the
+  // user typed.
+  const savedKey = savedKeyFor(draftBaseUrl);
   useEffect(() => {
     if (savedKey) setDraftApiKey((current) => current || savedKey);
-    else if (strandedKey) setDraftApiKey((current) => (current === strandedKey ? "" : current));
-  }, [savedKey, strandedKey]);
+    else if (storedKey) setDraftApiKey((current) => (current === storedKey ? "" : current));
+  }, [savedKey, storedKey]);
 
-  const currentProvider = providers.find((provider) => provider.id === selectedProvider);
-  const models = currentProvider?.models ?? [];
-  const knownCredential = providerCredential(selectedProvider, store);
-  // Both halves of the form survive a mode switch, so switching back shows the saved or
-  // typed values again; only the shared key field follows the mode.
-  const toggleSelfHosted = () => {
-    const next = !selfHosted;
-    setSelfHosted(next);
-    onSelfHostedChange(next);
-    setDraftApiKey(credentialFor(next, selectedProvider, draftBaseUrl));
-    setConnected(false);
-    onConnectionChange(false);
-  };
+  // Dictation proves its server with the connection test; the assistant's model
+  // list is fetched from the server itself, so a picked model is the proof.
+  const ready = assistant
+    ? Boolean(draftBaseUrl.trim() && draftModel.trim())
+    : Boolean(connected && draftBaseUrl.trim());
 
-  const chooseProvider = (providerId: string) => {
-    const fallbackModel = pickDefaultModelId(providers.find((item) => item.id === providerId));
-    setSelectedProvider(providerId);
-    setSelectedModel(fallbackModel);
-    setDraftApiKey(providerCredential(providerId, store).value);
-    setConnected(false);
-    onConnectionChange(false);
-  };
+  useEffect(() => {
+    onReadinessChange(ready);
+  }, [onReadinessChange, ready]);
 
-  const chooseModel = (modelId: string) => {
-    setSelectedModel(modelId);
-    setConnected(false);
-    onConnectionChange(false);
-  };
-
-  const handleConnected = useCallback(
-    (success: boolean) => {
-      setConnected(success);
-      onConnectionChange(success);
-    },
-    [onConnectionChange]
-  );
-
-  const testingProvider = selfHosted ? "custom" : selectedProvider;
-  const testingKey = draftApiKey;
-  const testingBaseUrl = selfHosted ? draftBaseUrl : undefined;
-  const fieldsReady = selfHosted
-    ? Boolean(draftBaseUrl.trim() && draftCustomModel.trim())
-    : Boolean(currentProvider && selectedModel && testingKey.trim());
+  const handleConnected = useCallback((success: boolean) => setConnected(success), []);
 
   const commitAndProceed = () => {
-    if (selfHosted) {
-      const committedBaseUrl = withHttpsScheme(draftBaseUrl);
-      if (assistant) {
-        store.setChatAgentRemoteUrl(committedBaseUrl);
-        store.setChatAgentCustomApiKey(draftApiKey);
-        store.setChatAgentModel(draftCustomModel);
-        store.setChatAgentMode("self-hosted");
-        store.setChatAgentProvider("custom");
-      } else {
-        store.setRemoteTranscriptionUrl(committedBaseUrl);
-        store.setRemoteTranscriptionModel(draftCustomModel);
-        store.setRemoteTranscriptionType("openai-compatible");
-        store.setCustomTranscriptionApiKey(draftApiKey);
-      }
+    const committedBaseUrl = withHttpsScheme(draftBaseUrl);
+    if (assistant) {
+      store.setChatAgentMode("self-hosted");
+      store.setChatAgentProvider("lan");
+      store.setChatAgentRemoteUrl(committedBaseUrl);
+      store.setChatAgentCustomApiKey(draftApiKey);
+      store.setChatAgentModel(draftModel);
     } else {
-      knownCredential.set(draftApiKey);
-      store.setChatAgentMode("providers");
-      store.switchReasoningProvider("chatIntelligence", selectedProvider, selectedModel);
-      store.setChatAgentModel(selectedModel);
+      store.setRemoteTranscriptionUrl(committedBaseUrl);
+      store.setRemoteTranscriptionModel(draftModel);
+      store.setRemoteTranscriptionType("openai-compatible");
+      store.setCustomTranscriptionApiKey(draftApiKey);
     }
     onProceed();
   };
@@ -490,33 +366,16 @@ export function ByokProviderStep({
       <SetupStageStepper stepId={stepId} />
 
       <div className="mt-3 space-y-3">
-        {assistant && (
-          <button
-            type="button"
-            role="checkbox"
-            aria-checked={selfHosted}
-            onClick={toggleSelfHosted}
-            className="flex items-center gap-2 text-xs text-[var(--onboarding-text-primary)]"
-          >
-            {/* Matches the checkbox in LanguageSelectionStep, which was built from
-                the spec: the light stroke stays on in both states, the fill is the
-                accent token rather than blue-500, and the tick is hairline. Kept at
-                size-5 because this card is the denser text-xs layout. */}
-            <span
-              className={`flex size-5 shrink-0 items-center justify-center rounded-[5.5px] border border-[var(--onboarding-control-border)] ${
-                selfHosted
-                  ? "bg-[var(--onboarding-accent)] text-[var(--onboarding-accent-foreground)]"
-                  : "bg-[var(--onboarding-surface)]"
-              }`}
-              aria-hidden="true"
-            >
-              {selfHosted && <Check className="size-3.5" strokeWidth={1.17} />}
-            </span>
-            {t("onboarding.rehaul.provider.selfHosted")}
-          </button>
-        )}
-
-        {selfHosted ? (
+        {assistant ? (
+          <OpenAICompatiblePanel
+            baseUrl={draftBaseUrl}
+            setBaseUrl={setDraftBaseUrl}
+            apiKey={draftApiKey}
+            setApiKey={setDraftApiKey}
+            model={draftModel}
+            setModel={setDraftModel}
+          />
+        ) : (
           <>
             <label className="block">
               <FieldLabel>{t("onboarding.rehaul.provider.endpointUrl")}</FieldLabel>
@@ -545,111 +404,31 @@ export function ByokProviderStep({
               <FieldLabel>{t("onboarding.rehaul.provider.modelId")}</FieldLabel>
               <Input
                 dir="ltr"
-                value={draftCustomModel}
-                onChange={(event) => setDraftCustomModel(event.target.value)}
-                placeholder={t("onboarding.rehaul.provider.modelIdPlaceholder")}
+                value={draftModel}
+                onChange={(event) => setDraftModel(event.target.value)}
+                placeholder={t("onboarding.rehaul.provider.optional")}
                 className={inputClass}
               />
             </label>
-          </>
-        ) : (
-          <>
-            <label className="block">
-              <FieldLabel>{t("onboarding.rehaul.provider.providerLabel")}</FieldLabel>
-              <Select value={selectedProvider || undefined} onValueChange={chooseProvider}>
-                <SelectTrigger
-                  className={`${SELECT_TRIGGER_CLASS} disabled:opacity-100 disabled:[&>svg]:hidden`}
-                >
-                  {currentProvider ? (
-                    <div className="flex items-center gap-2">
-                      <ProviderIcon provider={currentProvider.id} className="size-4" />
-                      {currentProvider.name}
-                    </div>
-                  ) : (
-                    <span className="text-[var(--onboarding-text-secondary)]">
-                      {t("onboarding.rehaul.provider.providerPlaceholder")}
-                    </span>
-                  )}
-                </SelectTrigger>
-                <SelectContent className={`max-h-[14.625rem] ${SELECT_PANEL_CLASS}`}>
-                  {providers.map((provider) => (
-                    <SelectItem key={provider.id} value={provider.id} className={SELECT_ITEM_CLASS}>
-                      <span className="flex items-center gap-2.5">
-                        <ProviderIcon provider={provider.id} className="size-5" />
-                        <span>{provider.name}</span>
-                      </span>
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
 
-            <label className="block">
-              <FieldLabel>{t("onboarding.rehaul.provider.modelLabel")}</FieldLabel>
-              <Select
-                value={selectedModel || undefined}
-                onValueChange={chooseModel}
-                disabled={!selectedProvider}
-              >
-                <SelectTrigger
-                  className={`${SELECT_TRIGGER_CLASS} disabled:opacity-100 disabled:[&>svg]:hidden`}
-                >
-                  {selectedModel ? (
-                    <span dir="ltr">
-                      {models.find((model) => model.id === selectedModel)?.name ?? selectedModel}
-                    </span>
-                  ) : (
-                    <span className="text-[var(--onboarding-text-secondary)]">
-                      {t("onboarding.rehaul.provider.modelPlaceholder")}
-                    </span>
-                  )}
-                </SelectTrigger>
-                <SelectContent className={`max-h-[14.625rem] ${SELECT_PANEL_CLASS}`}>
-                  {models.map((model) => (
-                    <SelectItem key={model.id} value={model.id} className={SELECT_ITEM_CLASS}>
-                      {model.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </label>
-
-            <label className="block">
-              <FieldLabel>{t("onboarding.rehaul.provider.apiKey")}</FieldLabel>
-              <Input
-                dir="ltr"
-                type="password"
-                value={draftApiKey}
-                onChange={(event) => setDraftApiKey(event.target.value)}
-                placeholder={t("onboarding.rehaul.provider.apiKeyPlaceholder")}
-                disabled={!selectedProvider}
-                autoComplete="off"
-                spellCheck={false}
-                className={inputClass}
-              />
-            </label>
+            {/* Keyed per step only; field changes reset through the component's
+                config effect instead of a remount on every keystroke. */}
+            <ProviderConnectionTest
+              key={stepId}
+              config={{
+                apiKey: draftApiKey,
+                baseUrl: draftBaseUrl,
+                model: draftModel.trim() || undefined,
+              }}
+              onSuccessChange={handleConnected}
+              variant="inline"
+            />
           </>
         )}
 
-        {/* Keyed per step+provider only; baseUrl/model changes reset through the
-            component's config effect instead of a remount, which used to run on
-            every keystroke in the self-hosted URL and model inputs. */}
-        <ProviderConnectionTest
-          key={`${stepId}:${testingProvider}`}
-          config={{
-            scope: assistant ? "reasoning" : "transcription",
-            provider: testingProvider,
-            apiKey: testingKey,
-            baseUrl: testingBaseUrl,
-            model: selfHosted ? draftCustomModel : selectedModel,
-          }}
-          onSuccessChange={handleConnected}
-          variant="inline"
-        />
-
         <StepPrimaryAction
           onClick={commitAndProceed}
-          disabled={!connected || !fieldsReady}
+          disabled={!ready}
           className="mt-4! w-full focus-visible:ring-0 focus-visible:ring-offset-0"
         >
           {t("onboarding.rehaul.provider.proceed")}

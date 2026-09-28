@@ -13,7 +13,7 @@ export interface ModelCardOption {
   icon?: string;
   invertInDark?: boolean;
   // Explicit group for SearchableModelList; falls back to the "provider/"
-  // prefix of `value` when absent (e.g. Bedrock ids carry no slash).
+  // prefix of `value` when absent (some servers' ids carry no slash).
   group?: string;
   // Local model properties (optional)
   isDownloaded?: boolean;
@@ -48,7 +48,7 @@ interface ModelCardProps {
   isSelected: boolean;
   onSelect: (modelId: string) => void;
   colorScheme?: ColorScheme;
-  // Long-form descriptions (e.g. OpenRouter) fill the row and ellipsize
+  // Long-form descriptions (e.g. from a server's model list) fill the row and ellipsize
   // instead of sitting flush-right like short metadata.
   truncateDescription?: boolean;
   // Local model actions (optional - when provided, enables local model UI)

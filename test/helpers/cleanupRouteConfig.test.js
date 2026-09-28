@@ -2,20 +2,19 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const { loadAudioManager } = require("./harness/audioManager");
 
-// Pin both cleanup routes against bridge defaults (local: 0.7, Anthropic/enterprise: 0.3).
-// Only direct Gemini defers to model defaults; stale provider selections must not leak.
-async function loadRouteResolver(t, provider = "test", mode = "providers") {
+// Pin both cleanup routes against the local bridge's 0.7 default, on either runtime.
+async function loadRouteResolver(t, mode = "local") {
   const { vite } = await loadAudioManager(t, {
     cachePrefix: "openwhispr-cleanup-route-config-test-",
     settingsKey: "__cleanupRouteConfigSettings",
     mockModules: {
       "/stores/settingsStore": `
         export const getSettings = () => globalThis.__cleanupRouteConfigSettings;
-        export const getEffectiveCleanupModel = () => "cleanup-model";
-        export const selectResolvedLLMConfig = () => ({ model: "cleanup-model", provider: ${JSON.stringify(provider)}, mode: ${JSON.stringify(mode)} });
-        export const isCloudCleanupMode = () => false;
-        export const isCloudDictationAgentMode = () => false;
-        export const isCloudTranslationMode = () => false;
+        export const selectResolvedLLMConfig = () => ({
+          model: "cleanup-model",
+          mode: ${JSON.stringify(mode)},
+          remoteUrl: "https://vllm.lan/v1",
+        });
       `,
       "/dictationAgentInference": `
         export const resolveDictationAgentInference = () => ({
@@ -23,11 +22,6 @@ async function loadRouteResolver(t, provider = "test", mode = "providers") {
           model: "agent-model",
           displayProvider: "test",
           config: { provider: "test" },
-        });
-        export const resolveDictationAgentVisionInference = () => ({
-          active: false,
-          model: "",
-          config: {},
         });
       `,
       "/dictationTranslationInference": `
@@ -76,17 +70,8 @@ test("the translation chain's cleanup step pins the same config", async (t) => {
   assert.equal(route.config.temperature, undefined);
 });
 
-test("both Gemini cleanup paths defer temperature to the provider", async (t) => {
-  const resolveRoute = await loadRouteResolver(t, "gemini");
-  assert.equal(resolveRoute("clean this").config.temperature, undefined);
-  assert.equal(
-    resolveRoute("translate this", { translationRequested: true }).cleanupConfig.temperature,
-    undefined
-  );
-});
-
-test("a stale Gemini selection does not change other cleanup modes", async (t) => {
-  const resolveRoute = await loadRouteResolver(t, "gemini", "local");
+test("self-hosted cleanup pins the same temperature", async (t) => {
+  const resolveRoute = await loadRouteResolver(t, "self-hosted");
   assert.equal(resolveRoute("clean this").config.temperature, 0);
   assert.equal(
     resolveRoute("translate this", { translationRequested: true }).cleanupConfig.temperature,

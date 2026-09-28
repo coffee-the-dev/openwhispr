@@ -8,15 +8,10 @@ import { AlertDialog } from "./dialog";
 import { useDialogs } from "../../hooks/useDialogs";
 import { useAgentName } from "../../utils/agentName";
 import ReasoningService from "../../services/ReasoningService";
-import { getModelProvider } from "../../models/ModelRegistry";
 import logger from "../../utils/logger";
 import { getDefaultPromptText, resolvePrompt, type PromptKind } from "../../config/prompts";
-import {
-  useSettingsStore,
-  selectIsCloudCleanupMode,
-  selectIsCloudDictationAgentMode,
-  selectIsCloudTranslationMode,
-} from "../../stores/settingsStore";
+import { useSettingsStore, selectResolvedLLMConfig } from "../../stores/settingsStore";
+import type { InferenceMode } from "../../types/electron";
 import { getLanguageLabel } from "../../utils/languageSupport";
 import { getDictionaryHintWords } from "../../utils/snippets";
 import { resolveDictationAgentInference } from "../../helpers/dictationAgentInference";
@@ -26,28 +21,6 @@ interface PromptStudioProps {
   className?: string;
   kind?: PromptKind;
 }
-
-type ProviderConfig = {
-  label: string;
-  apiKeyStorageKey?: string;
-  baseStorageKey?: string;
-};
-
-const PROVIDER_CONFIG: Record<string, ProviderConfig> = {
-  openai: { label: "OpenAI", apiKeyStorageKey: "openaiApiKey" },
-  anthropic: { label: "Anthropic", apiKeyStorageKey: "anthropicApiKey" },
-  gemini: { label: "Gemini", apiKeyStorageKey: "geminiApiKey" },
-  groq: { label: "Groq", apiKeyStorageKey: "groqApiKey" },
-  openrouter: { label: "OpenRouter", apiKeyStorageKey: "openrouterApiKey" },
-  tinfoil: { label: "Tinfoil", apiKeyStorageKey: "tinfoilApiKey" },
-  openwhispr: { label: "OpenWhispr Cloud" },
-  custom: {
-    label: "Custom endpoint",
-    apiKeyStorageKey: "openaiApiKey",
-    baseStorageKey: "cleanupCloudBaseUrl",
-  },
-  local: { label: "Local" },
-};
 
 export default function PromptStudio({ className = "", kind = "cleanup" }: PromptStudioProps) {
   const { t } = useTranslation();
@@ -68,20 +41,15 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
   const effectiveSettings = useSettingsStore(useShallow((settings) => settings));
   const uiLanguage = effectiveSettings.uiLanguage;
 
-  const isCloudMode = selectIsCloudCleanupMode(effectiveSettings);
   const useCleanupModel = effectiveSettings.useCleanupModel;
-  const cleanupModel = effectiveSettings.cleanupModel;
+  const cleanup = selectResolvedLLMConfig(effectiveSettings, "dictationCleanup");
 
-  const isCloudDictationAgent = selectIsCloudDictationAgentMode(effectiveSettings);
   const useDictationAgent = effectiveSettings.useDictationAgent;
   const dictationAgentMode = effectiveSettings.dictationAgentMode;
-  const dictationAgentProvider = effectiveSettings.dictationAgentProvider;
   const dictationAgentModel = effectiveSettings.dictationAgentModel;
 
-  const isCloudTranslation = selectIsCloudTranslationMode(effectiveSettings);
   const useDictationTranslation = effectiveSettings.useDictationTranslation;
   const translationMode = effectiveSettings.translationMode;
-  const translationProvider = effectiveSettings.translationProvider;
   const translationModel = effectiveSettings.translationModel;
   const translationRemoteUrl = effectiveSettings.translationRemoteUrl;
   const translationTargetLanguage = effectiveSettings.translationTargetLanguage;
@@ -136,9 +104,7 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
           return;
         }
 
-        const translation = resolveDictationTranslationInference(effectiveSettings, {
-          isCloudTranslation,
-        });
+        const translation = resolveDictationTranslationInference(effectiveSettings);
         if (!translation.reachable) {
           if (translationMode === "self-hosted" && !translationRemoteUrl.trim()) {
             setTestResult(t("notes.actions.errors.noEndpoint"));
@@ -181,12 +147,14 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
         }
 
         const settings = effectiveSettings;
-        const agent = resolveDictationAgentInference(settings, {
-          isCloudAgent: isCloudDictationAgent,
-        });
+        const agent = resolveDictationAgentInference(settings);
 
         if (!agent.reachable) {
-          setTestResult(t("promptStudio.test.noModelSelected"));
+          setTestResult(
+            dictationAgentMode === "self-hosted"
+              ? t("notes.actions.errors.noEndpoint")
+              : t("promptStudio.test.noModelSelected")
+          );
           return;
         }
 
@@ -211,17 +179,12 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
         return;
       }
 
-      const cleanupProvider = isCloudMode
-        ? "openwhispr"
-        : (cleanupModel && getModelProvider(cleanupModel)) || "openai";
-
       logger.debug(
         "PromptStudio test starting",
         {
           useCleanupModel,
-          isCloudMode,
-          cleanupModel,
-          cleanupProvider,
+          mode: cleanup.mode,
+          cleanupModel: cleanup.model,
           testTextLength: testText.length,
           agentName,
         },
@@ -233,38 +196,20 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
         return;
       }
 
-      if (!isCloudMode && !cleanupModel) {
+      if (cleanup.mode === "self-hosted" && !cleanup.remoteUrl?.trim()) {
+        setTestResult(t("notes.actions.errors.noEndpoint"));
+        return;
+      }
+
+      if (cleanup.mode === "local" && !cleanup.model) {
         setTestResult(t("promptStudio.test.noModelSelected"));
         return;
       }
 
-      if (!isCloudMode) {
-        const providerConfig = PROVIDER_CONFIG[cleanupProvider] || {
-          label: cleanupProvider.charAt(0).toUpperCase() + cleanupProvider.slice(1),
-        };
-
-        if (providerConfig.baseStorageKey) {
-          const baseUrl = (effectiveSettings.cleanupCloudBaseUrl || "").trim();
-          if (!baseUrl) {
-            setTestResult(
-              t("promptStudio.test.baseUrlMissing", {
-                provider:
-                  cleanupProvider === "custom"
-                    ? t("promptStudio.test.customEndpoint")
-                    : providerConfig.label,
-              })
-            );
-            return;
-          }
-        }
-      }
-
-      const modelToUse = isCloudMode ? cleanupModel || "auto" : cleanupModel;
-
       const previous = customPrompt;
       setCustomPrompt(kind, editedPrompt);
       try {
-        const result = await ReasoningService.processText(testText, modelToUse, agentName, {
+        const result = await ReasoningService.processText(testText, cleanup.model, agentName, {
           inferenceScope: "dictationCleanup",
           disableThinking: effectiveSettings.cleanupDisableThinking,
         });
@@ -275,12 +220,7 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       logger.error("PromptStudio test failed", { error: errorMessage }, "prompt-studio");
-      const typed = error as { code?: string; provider?: string };
-      setTestResult(
-        typed?.code === "API_KEY_MISSING"
-          ? t("promptStudio.test.apiKeyMissing", { provider: typed.provider })
-          : t("promptStudio.test.failed", { error: errorMessage })
-      );
+      setTestResult(t("promptStudio.test.failed", { error: errorMessage }));
     } finally {
       setIsLoading(false);
     }
@@ -428,58 +368,22 @@ export default function PromptStudio({ className = "", kind = "cleanup" }: Promp
         {activeTab === "test" &&
           (() => {
             // Each kind reports the scope that actually runs it.
-            const testIsCloud = isTranslate
-              ? isCloudTranslation
+            const testMode: InferenceMode = isTranslate
+              ? translationMode
               : isAgent
-                ? isCloudDictationAgent
-                : isCloudMode;
+                ? dictationAgentMode
+                : cleanup.mode;
             const testModel = isTranslate
               ? translationModel
               : isAgent
                 ? dictationAgentModel
-                : cleanupModel;
-            const agentDisplayProvider = isAgent
-              ? resolveDictationAgentInference(
-                  {
-                    useDictationAgent,
-                    dictationAgentMode,
-                    dictationAgentProvider,
-                    dictationAgentModel,
-                  },
-                  { isCloudAgent: isCloudDictationAgent }
-                ).displayProvider
-              : "";
-            const translationDisplayProvider = isTranslate
-              ? resolveDictationTranslationInference(
-                  {
-                    translationMode,
-                    translationProvider,
-                  },
-                  { isCloudTranslation }
-                ).displayProvider
-              : "";
-            const scopeProvider = isTranslate
-              ? translationDisplayProvider
-              : isAgent
-                ? agentDisplayProvider
-                : "";
-            const testProvider =
-              isAgent || isTranslate
-                ? scopeProvider
-                : testIsCloud
-                  ? "openwhispr"
-                  : scopeProvider || (testModel && getModelProvider(testModel)) || "openai";
-            const providerConfig = PROVIDER_CONFIG[testProvider] || {
-              label: testProvider.charAt(0).toUpperCase() + testProvider.slice(1),
-            };
-
-            const displayModel = testIsCloud
-              ? t("promptStudio.test.openwhisprCloud")
-              : testModel || t("promptStudio.test.none");
-            const displayProvider =
-              testProvider === "custom"
-                ? t("promptStudio.test.customEndpoint")
-                : providerConfig.label;
+                : cleanup.model;
+            const displayModel = testModel || t("promptStudio.test.none");
+            const displayProvider = t(
+              testMode === "self-hosted"
+                ? "settingsPage.aiModels.modes.selfHosted"
+                : "settingsPage.aiModels.modes.local"
+            );
 
             return (
               <div className="divide-y divide-border/60 dark:divide-border-subtle">

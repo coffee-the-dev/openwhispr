@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useShallow } from "zustand/react/shallow";
-import { selectIsCloudCleanupMode, useSettingsStore } from "../stores/settingsStore";
+import { selectResolvedLLMConfig, useSettingsStore } from "../stores/settingsStore";
 
 interface UseNotesOnboardingReturn {
   isComplete: boolean;
@@ -9,13 +9,14 @@ interface UseNotesOnboardingReturn {
 }
 
 export function useNotesOnboarding(): UseNotesOnboardingReturn {
-  const { useCleanupModel, effectiveModel, isCloudCleanup } = useSettingsStore(
+  const { useCleanupModel, mode, effectiveModel, remoteUrl } = useSettingsStore(
     useShallow((settings) => {
-      const effective = settings;
+      const cleanup = selectResolvedLLMConfig(settings, "dictationCleanup");
       return {
-        useCleanupModel: effective.useCleanupModel,
-        effectiveModel: effective.cleanupModel,
-        isCloudCleanup: selectIsCloudCleanupMode(effective),
+        useCleanupModel: settings.useCleanupModel,
+        mode: cleanup.mode,
+        effectiveModel: cleanup.model,
+        remoteUrl: cleanup.remoteUrl ?? "",
       };
     })
   );
@@ -24,7 +25,8 @@ export function useNotesOnboarding(): UseNotesOnboardingReturn {
     () => localStorage.getItem("notesOnboardingComplete") === "true"
   );
 
-  const isLLMConfigured = isCloudCleanup || (useCleanupModel && !!effectiveModel);
+  const isLLMConfigured =
+    useCleanupModel && (mode === "self-hosted" ? !!remoteUrl.trim() : !!effectiveModel);
 
   const complete = useCallback(() => {
     localStorage.setItem("notesOnboardingComplete", "true");

@@ -84,16 +84,13 @@ function activatePendingLocalModel(kind: PendingLocalModelKind, modelId: string)
     return;
   }
 
-  store.setChatAgentMode("local");
-  store.setChatAgentProvider(selection.provider);
-  store.setChatAgentModel(selection.modelId);
-  store.setCloudReasoningForAllScopes({
-    cleanupCloudMode: "local",
-    cleanupProvider: selection.provider,
-    cleanupModel: selection.modelId,
-    useCleanupModel: true,
-    useDictationAgent: true,
+  store.setReasoningForAllScopes({
+    mode: "local",
+    provider: selection.provider,
+    model: selection.modelId,
   });
+  store.setUseCleanupModel(true);
+  store.setUseDictationAgent(true);
 }
 
 // The X on each row (Figma "Frame 25"), inlined rather than drawn with the icon set so

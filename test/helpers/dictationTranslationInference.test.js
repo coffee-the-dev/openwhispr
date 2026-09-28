@@ -6,165 +6,79 @@ const load = () => import("../../src/helpers/dictationTranslationInference.js");
 const baseSettings = {
   useDictationTranslation: true,
   translationTargetLanguage: "es",
-  translationMode: "providers",
-  translationProvider: "openai",
-  translationModel: "gpt-5-mini",
+  translationMode: "local",
+  translationProvider: "qwen",
+  translationModel: "qwen3.5-9b-q4_k_m",
   translationRemoteUrl: "",
-  translationCloudBaseUrl: "",
   translationCustomApiKey: "",
   translationDisableThinking: true,
 };
 
-test("providers mode keeps its explicit provider and translation settings", async () => {
+test("local mode routes to llama.cpp with its translation settings", async () => {
   const { resolveDictationTranslationInference } = await load();
 
   const result = resolveDictationTranslationInference(baseSettings);
 
   assert.equal(result.reachable, true);
-  assert.equal(result.model, "gpt-5-mini");
-  assert.equal(result.config.provider, "openai");
+  assert.equal(result.model, "qwen3.5-9b-q4_k_m");
+  assert.equal(result.config.provider, "local");
   assert.equal(result.config.language, "es");
   assert.equal(result.config.disableThinking, true);
-});
-
-test("local mode routes to llama.cpp with an empty stored provider", async () => {
-  const { resolveDictationTranslationInference } = await load();
-
-  const result = resolveDictationTranslationInference({
-    ...baseSettings,
-    translationMode: "local",
-    translationProvider: "",
-    translationModel: "qwen2.5-coder",
-  });
-
-  assert.equal(result.reachable, true);
+  assert.equal(result.config.inferenceScope, "dictationTranslation");
   assert.equal(result.displayProvider, "local");
-  assert.equal(result.config.provider, "local");
 });
 
-test("local mode ignores a stale cloud provider", async () => {
+test("local mode needs a model", async () => {
   const { resolveDictationTranslationInference } = await load();
 
-  const result = resolveDictationTranslationInference({
-    ...baseSettings,
-    translationMode: "local",
-    translationProvider: "openai",
-    translationModel: "qwen2.5-coder",
-  });
+  const result = resolveDictationTranslationInference({ ...baseSettings, translationModel: "" });
 
-  assert.equal(result.config.provider, "local");
+  assert.equal(result.reachable, false);
 });
 
-test("self-hosted mode routes only through its configured endpoint", async () => {
+test("self-hosted mode forwards its URL and key and needs no model", async () => {
   const { resolveDictationTranslationInference } = await load();
 
   const result = resolveDictationTranslationInference({
     ...baseSettings,
     translationMode: "self-hosted",
-    translationProvider: "openai",
     translationModel: "",
-    translationRemoteUrl: "http://127.0.0.1:8080/v1",
-    translationCustomApiKey: "lan-key",
+    translationRemoteUrl: "https://vllm.lan/v1",
+    translationCustomApiKey: "secret",
   });
 
   assert.equal(result.reachable, true);
-  assert.equal(result.displayProvider, "self-hosted");
   assert.equal(result.config.provider, undefined);
-  assert.equal(result.config.lanUrl, "http://127.0.0.1:8080/v1");
-  assert.equal(result.config.customApiKey, "lan-key");
+  assert.equal(result.config.lanUrl, "https://vllm.lan/v1");
+  assert.equal(result.config.customApiKey, "secret");
+  assert.equal(result.displayProvider, "self-hosted");
 });
 
-test("self-hosted mode without an endpoint never falls through to cloud inference", async () => {
+test("self-hosted mode without a URL is unreachable and sends no key", async () => {
   const { resolveDictationTranslationInference } = await load();
 
   const result = resolveDictationTranslationInference({
     ...baseSettings,
     translationMode: "self-hosted",
-    translationProvider: "openai",
-    translationRemoteUrl: "",
+    translationCustomApiKey: "secret",
   });
 
   assert.equal(result.reachable, false);
-  assert.equal(result.config.provider, undefined);
   assert.equal(result.config.lanUrl, undefined);
+  assert.equal(result.config.customApiKey, undefined);
 });
 
-test("available managed mode resolves OpenWhispr without requiring a model", async () => {
+test("translation is unreachable when disabled or without a target", async () => {
   const { resolveDictationTranslationInference } = await load();
 
-  const result = resolveDictationTranslationInference(
-    {
-      ...baseSettings,
-      translationMode: "openwhispr",
-      translationModel: "",
-    },
-    { isCloudTranslation: true }
+  assert.equal(
+    resolveDictationTranslationInference({ ...baseSettings, useDictationTranslation: false })
+      .reachable,
+    false
   );
-
-  assert.equal(result.reachable, true);
-  assert.equal(result.displayProvider, "openwhispr");
-  assert.equal(result.config.provider, "openwhispr");
-});
-
-test("managed mode never falls through to a stale provider when signed out", async () => {
-  const { resolveDictationTranslationInference } = await load();
-
-  const result = resolveDictationTranslationInference({
-    ...baseSettings,
-    translationMode: "openwhispr",
-    translationProvider: "openai",
-  });
-
-  assert.equal(result.reachable, false);
-  assert.equal(result.displayProvider, "openwhispr");
-  assert.equal(result.config.provider, undefined);
-});
-
-test("provider mode rejects a stale local catalog provider", async () => {
-  const { resolveDictationTranslationInference } = await load();
-
-  const result = resolveDictationTranslationInference({
-    ...baseSettings,
-    translationProvider: "qwen",
-    translationModel: "qwen2.5-coder",
-  });
-
-  assert.equal(result.reachable, false);
-  assert.equal(result.displayProvider, "none");
-  assert.equal(result.config.provider, undefined);
-});
-
-test("custom provider credentials stay scoped to custom mode", async () => {
-  const { resolveDictationTranslationInference } = await load();
-
-  const custom = resolveDictationTranslationInference({
-    ...baseSettings,
-    translationProvider: "custom",
-    translationCloudBaseUrl: "https://example.test/v1",
-    translationCustomApiKey: "secret",
-  });
-  const openai = resolveDictationTranslationInference({
-    ...baseSettings,
-    translationCloudBaseUrl: "https://example.test/v1",
-    translationCustomApiKey: "secret",
-  });
-
-  assert.equal(custom.config.baseUrl, "https://example.test/v1");
-  assert.equal(custom.config.customApiKey, "secret");
-  assert.equal(openai.config.baseUrl, undefined);
-  assert.equal(openai.config.customApiKey, undefined);
-});
-
-test("enterprise mode without a provider fails closed", async () => {
-  const { resolveDictationTranslationInference } = await load();
-
-  const result = resolveDictationTranslationInference({
-    ...baseSettings,
-    translationMode: "enterprise",
-    translationProvider: "",
-    translationModel: "anthropic.claude-sonnet-4",
-  });
-
-  assert.equal(result.reachable, false);
-  assert.equal(result.config.provider, undefined);
+  assert.equal(
+    resolveDictationTranslationInference({ ...baseSettings, translationTargetLanguage: "" })
+      .reachable,
+    false
+  );
 });

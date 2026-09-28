@@ -20,36 +20,26 @@ export function shouldRunTranslateStep(sourceLanguage, targetLanguage) {
 }
 
 // Step 1 (optional cleanup) soft-fails to the input text; Step 2 translates unless
-// shouldTranslate is false. usedCloudReasoning tracks whether a cloud step actually ran;
-// translated tracks whether the output really reached the target language.
+// shouldTranslate is false. translated tracks whether the output really reached the
+// target language.
 export async function executeTranslationChain({
   text,
   cleanupReachable,
-  cleanupIsCloud = false,
   runCleanup,
   runTranslate,
   shouldTranslate,
-  translateIsCloud = false,
   onCleanupError,
   onEmptyTranslate,
   onUnchangedTranslate,
 }) {
   let out = text;
-  let usedCloudReasoning = false;
   let translated = false;
 
   if (cleanupReachable) {
     try {
       const cleaned = await runCleanup(out);
       if (hasTextContent(cleaned)) out = cleaned;
-      // Cloud cleanup counts as cloud reasoning once its call succeeds, even if it
-      // returned empty text.
-      if (cleanupIsCloud) usedCloudReasoning = true;
     } catch (cleanupError) {
-      // Rejected output still came from a successful cloud call.
-      if (cleanupIsCloud && cleanupError?.code === "CLEANUP_OUTPUT_INVALID") {
-        usedCloudReasoning = true;
-      }
       if (onCleanupError) onCleanupError(cleanupError);
     }
   }
@@ -66,8 +56,7 @@ export async function executeTranslationChain({
     } else if (onEmptyTranslate) {
       onEmptyTranslate();
     }
-    if (translateIsCloud) usedCloudReasoning = true;
   }
 
-  return { text: out, usedCloudReasoning, translated };
+  return { text: out, translated };
 }

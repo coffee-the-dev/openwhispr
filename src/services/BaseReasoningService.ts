@@ -11,7 +11,6 @@ export interface ReasoningConfig {
   contextSize?: number;
   systemPrompt?: string;
   lanUrl?: string;
-  baseUrl?: string;
   customApiKey?: string;
   provider?: string;
   disableThinking?: boolean;

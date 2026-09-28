@@ -8,9 +8,7 @@ function makeOpts(overrides = {}) {
   return {
     text: "raw",
     cleanupReachable: true,
-    cleanupIsCloud: false,
     shouldTranslate: true,
-    translateIsCloud: false,
     runCleanup: async () => null,
     runTranslate: async () => null,
     onCleanupError: () => {},
@@ -215,134 +213,6 @@ test("translate throws: error propagates, translate saw the cleaned text", async
 
   // The cleanup mutation reached the translate step before it threw.
   assert.equal(sawText, "cleaned");
-});
-
-test("usedCloudReasoning: both steps local stays false", async () => {
-  const { executeTranslationChain } = await load();
-
-  const result = await executeTranslationChain(
-    makeOpts({
-      cleanupIsCloud: false,
-      translateIsCloud: false,
-      runCleanup: async () => "cleaned",
-      runTranslate: async () => "translated",
-    })
-  );
-
-  assert.equal(result.usedCloudReasoning, false);
-});
-
-test("usedCloudReasoning: cloud cleanup succeeds sets it true", async () => {
-  const { executeTranslationChain } = await load();
-
-  const result = await executeTranslationChain(
-    makeOpts({
-      cleanupIsCloud: true,
-      translateIsCloud: false,
-      runCleanup: async () => "cleaned",
-      runTranslate: async () => "translated",
-    })
-  );
-
-  assert.equal(result.usedCloudReasoning, true);
-});
-
-test("usedCloudReasoning: cloud cleanup that returns empty still sets it true", async () => {
-  const { executeTranslationChain } = await load();
-
-  const result = await executeTranslationChain(
-    makeOpts({
-      cleanupIsCloud: true,
-      translateIsCloud: false,
-      runCleanup: async () => null,
-      runTranslate: async () => "translated",
-    })
-  );
-
-  assert.equal(result.usedCloudReasoning, true);
-});
-
-test("usedCloudReasoning: cloud cleanup that throws does not set it", async () => {
-  const { executeTranslationChain } = await load();
-
-  const result = await executeTranslationChain(
-    makeOpts({
-      cleanupIsCloud: true,
-      translateIsCloud: false,
-      runCleanup: async () => {
-        throw new Error("cleanup boom");
-      },
-      runTranslate: async () => "translated",
-    })
-  );
-
-  assert.equal(result.usedCloudReasoning, false);
-});
-
-test("usedCloudReasoning: cloud cleanup rejected after a successful call sets it true", async () => {
-  const { executeTranslationChain } = await load();
-
-  const result = await executeTranslationChain(
-    makeOpts({
-      cleanupIsCloud: true,
-      translateIsCloud: false,
-      runCleanup: async () => {
-        throw Object.assign(new Error("duplicated"), { code: "CLEANUP_OUTPUT_INVALID" });
-      },
-      runTranslate: async () => "translated",
-    })
-  );
-
-  assert.equal(result.usedCloudReasoning, true);
-});
-
-test("usedCloudReasoning: cloud translate sets it true", async () => {
-  const { executeTranslationChain } = await load();
-
-  const result = await executeTranslationChain(
-    makeOpts({
-      cleanupIsCloud: false,
-      translateIsCloud: true,
-      runCleanup: async () => "cleaned",
-      runTranslate: async () => "translated",
-    })
-  );
-
-  assert.equal(result.usedCloudReasoning, true);
-});
-
-test("usedCloudReasoning: cleanup fails but cloud translate succeeds is true", async () => {
-  const { executeTranslationChain } = await load();
-
-  const result = await executeTranslationChain(
-    makeOpts({
-      cleanupIsCloud: true,
-      translateIsCloud: true,
-      runCleanup: async () => {
-        throw new Error("cleanup boom");
-      },
-      runTranslate: async () => "translated",
-    })
-  );
-
-  assert.equal(result.usedCloudReasoning, true);
-  assert.equal(result.text, "translated");
-});
-
-test("usedCloudReasoning: cloud translate step skipped when shouldTranslate is false", async () => {
-  const { executeTranslationChain } = await load();
-
-  const result = await executeTranslationChain(
-    makeOpts({
-      cleanupIsCloud: false,
-      translateIsCloud: true,
-      shouldTranslate: false,
-      runCleanup: async () => "cleaned",
-    })
-  );
-
-  assert.equal(result.usedCloudReasoning, false);
-  assert.equal(result.text, "cleaned");
 });
 
 test("shouldRunTranslateStep matrix", async () => {

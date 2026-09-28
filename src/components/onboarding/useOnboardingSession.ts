@@ -53,10 +53,6 @@ export function useOnboardingSession() {
     setSession((current) => ({ ...current, setupMode }));
   }, []);
 
-  const setSelfHostedRequested = useCallback((selfHostedRequested: boolean) => {
-    setSession((current) => ({ ...current, selfHostedRequested }));
-  }, []);
-
   const setScreenContextRequested = useCallback((screenContextRequested: boolean) => {
     setSession((current) => ({ ...current, screenContextRequested }));
   }, []);
@@ -72,7 +68,6 @@ export function useOnboardingSession() {
     goTo,
     goBack,
     setSetupMode,
-    setSelfHostedRequested,
     setScreenContextRequested,
     clearSession,
   };

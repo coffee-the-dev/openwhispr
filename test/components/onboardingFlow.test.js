@@ -9,21 +9,26 @@ test("onboarding keeps permissions and the hotkey before setup choice", async ()
   // must still grant the mic and see the key they are getting.
   assert.deepEqual(getOnboardingRoute({ setupMode: null }), [
     "permissions",
+    "languages",
+    "use-cases",
     "dictation-hotkey",
     "setup-choice",
   ]);
 });
 
-test("setup choice appends the selected two-stage route", async () => {
+test("setup choice appends its two setup steps, then the practice steps", async () => {
   const { getOnboardingRoute } = await load();
-  assert.deepEqual(getOnboardingRoute({ setupMode: "byok" }), [
-    "permissions",
-    "dictation-hotkey",
+  // The demos run on the models the setup steps configured, so they follow them.
+  assert.deepEqual(getOnboardingRoute({ setupMode: "self-hosted" }).slice(4), [
     "setup-choice",
-    "byok-dictation",
-    "byok-assistant",
+    "self-hosted-dictation",
+    "self-hosted-assistant",
+    "dictation-demo",
+    "notes",
+    "assistant-hotkey",
+    "assistant-demo",
   ]);
-  assert.deepEqual(getOnboardingRoute({ setupMode: "local" }).slice(-2), [
+  assert.deepEqual(getOnboardingRoute({ setupMode: "local" }).slice(5, 7), [
     "local-dictation",
     "local-assistant",
   ]);
@@ -41,28 +46,40 @@ test("versioned sessions reject malformed or old data", async () => {
   assert.equal(parseOnboardingSession(null), null);
   assert.equal(parseOnboardingSession("not json"), null);
   assert.equal(parseOnboardingSession('{"version":1,"currentStepId":"permissions"}'), null);
-  // The sign-in step no longer exists, so a session saved on it restarts.
+  // A session saved by the route with provider setup restarts from the top.
   assert.equal(
-    parseOnboardingSession(JSON.stringify({ ...createOnboardingSession(), currentStepId: "auth" })),
+    parseOnboardingSession(
+      JSON.stringify({ ...createOnboardingSession(), version: 2, setupMode: "byok" })
+    ),
+    null
+  );
+  // Steps this build no longer has restart too.
+  for (const currentStepId of ["auth", "byok-dictation"]) {
+    assert.equal(
+      parseOnboardingSession(JSON.stringify({ ...createOnboardingSession(), currentStepId })),
+      null
+    );
+  }
+  // A setup mode this build no longer has is picked again.
+  assert.equal(
+    parseOnboardingSession(JSON.stringify({ ...createOnboardingSession(), setupMode: "byok" }))
+      .setupMode,
     null
   );
 
   const session = createOnboardingSession();
   assert.deepEqual(parseOnboardingSession(JSON.stringify(session)), session);
 
-  const legacyV2 = { ...session };
-  delete legacyV2.selfHostedRequested;
-  delete legacyV2.screenContextRequested;
-  delete legacyV2.resume;
-  assert.equal(parseOnboardingSession(JSON.stringify(legacyV2)).selfHostedRequested, false);
-  assert.equal(parseOnboardingSession(JSON.stringify(legacyV2)).screenContextRequested, false);
-  assert.deepEqual(
-    parseOnboardingSession(JSON.stringify(legacyV2)).resume,
-    createOnboardingSession().resume
-  );
+  const withoutOptionalFields = { ...session };
+  delete withoutOptionalFields.screenContextRequested;
+  delete withoutOptionalFields.resume;
   assert.equal(
-    parseOnboardingSession(JSON.stringify({ ...session, selfHostedRequested: "yes" })),
-    null
+    parseOnboardingSession(JSON.stringify(withoutOptionalFields)).screenContextRequested,
+    false
+  );
+  assert.deepEqual(
+    parseOnboardingSession(JSON.stringify(withoutOptionalFields)).resume,
+    createOnboardingSession().resume
   );
   assert.equal(
     parseOnboardingSession(JSON.stringify({ ...session, screenContextRequested: "yes" })),
@@ -79,17 +96,15 @@ test("a session keeps the screen-context request latch across a relaunch", async
   assert.equal(parseOnboardingSession(JSON.stringify(session)).screenContextRequested, true);
 });
 
-test("v2 sessions retain safe within-step state without accepting secrets", async () => {
+test("sessions retain safe within-step state without accepting secrets", async () => {
   const { createOnboardingSession, parseOnboardingSession } = await load();
   const session = createOnboardingSession();
-  session.currentStepId = "byok-dictation";
+  session.currentStepId = "self-hosted-dictation";
   session.resume.dictationHotkeyConfirmed = true;
   session.resume.dictationDemoCompleted = true;
-  session.resume.byok["byok-dictation"] = {
-    selectedProvider: "openai",
-    selectedModel: "gpt-4o-mini-transcribe",
+  session.resume.selfHosted["self-hosted-dictation"] = {
     baseUrl: "https://self-hosted.example.com",
-    customModel: "whisper-local",
+    model: "whisper-local",
   };
   session.resume.localModels["local-assistant"] = {
     provider: "qwen",
@@ -97,20 +112,19 @@ test("v2 sessions retain safe within-step state without accepting secrets", asyn
   };
 
   const serialized = JSON.stringify(session);
-  assert.doesNotMatch(serialized, /password|apiKey|cortiClientId|clientSecret/);
+  assert.doesNotMatch(serialized, /password|apiKey|clientSecret/);
   assert.deepEqual(parseOnboardingSession(serialized), session);
 
-  // Corti's client id is one of the safeStorage-encrypted secrets, so a draft
-  // written by an older build has to be dropped rather than read back.
-  const legacyDraft = JSON.parse(serialized);
-  legacyDraft.resume.byok["byok-dictation"].cortiClientId = "client-id";
-  assert.deepEqual(parseOnboardingSession(JSON.stringify(legacyDraft)), session);
+  // A key an older build wrote into a draft is dropped rather than read back.
+  const keyedDraft = JSON.parse(serialized);
+  keyedDraft.resume.selfHosted["self-hosted-dictation"].apiKey = "secret";
+  assert.deepEqual(parseOnboardingSession(JSON.stringify(keyedDraft)), session);
 
   const malformedDraft = JSON.parse(serialized);
-  malformedDraft.resume.byok["byok-dictation"].selectedProvider = 42;
+  malformedDraft.resume.selfHosted["self-hosted-dictation"].baseUrl = 42;
   malformedDraft.resume.localModels["local-assistant"].modelId = false;
   const parsed = parseOnboardingSession(JSON.stringify(malformedDraft));
-  assert.equal(parsed.resume.byok["byok-dictation"].selectedProvider, "");
+  assert.equal(parsed.resume.selfHosted["self-hosted-dictation"].baseUrl, "");
   assert.equal(parsed.resume.localModels["local-assistant"].modelId, "");
 });
 
@@ -139,6 +153,8 @@ test("legacy numeric steps migrate conservatively", async () => {
   assert.equal(migrateLegacyOnboardingStep("1"), "permissions");
   assert.equal(migrateLegacyOnboardingStep("2"), "permissions");
   assert.equal(migrateLegacyOnboardingStep("4"), "dictation-hotkey");
+  // Later legacy steps preceded the setup choice the route now makes first.
+  assert.equal(migrateLegacyOnboardingStep("5"), "setup-choice");
   assert.equal(migrateLegacyOnboardingStep("999"), "setup-choice");
 });
 
@@ -146,7 +162,7 @@ test("route helpers recover from ineligible steps", async () => {
   const { getNextOnboardingStep, getOnboardingRoute, reconcileStepWithRoute } = await load();
   const route = getOnboardingRoute({ setupMode: null });
   assert.equal(reconcileStepWithRoute("assistant-demo", route), "setup-choice");
-  assert.equal(getNextOnboardingStep("permissions", route), "dictation-hotkey");
+  assert.equal(getNextOnboardingStep("permissions", route), "languages");
   assert.equal(getNextOnboardingStep("setup-choice", route), null);
 });
 
@@ -163,25 +179,28 @@ test("progress counts every step the user is shown, once each", async () => {
     counted.map((stepId) => getOnboardingProgress(stepId, route).index),
     counted.map((_, index) => index)
   );
-  assert.deepEqual(getOnboardingProgress("dictation-hotkey", route), { index: 0, total: 4 });
-  assert.deepEqual(getOnboardingProgress("local-assistant", route), { index: 3, total: 4 });
+  assert.deepEqual(getOnboardingProgress("languages", route), { index: 0, total: 10 });
+  assert.deepEqual(getOnboardingProgress("local-assistant", route), { index: 5, total: 10 });
+  assert.deepEqual(getOnboardingProgress("assistant-demo", route), { index: 9, total: 10 });
 });
 
 test("progress total tracks the conditional parts of the route", async () => {
   const { getOnboardingProgress, getOnboardingRoute } = await load();
-  // Before a setup is picked the route counts dictation-hotkey and setup-choice:
-  // a two-dot row.
+  // Before a setup is picked the route counts the four steps up to setup-choice.
   const unplanned = getOnboardingRoute({ setupMode: null });
-  assert.deepEqual(getOnboardingProgress("setup-choice", unplanned), { index: 1, total: 2 });
+  assert.deepEqual(getOnboardingProgress("setup-choice", unplanned), { index: 3, total: 4 });
 
-  // Picking a setup appends the provider pair, so the row grows by two at that
-  // moment and the last provider step is what fills it.
-  const byok = getOnboardingRoute({ setupMode: "byok" });
-  assert.deepEqual(getOnboardingProgress("setup-choice", byok), { index: 1, total: 4 });
-  assert.deepEqual(getOnboardingProgress("byok-assistant", byok), { index: 3, total: 4 });
+  // Picking a setup appends its pair and the practice steps, so the row grows
+  // at that moment.
+  const selfHosted = getOnboardingRoute({ setupMode: "self-hosted" });
+  assert.deepEqual(getOnboardingProgress("setup-choice", selfHosted), { index: 3, total: 10 });
+  assert.deepEqual(getOnboardingProgress("self-hosted-assistant", selfHosted), {
+    index: 5,
+    total: 10,
+  });
 
   // An off-route step has no position to report.
-  assert.equal(getOnboardingProgress("notes", byok), null);
+  assert.equal(getOnboardingProgress("local-dictation", selfHosted), null);
 });
 
 test("a session written before the resume flags infers its hotkey confirmations", async () => {
@@ -195,12 +214,12 @@ test("a session written before the resume flags infers its hotkey confirmations"
   // The shipped build persists this shape. Read back as "never confirmed", a
   // macOS session resuming past the hotkey step lets finalizeOnboarding replace
   // the chord the user confirmed on that build, with no screen ever showing it.
-  const past = parseOnboardingSession(preResumeSession("setup-choice"));
+  const past = parseOnboardingSession(preResumeSession("assistant-demo"));
   assert.equal(past.resume.dictationHotkeyConfirmed, true);
   assert.equal(past.resume.assistantHotkeyConfirmed, true);
 
-  // Notes now precedes the assistant steps, so a session standing there is
-  // still ahead of the assistant hotkey and gets shown that step.
+  // Notes precedes the assistant steps, so a session standing there is still
+  // ahead of the assistant hotkey and gets shown that step.
   const onNotes = parseOnboardingSession(preResumeSession("notes"));
   assert.equal(onNotes.resume.dictationHotkeyConfirmed, true);
   assert.equal(onNotes.resume.assistantHotkeyConfirmed, false);

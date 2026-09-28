@@ -15,40 +15,19 @@ test("ReasoningService entry points guard their endpoints", async (t) => {
   const reasoningService = (await vite.ssrLoadModule("/services/ReasoningService.ts")).default;
   t.after(() => reasoningService.destroy());
   const { useSettingsStore } = await vite.ssrLoadModule("/stores/settingsStore.ts");
-  const { resolveConfiguredOpenAIBase } = await vite.ssrLoadModule("/services/ai/openaiBase.ts");
   const { default: i18n } = await vite.ssrLoadModule("/i18n.ts");
   await i18n.changeLanguage("en");
 
-  await t.test("a selection without a model fails before dispatch", async () => {
-    await assert.rejects(reasoningService.processText("hi", "", null, { provider: "openai" }), {
+  await t.test("a local selection without a model fails before dispatch", async () => {
+    await assert.rejects(reasoningService.processText("hi", "", null, { provider: "local" }), {
       message: "No reasoning model selected",
     });
   });
 
-  await t.test("Custom endpoints fail closed instead of falling back to OpenAI", () => {
-    const CUSTOM_ENDPOINT_INVALID = enTranslations.reasoning.custom.endpointInvalid;
-    for (const baseUrl of [
-      "",
-      "http://public.example.com/v1",
-      "https://api.groq.com/openai/v1",
-      "https://inference.tinfoil.sh/v1",
-    ]) {
-      assert.throws(() => resolveConfiguredOpenAIBase("custom", baseUrl), {
-        message: CUSTOM_ENDPOINT_INVALID,
-      });
-    }
-    // HTTP stays allowed for local-network endpoints.
-    assert.equal(
-      resolveConfiguredOpenAIBase("custom", "http://192.168.1.20:11434/v1"),
-      "http://192.168.1.20:11434/v1"
-    );
-  });
-
-  await t.test("a scope's custom endpoint never borrows the cleanup key", async () => {
+  await t.test("a scope's self-hosted endpoint never borrows the cleanup key", async () => {
     useSettingsStore.setState({
-      cleanupMode: "providers",
-      cleanupProvider: "custom",
-      cleanupCloudBaseUrl: "https://cleanup.example.com/v1",
+      cleanupMode: "self-hosted",
+      cleanupRemoteUrl: "https://cleanup.example.com/v1",
       cleanupCustomApiKey: "cleanup-secret",
     });
 
@@ -65,8 +44,7 @@ test("ReasoningService entry points guard their endpoints", async (t) => {
     try {
       await assert.rejects(
         reasoningService.processText("hi", "other-model", null, {
-          provider: "custom",
-          baseUrl: "https://other-scope.example.com/v1",
+          lanUrl: "https://other-scope.example.com/v1",
           inferenceScope: "chatIntelligence",
         }),
         { message: "expected test stop" }
@@ -81,14 +59,14 @@ test("ReasoningService entry points guard their endpoints", async (t) => {
         );
       }
 
-      // The cleanup endpoint itself still gets the shared key.
+      // Implicit cleanup runs on its own endpoint with the shared key.
       requests.length = 0;
-      await assert.rejects(
-        reasoningService.processText("hi", "cleanup-model", null, {
-          provider: "custom",
-          baseUrl: "https://cleanup.example.com/v1",
-        }),
-        { message: "expected test stop" }
+      await assert.rejects(reasoningService.processText("hi", "cleanup-model"), {
+        message: "expected test stop",
+      });
+      assert.ok(requests.length > 0);
+      assert.ok(
+        requests.every((request) => request.url.startsWith("https://cleanup.example.com/v1/"))
       );
       assert.ok(requests.some((request) => request.auth === "Bearer cleanup-secret"));
     } finally {
@@ -96,69 +74,8 @@ test("ReasoningService entry points guard their endpoints", async (t) => {
     }
   });
 
-  await t.test("normal cleanup uses its saved valid Custom endpoint", async () => {
-    useSettingsStore.setState({
-      cleanupMode: "providers",
-      cleanupProvider: "custom",
-      cleanupCloudBaseUrl: "https://custom.example.com/v1",
-      cleanupCustomApiKey: "custom-key",
-    });
-
-    const originalFetch = globalThis.fetch;
-    const requestedUrls = [];
-    globalThis.fetch = async (url) => {
-      requestedUrls.push(String(url));
-      return new Response(JSON.stringify({ error: "expected test stop" }), {
-        status: 400,
-        headers: { "content-type": "application/json" },
-      });
-    };
-
-    try {
-      await assert.rejects(reasoningService.processText("hi", "custom-model"), {
-        message: "expected test stop",
-      });
-      assert.ok(requestedUrls.length > 0);
-      assert.ok(requestedUrls.every((url) => url.startsWith("https://custom.example.com/v1/")));
-    } finally {
-      globalThis.fetch = originalFetch;
-    }
-  });
-
   await t.test(
-    "implicit cleanup pins the selected provider instead of inferring from its model",
-    async () => {
-      useSettingsStore.setState({
-        cleanupMode: "providers",
-        cleanupProvider: "openai",
-        cleanupModel: "llama-3.3-70b-versatile",
-      });
-      globalThis.window.electronAPI.getOpenAIKey = async () => "openai-key";
-
-      const originalFetch = globalThis.fetch;
-      const requestedUrls = [];
-      globalThis.fetch = async (url) => {
-        requestedUrls.push(String(url));
-        return new Response(JSON.stringify({ error: "expected test stop" }), {
-          status: 400,
-          headers: { "content-type": "application/json" },
-        });
-      };
-
-      try {
-        await assert.rejects(reasoningService.processText("hi", "llama-3.3-70b-versatile"), {
-          message: "expected test stop",
-        });
-        assert.ok(requestedUrls.length > 0);
-        assert.ok(requestedUrls.every((url) => url.startsWith("https://api.openai.com/")));
-      } finally {
-        globalThis.fetch = originalFetch;
-      }
-    }
-  );
-
-  await t.test(
-    "implicit self-hosted cleanup without a URL never infers a cloud provider",
+    "implicit self-hosted cleanup without a URL never falls back elsewhere",
     async () => {
       useSettingsStore.setState({
         cleanupMode: "self-hosted",
@@ -204,7 +121,7 @@ test("ReasoningService entry points guard their endpoints", async (t) => {
           const textStream = reasoningService.processTextStreaming(
             [{ role: "user", content: "hi" }],
             "custom-model",
-            "custom",
+            "lan",
             { systemPrompt: "s", lanUrl }
           );
           await assert.rejects(textStream.next(), { message: HTTPS_REQUIRED });
@@ -212,7 +129,7 @@ test("ReasoningService entry points guard their endpoints", async (t) => {
           const toolStream = reasoningService.processTextStreamingAI(
             [{ role: "user", content: "hi" }],
             "custom-model",
-            "custom",
+            "lan",
             { systemPrompt: "s", lanUrl },
             {}
           );

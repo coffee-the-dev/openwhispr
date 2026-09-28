@@ -4,15 +4,6 @@ export interface CleanupFailure {
   message: string;
   messageKey?: string;
   messageParams?: Record<string, string | number>;
-  action?: string;
-  actionKey?: string;
-  copyCommand?: string;
-  technicalDetails?: {
-    status?: number;
-    exceptionType?: string;
-    requestId?: string;
-    underlyingError?: string;
-  };
 }
 
 interface CleanupFailureState {
@@ -20,7 +11,7 @@ interface CleanupFailureState {
   pending: number;
   /** Cause of the most recent failure, shown with the toast so it's actionable. */
   lastMessage: string;
-  /** Structured cause and AWS diagnostics for the most recent fallback. */
+  /** Structured cause of the most recent fallback. */
   lastFailure: CleanupFailure | null;
 }
 

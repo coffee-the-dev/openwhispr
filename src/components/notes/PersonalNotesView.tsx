@@ -14,11 +14,7 @@ import type { NoteMoveTarget } from "../../hooks/useNoteDragAndDrop";
 import type { ActionItem, NoteItem } from "../../types/electron";
 import { useActions } from "../../stores/actionStore";
 import { DETAILED_NOTES_KEY } from "../../helpers/builtinActions";
-import {
-  useSettingsStore,
-  selectIsCloudNoteFormattingMode,
-  selectResolvedNoteFormatting,
-} from "../../stores/settingsStore";
+import { useSettingsStore, selectResolvedNoteFormatting } from "../../stores/settingsStore";
 import { cn } from "../lib/utils";
 import logger from "../../utils/logger";
 import { parseTranscriptSegments } from "../../utils/parseTranscriptSegments";
@@ -211,12 +207,10 @@ export default function PersonalNotesView({
     useShallow((settings) => {
       const effectiveSettings = settings;
       return {
-        isCloudMode: selectIsCloudNoteFormattingMode(effectiveSettings),
         modelId: selectResolvedNoteFormatting(effectiveSettings).model,
       };
     })
   );
-  const isCloudMode = noteFormatting.isCloudMode;
   const effectiveModelId = noteFormatting.modelId;
   const { isComplete: isOnboardingComplete, complete: completeOnboarding } = useNotesOnboarding();
 
@@ -604,7 +598,6 @@ export default function PersonalNotesView({
       .filter(Boolean)
       .join("\n\n");
     runAction(action, parts, makeContentHash(`${noteContent}\n${rawTranscript}`), {
-      isCloudMode,
       modelId: effectiveModelId,
       isMeetingNote,
       knownPeople,

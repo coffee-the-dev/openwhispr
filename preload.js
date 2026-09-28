@@ -1,17 +1,10 @@
 const { contextBridge, ipcRenderer, webUtils } = require("electron");
 
-// BYOK API-key bridges, built once instead of hand-listed per key. Sandboxed
-// preloads can't require local modules, so the {base, get, save} tuples are
-// inlined here; keep them in sync with the BYOK_API_KEYS manifest in
-// src/config/secretKeys.js (the main process derives its plumbing from that).
-const BYOK_KEY_BRIDGES = [
-  { base: "openai", get: "getOpenAIKey", save: "saveOpenAIKey" },
-  { base: "anthropic", get: "getAnthropicKey", save: "saveAnthropicKey" },
-  { base: "gemini", get: "getGeminiKey", save: "saveGeminiKey" },
-  { base: "groq", get: "getGroqKey", save: "saveGroqKey" },
-  { base: "openrouter", get: "getOpenrouterKey", save: "saveOpenrouterKey" },
-  { base: "tinfoil", get: "getTinfoilKey", save: "saveTinfoilKey" },
-  { base: "corti", get: "getCortiKey", save: "saveCortiKey" },
+// Per-scope self-hosted API-key bridges, built once instead of hand-listed per
+// key. Sandboxed preloads can't require local modules, so the {base, get, save}
+// tuples are inlined here; keep them in sync with the SCOPE_API_KEYS manifest
+// in src/config/secretKeys.js (the main process derives its plumbing from that).
+const SCOPE_KEY_BRIDGES = [
   {
     base: "note-formatting-custom",
     get: "getNoteFormattingCustomKey",
@@ -23,15 +16,10 @@ const BYOK_KEY_BRIDGES = [
     get: "getDictationAgentCustomKey",
     save: "saveDictationAgentCustomKey",
   },
-  {
-    base: "dictation-agent-vision-custom",
-    get: "getDictationAgentVisionCustomKey",
-    save: "saveDictationAgentVisionCustomKey",
-  },
   { base: "chat-agent-custom", get: "getChatAgentCustomKey", save: "saveChatAgentCustomKey" },
 ];
 const secretKeyApi = {};
-for (const k of BYOK_KEY_BRIDGES) {
+for (const k of SCOPE_KEY_BRIDGES) {
   secretKeyApi[k.get] = () => ipcRenderer.invoke(`get-${k.base}-key`);
   secretKeyApi[k.save] = (key) => ipcRenderer.invoke(`save-${k.base}-key`, key);
 }
@@ -316,7 +304,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     return () => ipcRenderer.removeListener("analytics-changed", listener);
   },
 
-  // BYOK API keys (get/save for every provider in the secretKeys manifest)
+  // Per-scope self-hosted API keys (get/save for every scope in the secretKeys manifest)
   ...secretKeyApi,
 
   // Clipboard functions
@@ -512,41 +500,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
   saveUiLanguage: (language) => ipcRenderer.invoke("save-ui-language", language),
   setUiLanguage: (language) => ipcRenderer.invoke("set-ui-language", language),
 
-  getTinfoilChatModels: () => ipcRenderer.invoke("get-tinfoil-chat-models"),
-
   // Custom endpoint API keys
   getCustomTranscriptionKey: () => ipcRenderer.invoke("get-custom-transcription-key"),
   saveCustomTranscriptionKey: (key) => ipcRenderer.invoke("save-custom-transcription-key", key),
   getCleanupCustomKey: () => ipcRenderer.invoke("get-cleanup-custom-key"),
   saveCleanupCustomKey: (key) => ipcRenderer.invoke("save-cleanup-custom-key", key),
-
-  // Enterprise provider key management
-  getBedrockRegion: () => ipcRenderer.invoke("get-bedrock-region"),
-  saveBedrockRegion: (value) => ipcRenderer.invoke("save-bedrock-region", value),
-  getBedrockProfile: () => ipcRenderer.invoke("get-bedrock-profile"),
-  saveBedrockProfile: (value) => ipcRenderer.invoke("save-bedrock-profile", value),
-  getBedrockAccessKeyId: () => ipcRenderer.invoke("get-bedrock-access-key-id"),
-  saveBedrockAccessKeyId: (key) => ipcRenderer.invoke("save-bedrock-access-key-id", key),
-  getBedrockSecretAccessKey: () => ipcRenderer.invoke("get-bedrock-secret-access-key"),
-  saveBedrockSecretAccessKey: (key) => ipcRenderer.invoke("save-bedrock-secret-access-key", key),
-  getBedrockSessionToken: () => ipcRenderer.invoke("get-bedrock-session-token"),
-  saveBedrockSessionToken: (key) => ipcRenderer.invoke("save-bedrock-session-token", key),
-  getAzureEndpoint: () => ipcRenderer.invoke("get-azure-endpoint"),
-  saveAzureEndpoint: (value) => ipcRenderer.invoke("save-azure-endpoint", value),
-  getAzureApiKey: () => ipcRenderer.invoke("get-azure-api-key"),
-  saveAzureApiKey: (key) => ipcRenderer.invoke("save-azure-api-key", key),
-  getAzureDeployment: () => ipcRenderer.invoke("get-azure-deployment"),
-  saveAzureDeployment: (value) => ipcRenderer.invoke("save-azure-deployment", value),
-  getAzureApiVersion: () => ipcRenderer.invoke("get-azure-api-version"),
-  saveAzureApiVersion: (value) => ipcRenderer.invoke("save-azure-api-version", value),
-  getVertexProject: () => ipcRenderer.invoke("get-vertex-project"),
-  saveVertexProject: (value) => ipcRenderer.invoke("save-vertex-project", value),
-  getVertexLocation: () => ipcRenderer.invoke("get-vertex-location"),
-  saveVertexLocation: (value) => ipcRenderer.invoke("save-vertex-location", value),
-  getVertexApiKey: () => ipcRenderer.invoke("get-vertex-api-key"),
-  saveVertexApiKey: (key) => ipcRenderer.invoke("save-vertex-api-key", key),
-  testEnterpriseConnection: (provider, config) =>
-    ipcRenderer.invoke("test-enterprise-connection", provider, config),
 
   // Dictation key persistence (file-based for reliable startup)
   getDictationKey: () => ipcRenderer.invoke("get-dictation-key"),
@@ -567,23 +525,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   checkLocalReasoningAvailable: () => ipcRenderer.invoke("check-local-reasoning-available"),
   getLocalContextBudget: (modelId) => ipcRenderer.invoke("get-local-context-budget", modelId),
   cancelLocalReasoning: (requestId) => ipcRenderer.invoke("cancel-local-reasoning", requestId),
-
-  // Anthropic reasoning
-  processAnthropicReasoning: (text, modelId, agentName, config) =>
-    ipcRenderer.invoke("process-anthropic-reasoning", text, modelId, agentName, config),
-
-  // Enterprise reasoning (Bedrock, Azure, Vertex) — runs in main process so
-  // Node-only SDKs (AWS/Azure/Google credential providers) can resolve.
-  processEnterpriseReasoning: (text, modelId, agentName, config) =>
-    ipcRenderer.invoke("process-enterprise-reasoning", text, modelId, agentName, config),
-  cancelEnterpriseReasoning: () => ipcRenderer.send("enterprise-reasoning-cancel"),
-  enterpriseStreamStart: (payload) => ipcRenderer.invoke("enterprise-stream-start", payload),
-  enterpriseStreamCancel: (streamId) => ipcRenderer.invoke("enterprise-stream-cancel", streamId),
-  onEnterpriseStreamPart: registerListener(
-    "enterprise-stream-part",
-    (callback) => (_event, payload) => callback(payload)
-  ),
-  listBedrockModels: (config) => ipcRenderer.invoke("bedrock-list-models", config),
 
   // llama.cpp
   llamaCppCheck: () => ipcRenderer.invoke("llama-cpp-check"),
@@ -639,10 +580,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   resumeMediaPlayback: () => ipcRenderer.invoke("resume-media-playback"),
   getModelCacheRoot: () => ipcRenderer.invoke("get-model-cache-root"),
   openWhisperModelsFolder: () => ipcRenderer.invoke("open-whisper-models-folder"),
-
-  // OpenWhispr Cloud API
-  cloudReason: (text, opts) => ipcRenderer.invoke("cloud-reason", text, opts),
-  cancelCloudReason: () => ipcRenderer.send("cloud-reason-cancel"),
 
   // Audio file transcription (cancel covers local jobs too)
   cancelUploadTranscription: (requestId) =>
@@ -798,25 +735,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   acquireRecordingLock: (pipeline) => ipcRenderer.invoke("acquire-recording-lock", pipeline),
   releaseRecordingLock: (pipeline) => ipcRenderer.invoke("release-recording-lock", pipeline),
 
-  // Agent cloud streaming (event-based for real-time chunks)
-  startAgentStream: (requestId, messages, opts) =>
-    ipcRenderer.send("cloud-agent-stream-start", requestId, messages, opts),
-  cancelAgentStream: (requestId) => ipcRenderer.send("cloud-agent-stream-cancel", requestId),
-  onAgentStreamChunk: registerListener(
-    "cloud-agent-stream-chunk",
-    (callback) => (_event, payload) => callback(payload)
-  ),
-  onAgentStreamError: registerListener(
-    "cloud-agent-stream-error",
-    (callback) => (_event, payload) => callback(payload)
-  ),
-  onAgentStreamEnd: registerListener(
-    "cloud-agent-stream-end",
-    (callback) => (_event, payload) => callback(payload)
-  ),
-
-  // Agent cloud tools
-  agentWebSearch: (query, numResults) => ipcRenderer.invoke("agent-web-search", query, numResults),
+  // Agent tools
   agentOpenNote: (noteId) => ipcRenderer.invoke("agent-open-note", noteId),
 
   // Agent conversation persistence

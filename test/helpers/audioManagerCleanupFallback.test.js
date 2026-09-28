@@ -11,34 +11,26 @@ test("cleanup failure details ride the raw result instead of notifying before pa
     settingsKey: "__audioCleanupFallbackSettings",
     settings: {
       useCleanupModel: true,
-      cleanupProvider: "bedrock",
-      cleanupMode: "enterprise",
+      cleanupProvider: "qwen",
+      cleanupMode: "local",
       cleanupDisableThinking: true,
       useDictationAgent: false,
       useDictationTranslation: false,
       preferredLanguage: "en",
-      enterpriseSetupMode: "manual",
     },
     mockModules: {
       "/stores/settingsStore": `
         export const getSettings = () => globalThis.__audioCleanupFallbackSettings;
-        export const getEffectiveCleanupModel = () => "anthropic.claude-haiku";
         export const selectResolvedLLMConfig = () => ({
-          mode: "enterprise",
-          provider: "bedrock",
-          model: "anthropic.claude-haiku"
+          mode: "local",
+          provider: "qwen",
+          model: "qwen3.5-9b-q4_k_m"
         });
-        export const isCloudCleanupMode = () => false;
-        export const isCloudDictationAgentMode = () => false;
-        export const isCloudTranslationMode = () => false;
         export const useSettingsStore = { subscribe: () => () => {} };
       `,
       "/dictationAgentInference": `
         export const resolveDictationAgentInference = () => ({
           reachable: false, model: "", displayProvider: "none", config: {}
-        });
-        export const resolveDictationAgentVisionInference = () => ({
-          active: false, model: "", config: {}
         });
       `,
       "/dictationTranslationInference": `
@@ -54,24 +46,10 @@ test("cleanup failure details ride the raw result instead of notifying before pa
     },
   });
 
-  const technicalDetails = {
-    status: 503,
-    exceptionType: "ServiceUnavailableException",
-    requestId: "request-503",
-    underlyingError: "AWS overloaded",
-  };
-  const failure = Object.assign(
-    new Error(
-      "AWS Bedrock is temporarily unavailable due to high demand. This is an AWS service issue, not an OpenWhispr outage. Please try again in a few minutes."
-    ),
-    {
-      messageKey: "reasoning.enterprise.errors.bedrock.serviceUnavailable",
-      action: "Run the command below in your terminal to re-authenticate:",
-      actionKey: "reasoning.enterprise.errors.bedrock.actions.reauthenticate",
-      copyCommand: "aws sso login --profile company-sso",
-      technicalDetails,
-    }
-  );
+  const failure = Object.assign(new Error("Model not found: qwen3.5-9b-q4_k_m"), {
+    messageKey: "models.errors.localServerUnavailable",
+    messageParams: { model: "qwen3.5-9b-q4_k_m" },
+  });
   const manager = createManager({
     voiceAgentRequested: false,
     translationRequested: false,
@@ -92,10 +70,7 @@ test("cleanup failure details ride the raw result instead of notifying before pa
     cleanupFailure: {
       message: failure.message,
       messageKey: failure.messageKey,
-      action: failure.action,
-      actionKey: failure.actionKey,
-      copyCommand: failure.copyCommand,
-      technicalDetails,
+      messageParams: failure.messageParams,
     },
   });
   assert.deepEqual(manager._takePendingResultExtras(), {});
@@ -109,8 +84,8 @@ test("a truncated cleanup inside the translation chain still reports the failure
     settingsKey: "__audioTranslationCleanupSettings",
     settings: {
       useCleanupModel: true,
-      cleanupProvider: "gemini",
-      cleanupMode: "providers",
+      cleanupProvider: "qwen",
+      cleanupMode: "local",
       cleanupDisableThinking: true,
       useDictationAgent: false,
       useDictationTranslation: true,
@@ -121,31 +96,24 @@ test("a truncated cleanup inside the translation chain still reports the failure
     mockModules: {
       "/stores/settingsStore": `
         export const getSettings = () => globalThis.__audioTranslationCleanupSettings;
-        export const getEffectiveCleanupModel = () => "gemini-3-flash-preview";
         export const selectResolvedLLMConfig = () => ({
-          mode: "providers",
-          provider: "gemini",
-          model: "gemini-3-flash-preview"
+          mode: "local",
+          provider: "qwen",
+          model: "qwen3.5-9b-q4_k_m"
         });
-        export const isCloudCleanupMode = () => false;
-        export const isCloudDictationAgentMode = () => false;
-        export const isCloudTranslationMode = () => false;
         export const useSettingsStore = { subscribe: () => () => {} };
       `,
       "/dictationAgentInference": `
         export const resolveDictationAgentInference = () => ({
           reachable: false, model: "", displayProvider: "none", config: {}
         });
-        export const resolveDictationAgentVisionInference = () => ({
-          active: false, model: "", config: {}
-        });
       `,
       "/dictationTranslationInference": `
         export const resolveDictationTranslationInference = () => ({
           reachable: true,
-          model: "gemini-3-flash-preview",
-          displayProvider: "gemini",
-          config: { provider: "gemini" }
+          model: "qwen3.5-9b-q4_k_m",
+          displayProvider: "local",
+          config: { provider: "local" }
         });
       `,
       "/config/prompts": `

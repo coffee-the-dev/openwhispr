@@ -11,7 +11,7 @@ import AssistantHotkeyPreview from "./onboarding/AssistantHotkeyPreview";
 import DemoStep from "./onboarding/DemoStep";
 import CalendarConnectionsStep from "./onboarding/CalendarConnectionsStep";
 import SetupChoiceStep from "./onboarding/SetupChoiceStep";
-import { ByokProviderStep, LocalModelSetupStep } from "./onboarding/ProviderSetupStep";
+import { SelfHostedSetupStep, LocalModelSetupStep } from "./onboarding/ProviderSetupStep";
 import { AlertDialog } from "./ui/dialog";
 import { usePermissions } from "../hooks/usePermissions";
 import { useClipboard } from "../hooks/useClipboard";
@@ -42,9 +42,9 @@ import {
   getOnboardingProgress,
   getOnboardingRoute,
   reconcileStepWithRoute,
-  type OnboardingByokDraft,
   type OnboardingLocalModelDraft,
   type OnboardingResumeState,
+  type OnboardingSelfHostedDraft,
   type OnboardingSetupMode,
   type OnboardingStepId,
 } from "./onboarding/flow";
@@ -86,7 +86,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     goTo,
     goBack,
     setSetupMode,
-    setSelfHostedRequested,
     setScreenContextRequested,
     clearSession,
   } = useOnboardingSession();
@@ -234,14 +233,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const permissions = usePermissions((dialog) =>
     setPermissionAlert({ title: dialog.title, description: dialog.description })
   );
-  const updateCurrentByokDraft = useCallback(
-    (state: OnboardingByokDraft) => {
-      if (currentStepId !== "byok-dictation" && currentStepId !== "byok-assistant") return;
+  const updateCurrentSelfHostedDraft = useCallback(
+    (state: OnboardingSelfHostedDraft) => {
+      if (currentStepId !== "self-hosted-dictation" && currentStepId !== "self-hosted-assistant")
+        return;
       setSession((current) => ({
         ...current,
         resume: {
           ...current.resume,
-          byok: { ...current.resume.byok, [currentStepId]: state },
+          selfHosted: { ...current.resume.selfHosted, [currentStepId]: state },
         },
       }));
     },
@@ -409,7 +409,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         // clears this flag) while the flag is set.
         //
         // Only preserve a pending download when the completed route still uses
-        // local models. A user who walks Back and finishes on BYOK must not
+        // local models. A user who walks Back and finishes self-hosted must not
         // be switched back to a stale local selection when it completes later.
         const routeKeepsLocalModels = mode === "local";
         if (routeKeepsLocalModels && (options.localPending || hasPendingLocalModels())) {
@@ -441,43 +441,36 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   );
 
   const applyReasoningSelectionToAllScopes = useCallback(
-    (mode: "byok" | "local") => {
-      // getState(), not the render-time snapshot: the provider steps write
-      // chatAgentProvider/chatAgentModel via switchReasoningProvider and call
-      // onProceed() in the same tick, so `settingsStore` here still holds the
-      // values from before the pick. Reading it stale configured the other three
-      // scopes to the defaults (groq / openai/gpt-oss-120b) with no key.
-      const {
-        chatAgentProvider,
-        chatAgentModel,
-        chatAgentCloudBaseUrl,
-        chatAgentRemoteUrl,
-        chatAgentCustomApiKey,
-      } = useSettingsStore.getState();
-      settingsStore.setCloudReasoningForAllScopes({
-        cleanupCloudMode: mode,
-        cleanupProvider: chatAgentProvider,
-        cleanupModel: chatAgentModel,
-        cleanupCloudBaseUrl: chatAgentCloudBaseUrl,
-        cleanupRemoteUrl: chatAgentRemoteUrl,
-        // Only a self-hosted or custom endpoint has one; an empty write would
-        // just churn five secure-store entries.
-        ...(chatAgentCustomApiKey ? { cleanupCustomApiKey: chatAgentCustomApiKey } : {}),
-        useCleanupModel: true,
-        useDictationAgent: true,
+    (mode: OnboardingCompletionMode) => {
+      // getState(), not the render-time snapshot: the setup steps write the
+      // Chat scope and call onProceed() in the same tick, so `settingsStore`
+      // here still holds the values from before the pick.
+      const { chatAgentProvider, chatAgentModel, chatAgentRemoteUrl, chatAgentCustomApiKey } =
+        useSettingsStore.getState();
+      settingsStore.setReasoningForAllScopes({
+        mode,
+        provider: chatAgentProvider,
+        model: chatAgentModel,
+        ...(mode === "self-hosted" ? { remoteUrl: chatAgentRemoteUrl } : {}),
+        // Only a self-hosted server has one; an empty write would just churn
+        // five secure-store entries.
+        ...(mode === "self-hosted" && chatAgentCustomApiKey
+          ? { customApiKey: chatAgentCustomApiKey }
+          : {}),
       });
+      settingsStore.setUseCleanupModel(true);
+      settingsStore.setUseDictationAgent(true);
     },
     [settingsStore]
   );
 
   const handleSetupSelection = useCallback(
-    async (mode: Exclude<OnboardingSetupMode, null>, options?: { selfHosted?: boolean }) => {
+    async (mode: Exclude<OnboardingSetupMode, null>) => {
       setSetupMode(mode);
-      setSelfHostedRequested(!!options?.selfHosted);
       const next = getNextOnboardingStep("setup-choice", getOnboardingRoute({ setupMode: mode }));
       if (next) goTo(next);
     },
-    [goTo, setSelfHostedRequested, setSetupMode]
+    [goTo, setSetupMode]
   );
 
   const continueFromCurrentStep = useCallback(async () => {
@@ -511,10 +504,10 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           return;
         }
       }
-    } else if (currentStepId === "byok-dictation") {
+    } else if (currentStepId === "self-hosted-dictation") {
       settingsStore.setTranscriptionModeForAllScopes("self-hosted");
-    } else if (currentStepId === "byok-assistant") {
-      applyReasoningSelectionToAllScopes("byok");
+    } else if (currentStepId === "self-hosted-assistant") {
+      applyReasoningSelectionToAllScopes("self-hosted");
     } else if (currentStepId === "local-dictation") {
       settingsStore.setTranscriptionModeForAllScopes("local");
     } else if (currentStepId === "local-assistant") {
@@ -548,13 +541,19 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     withExtraDictationHotkeys,
   ]);
 
+  // A skipped model is still downloading, and the tray applies it once it lands
+  // (the step sets localSetupPending), so the assistant step moves on without
+  // fanning out a Chat selection that does not exist yet.
   const skipLocalSetup = useCallback(async () => {
     if (currentStepId === "local-dictation") {
       await continueFromCurrentStep();
       return;
     }
-    await finalizeOnboarding("local", { localPending: true });
-  }, [continueFromCurrentStep, currentStepId, finalizeOnboarding]);
+    setFatalError(null);
+    const next = getNextOnboardingStep(currentStepId, route);
+    if (next) goTo(next);
+    else await finalizeOnboarding("local", { localPending: true });
+  }, [continueFromCurrentStep, currentStepId, finalizeOnboarding, goTo, route]);
 
   const canContinue = (() => {
     switch (currentStepId) {
@@ -574,8 +573,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         return assistantDemoSuccess;
       case "notes":
         return notesFooterAction === "continue";
-      case "byok-dictation":
-      case "byok-assistant":
+      case "self-hosted-dictation":
+      case "self-hosted-assistant":
       case "local-dictation":
       case "local-assistant":
         return stageReady;
@@ -836,14 +835,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               ]}
               description={t("onboarding.rehaul.setupChoice.description")}
             />
-            <SetupChoiceStep
-              onSelect={(mode, options) => void handleSetupSelection(mode, options)}
-            />
+            <SetupChoiceStep onSelect={(mode) => void handleSetupSelection(mode)} />
           </div>
         );
 
-      case "byok-dictation":
-      case "byok-assistant":
+      case "self-hosted-dictation":
+      case "self-hosted-assistant":
         return (
           <div className="h-full w-full pt-2">
             <div>
@@ -857,15 +854,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 wideTitle
               />
             </div>
-            <ByokProviderStep
+            <SelfHostedSetupStep
               key={currentStepId}
               stepId={currentStepId}
-              selfHostedRequested={session.selfHostedRequested}
-              onSelfHostedChange={setSelfHostedRequested}
-              onConnectionChange={setStageReady}
+              onReadinessChange={setStageReady}
               onProceed={() => void continueFromCurrentStep()}
-              resumeState={session.resume.byok[currentStepId]}
-              onResumeStateChange={updateCurrentByokDraft}
+              resumeState={session.resume.selfHosted[currentStepId]}
+              onResumeStateChange={updateCurrentSelfHostedDraft}
             />
           </div>
         );
@@ -906,8 +901,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const inlineGatedStep = hotkeyStep || demoStep;
   const choiceStep = currentStepId === "setup-choice";
   const inlineProviderStep =
-    currentStepId === "byok-dictation" ||
-    currentStepId === "byok-assistant" ||
+    currentStepId === "self-hosted-dictation" ||
+    currentStepId === "self-hosted-assistant" ||
     currentStepId === "local-dictation" ||
     currentStepId === "local-assistant";
   // Choice/provider pages own their forward action. Hotkey/demo pages withhold

@@ -19,10 +19,6 @@ export default function DictationAgentSettings() {
   const setUseDictationAgent = useSettingsStore((s) => s.setUseDictationAgent);
   const voiceAgentScreenContext = useSettingsStore((s) => s.voiceAgentScreenContext);
   const setVoiceAgentScreenContext = useSettingsStore((s) => s.setVoiceAgentScreenContext);
-  const useDictationAgentVisionModel = useSettingsStore((s) => s.useDictationAgentVisionModel);
-  const setUseDictationAgentVisionModel = useSettingsStore(
-    (s) => s.setUseDictationAgentVisionModel
-  );
   const {
     isMacOS,
     granted: screenGranted,
@@ -173,19 +169,6 @@ export default function DictationAgentSettings() {
                 />
               </SettingsRow>
             </SettingsPanelRow>
-            {voiceAgentScreenContext && (
-              <SettingsPanelRow>
-                <SettingsRow
-                  label={t("dictationAgent.screenContext.visionModel")}
-                  description={t("dictationAgent.screenContext.visionModelDescription")}
-                >
-                  <Toggle
-                    checked={useDictationAgentVisionModel}
-                    onChange={setUseDictationAgentVisionModel}
-                  />
-                </SettingsRow>
-              </SettingsPanelRow>
-            )}
           </SettingsPanel>
           {voiceAgentScreenContext && isMacOS && !screenGranted && (
             <PermissionCard
@@ -201,9 +184,6 @@ export default function DictationAgentSettings() {
             <p className="text-[11px] text-warning/80 leading-snug">
               {t("dictationAgent.screenContext.relaunchHint")}
             </p>
-          )}
-          {voiceAgentScreenContext && useDictationAgentVisionModel && (
-            <InferenceConfigEditor scope="dictationAgentVision" allowedModes={["providers"]} />
           )}
         </div>
       )}

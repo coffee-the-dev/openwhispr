@@ -106,7 +106,7 @@ const run = (store, noteId, material, options = {}, action = ACTION) =>
     ),
     "hash",
     action,
-    { modelId: "qwen3.5-9b-q4_k_m", isCloudMode: false, isMeetingNote: true, material, ...options },
+    { modelId: "qwen3.5-9b-q4_k_m", isMeetingNote: true, material, ...options },
     LABELS
   );
 
@@ -121,9 +121,12 @@ test("material that fits is one request with today's prompt and no budget read",
   assert.equal(calls[0].config.maxTokens, 4096);
 });
 
-test("cloud mode never reads the budget and never chunks", async (t) => {
-  const { store, calls, updates, budgetCalls } = await loadStore(t, { mode: "openwhispr" });
-  run(store, 2, longMaterial(400), { isCloudMode: true });
+test("a self-hosted server never reads the local budget and never chunks", async (t) => {
+  const { store, calls, updates, budgetCalls } = await loadStore(t, {
+    mode: "self-hosted",
+    storage: { noteFormattingRemoteUrl: "https://vllm.lan/v1" },
+  });
+  run(store, 2, longMaterial(400));
   await waitFor(() => updates.length > 0, "save");
   assert.equal(calls.length, 1);
   assert.deepEqual(budgetCalls, []);
@@ -737,7 +740,6 @@ test("a plain note saves a reply the window clipped rather than refusing it", as
     ACTION,
     {
       modelId: "qwen3.5-9b-q4_k_m",
-      isCloudMode: false,
       material: { notes, meetingContext: "", transcript: "" },
     },
     LABELS
@@ -761,7 +763,6 @@ test("a long plain note keeps the translated refusal instead of being condensed"
     ACTION,
     {
       modelId: "qwen3.5-9b-q4_k_m",
-      isCloudMode: false,
       material: { notes, meetingContext: "", transcript: "" },
     },
     LABELS

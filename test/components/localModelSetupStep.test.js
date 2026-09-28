@@ -111,6 +111,7 @@ async function createSetupHarness(
       "/ProviderConnectionTest": `export default function ProviderConnectionTest() { return null; }`,
       "/OnboardingShell": `export function BrandMark() { return null; }`,
       "/ui/ProviderIcon": `export function ProviderIcon() { return null; }`,
+      "/OpenAICompatiblePanel": `export default function OpenAICompatiblePanel() { return null; }`,
     },
   });
   const { useSettingsStore } = await vite.ssrLoadModule("/stores/settingsStore.ts");

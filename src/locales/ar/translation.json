@@ -223,61 +223,6 @@
         "large": "أفضل جودة، الأبطأ",
         "turbo": "سريع بجودة جيدة"
       },
-      "cloud": {
-        "openai_gpt_5_2": "نموذج استنتاج قوي",
-        "openai_gpt_5_mini": "سريع وفعال من حيث التكلفة",
-        "openai_gpt_5_nano": "فائق السرعة، زمن انتقال منخفض",
-        "openai_gpt_4_1": "أساس قوي، سياق 1 مليون",
-        "openai_gpt_4_1_mini": "نموذج GPT-4.1 أصغر",
-        "openai_gpt_4_1_nano": "GPT-4.1 بأقل زمن انتقال",
-        "anthropic_claude_fable_5_1": "نموذج Anthropic الأكثر قدرة، فئة Mythos",
-        "anthropic_claude_fable_5": "الرائد السابق من فئة Mythos",
-        "anthropic_claude_sonnet_5": "نموذج مساعد سريع وقادر بتكلفة أقل",
-        "anthropic_claude_sonnet_4_6": "أداء متوازن",
-        "anthropic_claude_sonnet_4_5": "جيل Sonnet السابق",
-        "anthropic_claude_haiku_4_5": "سريع بذكاء يقترب من مستوى النماذج الرائدة",
-        "gemini_gemini_3_5_flash": "أحدث نموذج Gemini سريع وعالي القدرة",
-        "gemini_gemini_3_5_flash_lite": "نموذج 3.5 الأسرع والأكثر فعالية من حيث التكلفة",
-        "gemini_gemini_3_1_pro_preview": "نموذج رائد من الجيل التالي للاستنتاج المعقد",
-        "gemini_gemini_3_1_flash_lite": "أداء من الدرجة الأولى بتكلفة منخفضة",
-        "gemini_gemini_3_flash_preview": "نموذج من الجيل التالي فائق السرعة وعالي القدرة",
-        "gemini_gemini_2_5_flash_lite": "أقل زمن انتقال وتكلفة",
-        "gemini_gemma_4_31b_it": "أكبر نموذج Gemma 4 من Google، نموذج كثيف بحجم 31B، سياق 256K",
-        "gemini_gemma_4_26b_a4b_it": "نموذج Gemma 4 MoE من Google، بمعلمات نشطة 4B، سياق 256K",
-        "groq_openai_gpt_oss_120b": "نموذج OpenAI مفتوح المصدر الرائد، 500 رمز/ثانية",
-        "groq_openai_gpt_oss_20b": "نموذج سريع مفتوح المصدر، 1000 رمز/ثانية",
-        "groq_compound": "نظام Groq المركب، 450 رمز/ثانية",
-        "groq_compound_mini": "نظام مركب سريع، زمن انتقال أقل بمقدار 3 أضعاف",
-        "openai_gpt_6_astra": "نموذج OpenAI الأكثر قدرة للبرمجة والبحث",
-        "openai_gpt_5_6_sol": "GPT-5.6 الرائد للبرمجة والبحوث المعقدة",
-        "openai_gpt_5_6_terra": "GPT-5.6 متوازن للعمل اليومي",
-        "openai_gpt_5_6_luna": "GPT-5.6 الأسرع والأقل تكلفة",
-        "openai_gpt_5_5": "نموذج رائد للاستنتاج المعقد",
-        "anthropic_claude_opus_5": "نموذج Opus الأكثر قدرة، سياق 1 مليون",
-        "anthropic_claude_opus_4_8": "نموذج Opus قوي مضبوط من أجل الصدق والموثوقية",
-        "anthropic_claude_opus_4_7": "نموذج Opus قوي",
-        "anthropic_claude_opus_4_6": "جيل Opus السابق، سياق 1 مليون",
-        "anthropic_claude_opus_4_5": "نموذج Opus أقدم",
-        "tinfoil_gemma4_31b": "نموذج استنتاج خاص متعدد اللغات مع استدعاء الأدوات، سياق 256K",
-        "tinfoil_gpt_oss_120b": "نموذج استنتاج خاص مفتوح الوزن مع استخدام الأدوات، سياق 131K",
-        "tinfoil_llama3_3_70b": "نموذج محادثة خاص مع استدعاء الأدوات، سياق 128K",
-        "corti_corti_s1_instant": "نموذج رعاية صحية سريع، بدون تتبع الاستنتاج",
-        "corti_corti_s1": "النموذج السريري الأكثر قدرة مع الاستنتاج",
-        "corti_corti_s1_mini_instant": "نموذج رعاية صحية مدمج، الأسرع والأقل تكلفة",
-        "corti_corti_s1_mini": "نموذج سريري مدمج مع استنتاج بنصف السعر",
-        "tinfoil_glm_5_3": "نموذج خاص للهندسة البرمجية بقدرات وكيلية في بيئات معزولة وآمنة، سياق 1M"
-      },
-      "enterprise": {
-        "bedrock_claude_fable_5": "نموذج Claude الأكثر قدرة. الأفضل لأصعب مهام المساعد.",
-        "bedrock_claude_haiku_4_5": "سريع ورخيص. خيار افتراضي رائع لتنظيف النص.",
-        "bedrock_claude_sonnet_5": "نموذج موثوق متوازن للاستخدام اليومي. أفضل خيار افتراضي لمهام المساعد.",
-        "bedrock_claude_opus_4_8": "أقصى درجات الذكاء. الأفضل لمهام المساعد المعقدة.",
-        "bedrock_gpt_oss_120b": "نموذج OpenAI مفتوح الوزن. استنتاج قوي بتكلفة منخفضة.",
-        "bedrock_deepseek_v3_2": "نموذج رائد مفتوح الوزن. قيمة رائعة لمهام المساعد.",
-        "bedrock_qwen3_next_80b": "نموذج متناثر مفتوح الوزن. سريع ومتعدد اللغات.",
-        "vertex_gemini_2_5_flash": "نموذج متعدد الوسائط سريع عبر Vertex",
-        "vertex_gemini_2_5_pro": "استنتاج متقدم عبر Vertex"
-      },
       "local": {
         "qwen_qwen3_5_9b_q4_k_m": "نموذج هجين قوي",
         "qwen_qwen3_5_4b_q4_k_m": "نموذج Qwen3.5 متوازن للاستخدام العام",
@@ -324,25 +269,15 @@
     }
   },
   "reasoning": {
-    "mode": {
-      "cloud": "سحابي (Cloud)",
-      "local": "محلي (Local)",
-      "enterprise": "مؤسسي (Enterprise)",
-      "localDescription": "يعمل على جهازك. خصوصية تامة، يعمل بدون إنترنت.",
-      "cloudDescription": "نماذج متقدمة عبر API. سريعة وقادرة، وتتطلب اتصالًا بالإنترنت.",
-      "enterpriseDescription": "استخدم بيانات اعتماد مزود السحابة الخاص بمؤسستك."
-    },
     "custom": {
       "endpointWithProtocol": "أدخل عنوان URL أساسي كامل يتضمن البروتوكول (على سبيل المثال، https://server/v1).",
       "httpsRequired": "يتطلب HTTPS (يُسمح بـ HTTP للشبكة المحلية فقط).",
-      "endpointInvalid": "نقطة النهاية المخصصة غير صالحة أو غير مهيأة. تحقق من عنوان URL لنقطة النهاية في الإعدادات ← نماذج الذكاء الاصطناعي (AI Models).",
       "endpointUnauthorized": "رفضت نقطة النهاية الطلب (401/403). أضف مفتاح API أو اضبط إعدادات مصادقة الخادم.",
       "endpointTitle": "عنوان URL لنقطة النهاية",
-      "endpointExamples": "أمثلة:",
       "ollama": "(Ollama)",
       "localAi": "(LocalAI)",
       "apiKeyOptional": "مفتاح API (اختياري)",
-      "apiKeyHelp": "اختياري. يتم إرساله كرمز Bearer للمصادقة. هذا منفصل عن مفتاح OpenAI API الخاص بك.",
+      "apiKeyHelp": "اختياري. يتم إرساله كرمز Bearer للمصادقة.",
       "applyAndRefresh": "تطبيق وتحديث",
       "queryPrefix": "سنستعلم من",
       "querySuffix": "عن النماذج المتاحة.",
@@ -350,18 +285,14 @@
       "enterEndpoint": "أدخل عنوان URL لنقطة النهاية أعلاه لتحميل النماذج.",
       "fetchingModels": "جاري جلب قائمة النماذج من نقطة النهاية...",
       "noModels": "لم يتم إرجاع أي نماذج. تحقق من عنوان URL لنقطة النهاية.",
-      "providerName": "مخصص",
       "ownerLabel": "المالك: {{owner}}",
       "unableToLoadModels": "تعذر تحميل النماذج من نقطة النهاية.",
       "searchPlaceholder": "البحث عن النماذج...",
       "selectedGroup": "المحدد",
       "otherGroup": "أخرى",
       "noSearchResults": "لا توجد نماذج تتطابق مع \"{{query}}\"",
-      "selectModelHint": "لم يتم تحديد أي نموذج بعد — اختر واحدًا من القائمة أدناه.",
-      "keyRequiredHint": "مفتاح API مطلوب للاستدلال — أضف واحدًا لاستخدام هذا المزود."
+      "selectModelHint": "لم يتم تحديد أي نموذج بعد — اختر واحدًا من القائمة أدناه."
     },
-    "getApiKey": "احصل على مفتاح API الخاص بك ←",
-    "selectModel": "تحديد النموذج",
     "availableModels": "النماذج المتاحة",
     "disableThinking": {
       "label": "تعطيل مخرجات التفكير",
@@ -369,43 +300,6 @@
     },
     "selfHosted": {
       "endpointHelp": "أدخل عنوان خادم متوافق مع OpenAI على شبكتك المحلية (مثل Ollama أو LM Studio أو vLLM أو llama-server)."
-    },
-    "enterprise": {
-      "errors": {
-        "bedrock": {
-          "ssoExpired": "انتهت صلاحية جلسة AWS SSO.",
-          "credentialsRejected": "رفضت AWS بيانات الاعتماد. تحقق من معرّف مفتاح الوصول والمفتاح السري ورمز الجلسة.",
-          "accessDenied": "رفضت AWS Bedrock هذا الطلب. اطلب من مسؤول AWS منح إذن لاستدعاء النموذج المحدد في المنطقة {{region}}.",
-          "modelNotFound": "تعذر على AWS Bedrock العثور على النموذج المحدد في المنطقة {{region}}. تحقق من معرّف النموذج ومن توفره في تلك المنطقة.",
-          "configurationRejected": "رفضت AWS Bedrock تهيئة النموذج للمنطقة {{region}}. تحقق من معرّف النموذج وملف تعريف الاستدلال والمنطقة.",
-          "notConfigured": "لم يتم تكوين AWS Bedrock بشكل صحيح. تحقق من المنطقة وبيانات اعتماد AWS.",
-          "serviceUnavailable": "خدمة AWS Bedrock غير متاحة مؤقتًا بسبب ارتفاع الطلب. هذه مشكلة في خدمة AWS وليست انقطاعًا في OpenWhispr. يُرجى المحاولة مرة أخرى بعد بضع دقائق.",
-          "throttled": "تقيّد AWS Bedrock الطلبات مؤقتًا لأنها تتلقى عددًا كبيرًا منها. انتظر لحظة وحاول مرة أخرى. إذا استمر ذلك، فاطلب من مسؤول AWS التحقق من استخدام Bedrock وحصصها.",
-          "timeout": "لم تستجب AWS Bedrock ضمن المهلة. حاول مرة أخرى. إذا استمر ذلك، فتحقق من اتصالك بالإنترنت وحالة خدمة AWS Bedrock.",
-          "network": "تعذر الوصول إلى AWS Bedrock. تحقق من اتصالك بالإنترنت وحاول مرة أخرى.",
-          "unknown": "خطأ في AWS Bedrock: {{error}}",
-          "actions": {
-            "reauthenticate": "شغّل الأمر أدناه في الطرفية (terminal) لإعادة المصادقة:"
-          }
-        }
-      },
-      "technicalDetails": {
-        "title": "التفاصيل التقنية",
-        "httpStatus": "حالة HTTP",
-        "awsException": "استثناء AWS",
-        "awsRequestId": "معرّف طلب AWS",
-        "underlyingError": "الخطأ الأساسي",
-        "copy": "نسخ التفاصيل التقنية",
-        "copyCommand": "نسخ أمر الاسترداد"
-      }
-    },
-    "tinfoil": {
-      "modelRetiredTitle": "النموذج لم يعد متاحًا",
-      "modelRetired": "قام Tinfoil بإيقاف {{from}}. تم التبديل إلى {{to}}.",
-      "refreshingModels": "جاري تحديث النماذج..."
-    },
-    "corti": {
-      "euOnly": "نماذج Corti متوفرة فقط في منطقة الاتحاد الأوروبي."
     }
   },
   "controlPanel": {
@@ -639,7 +533,6 @@
     "test": {
       "addressHint": "حاول مخاطبة \"{{agentName}}\" لاختبار وضع التعليمات",
       "aiModels": "نماذج الذكاء الاصطناعي",
-      "baseUrlMissing": "عنوان URL الأساسي لـ {{provider}} مفقود. أضفه في إعدادات «نماذج الذكاء الاصطناعي».",
       "cleanup": "تنقيح",
       "disabledInSettingsPrefix": "تم تعطيل تحسين النص بالذكاء الاصطناعي.",
       "disabledInSettingsSuffix": "قم بتمكينه من قسم «نماذج الذكاء الاصطناعي» لاختبار المطالبات.",
@@ -653,11 +546,8 @@
       "none": "لا شيء",
       "outputLabel": "المخرجات",
       "processing": "جاري المعالجة...",
-      "openwhisprCloud": "OpenWhispr Cloud",
       "providerLabel": "المزود",
       "run": "تشغيل الاختبار",
-      "customEndpoint": "نقطة نهاية مخصصة",
-      "apiKeyMissing": "مفتاح API الخاص بـ {{provider}} غير مهيأ. أضفه في إعدادات «نماذج الذكاء الاصطناعي».",
       "translateHint": "سيتم ترجمة النص إلى {{language}}",
       "translation": "الترجمة",
       "translationDisabled": "قم بتمكين ترجمة الإملاء لاختبار هذه المطالبة",
@@ -745,15 +635,11 @@
       "enable": "مشاركة سياق الشاشة",
       "enableDescription": "يلتقط الشاشة التي يوجد عليها المؤشر عند بدء تسجيل المساعد الصوتي. لا يتم حفظه أو تسجيله أبدًا.",
       "unsupported": "التقاط الشاشة غير متوفر على Linux Wayland.",
-      "visionModel": "نموذج رؤية منفصل",
-      "visionModelDescription": "توجيه الأوامر التي تتضمن لقطة شاشة إلى نموذج مختلف قادر على الرؤية.",
       "permissionTitle": "تسجيل الشاشة",
       "permissionDescription": "يتطلب macOS إذن تسجيل الشاشة لالتقاط شاشتك.",
       "relaunchHint": "تم منح إذن تسجيل الشاشة أثناء تشغيل OpenWhispr. قم بإنهاء OpenWhispr وإعادة فتحه لبدء التقاط لقطات الشاشة."
     },
     "modes": {
-      "providers": "إحضار مفتاحك الخاص",
-      "providersDesc": "اتصل بـ OpenAI أو Anthropic أو Gemini أو Groq باستخدام مفتاح API الخاص بك.",
       "local": "محلي",
       "localDesc": "قم بتشغيل LLM محلي على جهازك — خاص بالكامل.",
       "selfHosted": "مستضاف ذاتيًا",
@@ -770,10 +656,8 @@
       "systemPromptDescription": "تعليمات مخصصة للمساعد",
       "systemPromptPlaceholder": "أدخل مطالبة النظام المخصصة...",
       "modes": {
-        "providers": "مزودو الخدمات السحابية",
         "local": "محلي",
         "selfHosted": "مستضاف ذاتيًا",
-        "providersDesc": "أحضر مفتاح API الخاص بك.",
         "localDesc": "نماذج على الجهاز. خاصة بالكامل.",
         "selfHostedDesc": "الخادم الخاص بك على شبكتك."
       }
@@ -1428,10 +1312,6 @@
         "titleLineOne": "اختر إعداد",
         "titleLineTwo": "OpenWhispr الخاص بك",
         "description": "اختر الخيار الذي يناسب طريقة عملك.",
-        "byok": {
-          "title": "مزود API",
-          "description": "استخدم مفتاح API الخاص بك."
-        },
         "local": {
           "title": "على جهازك",
           "description": "تفريغ محلي خاص بدون إنترنت. يتطلب مساحة خالية تبلغ {{minimumSpace}} جيجابايت على الأقل.",
@@ -1445,16 +1325,6 @@
           }
         },
         "warnings": {
-          "byok": {
-            "title": "يتعامل مزودك مع بياناتك",
-            "description": "ستضيف بيانات اعتماد لمزودي الإملاء والمساعد بشكل منفصل. تطبق سياسات التسعير والاحتفاظ بالبيانات الخاصة بالمزود.",
-            "continue": "إعداد مزود API",
-            "steps": {
-              "1": "اختر مزودين للإملاء والمساعد",
-              "2": "أضف بيانات الاعتماد باستخدام التخزين الآمن",
-              "3": "اختبر كل اتصال قبل التفعيل"
-            }
-          },
           "local": {
             "title": "يتطلب الإعداد المحلي بضع خطوات إضافية",
             "description": "تحتفظ المعالجة المحلية بكلامك على هذا الجهاز، ولكنها تتطلب إعدادًا لمرة واحدة ومساحة خالية تبلغ {{minimumSpace}} جيجابايت على الأقل.",
@@ -1467,36 +1337,30 @@
           }
         },
         "continueSetup": "متابعة الإعداد",
-        "showMore": "إظهار المزيد من الخيارات",
-        "moreOptions": {
-          "title": "اختر إعداد API الخاص بك",
-          "description": "أضف مفتاح API أو اربط نموذجًا مستضافًا ذاتيًا.",
-          "selfHosted": {
-            "title": "مستضاف ذاتيًا",
-            "description": "اربط نموذجك المستضاف ذاتيًا."
-          }
+        "selfHosted": {
+          "title": "مستضاف ذاتيًا",
+          "description": "اربط خوادم متوافقة مع OpenAI على شبكتك.",
+          "features": {
+            "network": "يعمل على شبكتك",
+            "key": "مفتاح API اختياري",
+            "models": "استخدم أي نموذج يستضيفه خادمك"
+          },
+          "connect": "ربط خادم"
         }
       },
       "provider": {
         "progress": "تقدم إعداد المزود",
         "dictation": "الإملاء",
         "assistant": "المساعد",
-        "title": "اربط مزود الذكاء الاصطناعي الخاص بك",
-        "description": "اختر مزودًا، وأضف بيانات الاعتماد الخاصة بك، واختبر الاتصال.",
-        "descriptionLineOne": "اختر مزودًا وأضف",
-        "descriptionLineTwo": "مفتاح API الخاص بك.",
-        "selfHosted": "لدي مفتاح نموذج مستضاف ذاتيًا",
-        "providerLabel": "المزود",
-        "providerPlaceholder": "اختر مزود النموذج",
-        "modelLabel": "النموذج",
-        "modelPlaceholder": "اختر النموذج",
+        "title": "اربط خادمك",
+        "description": "أدخل عنوان خادمك ومفتاح API اختياريًا، ثم اختبر الاتصال.",
+        "descriptionLineOne": "أدخل عنوان خادمك",
+        "descriptionLineTwo": "ومفتاح API اختياريًا.",
         "apiKey": "مفتاح API",
-        "apiKeyPlaceholder": "الصق مفتاح API الخاص بك",
         "endpointUrl": "عنوان URL لنقطة النهاية",
         "endpointPlaceholder": "الصق عنوان URL لنقطة النهاية الخاص بك",
         "optional": "اختياري",
         "modelId": "معرف النموذج",
-        "modelIdPlaceholder": "اكتب معرف النموذج الخاص بك",
         "testConnection": "اختبار الاتصال",
         "proceed": "متابعة",
         "runTest": "إجراء الاختبار",
@@ -1507,8 +1371,6 @@
           "endpointRequired": "أدخل عنوان URL لنقطة النهاية قبل الاختبار.",
           "invalidUrl": "يجب أن تكون نقطة النهاية عنوان URL صالحًا لـ HTTP أو HTTPS.",
           "httpsRequired": "يجب أن تستخدم نقاط النهاية العامة HTTPS. يُسمح بـ HTTP فقط على العناوين الخاصة.",
-          "unsupportedProvider": "اختبار الاتصال غير متوفر لهذا المزود.",
-          "apiKeyRequired": "أضف مفتاح API قبل الاختبار.",
           "credentialsRejected": "رفض المزود بيانات الاعتماد هذه.",
           "endpointNotFound": "لا توفر نقطة النهاية قائمة نماذج متوافقة مع OpenAI.",
           "modelNotFound": "النموذج المحدد غير متوفر من هذا المزود.",
@@ -1636,27 +1498,6 @@
       "hotkeyLabel": "اختصار الاجتماع",
       "hotkeyHint": "اختياري — اضغط عليه في أي اجتماع لبدء ملاحظة على الفور."
     },
-    "finish": {
-      "title": "لقد انتهيت من الإعداد",
-      "cloudDescription": "أنت تستخدم OpenWhispr Cloud — سريع ودقيق ولا يحتفظ بالبيانات، مع 2,000 كلمة مجانية كل أسبوع. هل تفضل كل شيء على جهازك؟ قم بالتبديل إلى المعالجة المحلية في الإعدادات.",
-      "localDescription": "لقد قمت بإعداد المعالجة المحلية أو مفتاحك الخاص. يمكنك ضبط كيفية معالجة صوتك في أي وقت في الإعدادات.",
-      "cleanupNote": "يعمل تنظيف النص بالذكاء الاصطناعي بإعدادات افتراضية معقولة. يمكنك تعديلها في أي وقت في الإعدادات.",
-      "openSettings": "فتح الإعدادات",
-      "skipForNow": "تخطي في الوقت الحالي",
-      "corti": {
-        "title": "أخبرتنا أنك هنا من أجل التفريغ السريري",
-        "description": "لقد عقدنا شراكة مع Corti — تحويل الكلام إلى نص من الدرجة السريرية بأعلى دقة، وهو متوافق مع قانون HIPAA.",
-        "createAccount": "أنشئ حساب Corti الخاص بك",
-        "creditBadge": "رصيد مجاني بقيمة 50 دولارًا",
-        "regionHint": "اختر مكان معالجة صوتك — الولايات المتحدة أو الاتحاد الأوروبي.",
-        "llmHint": "ستعمل ميزات نموذج اللغة أيضًا على نماذج Corti.",
-        "useCorti": "استخدام Corti",
-        "skip": "ليس الآن",
-        "step1": "سجل في corti.ai",
-        "step2": "افتح وحدة تحكم Corti وأنشئ بيانات اعتماد API",
-        "step3": "الصق معرف العميل وسر العميل أدناه"
-      }
-    },
     "welcomeSubtitle": "قوة صوتك. بشروطك."
   },
   "settingsPage": {
@@ -1682,35 +1523,17 @@
       }
     },
     "aiModels": {
-      "customSetup": "إعداد مخصص",
-      "customSetupDescription": "استخدم المزود ومفتاح API الخاص بك.",
       "description": "تنظيف النصوص المفرَّغة ومعالجة الأوامر وإصلاح الأخطاء مع الحفاظ على أسلوبك.",
       "enableTextCleanup": "تمكين تنظيف النص",
       "enableTextCleanupDescription": "استخدم الذكاء الاصطناعي لإزالة كلمات الحشو، وإصلاح القواعد، وتنسيق علامات الترقيم",
       "modes": {
-        "providers": "مزودو الخدمات السحابية",
         "local": "محلي",
         "selfHosted": "مستضاف ذاتيًا",
-        "providersDesc": "أحضر مفتاح API الخاص بك.",
         "localDesc": "نماذج على الجهاز. خاصة بالكامل.",
         "selfHostedDesc": "خادمك الخاص على شبكتك."
       },
-      "openwhisprCloud": "OpenWhispr Cloud",
-      "openwhisprCloudDescription": "دقة موثوقة. لا حاجة للإعداد.",
       "title": "تحسين النص بالذكاء الاصطناعي",
       "toasts": {
-        "switchedCloud": {
-          "description": "سيستخدم تحسين النص الخدمة السحابية لـ OpenWhispr.",
-          "title": "تم التبديل إلى OpenWhispr Cloud"
-        },
-        "switchedCustom": {
-          "description": "قم بتكوين المزود ومفتاح API الخاصين بك.",
-          "title": "تم التبديل إلى الإعداد المخصص"
-        },
-        "switchedProviders": {
-          "title": "مزودو الخدمات السحابية",
-          "description": "استخدام مفاتيح API الخاصة بك."
-        },
         "switchedLocal": {
           "title": "على الجهاز",
           "description": "يعمل الذكاء الاصطناعي محليًا على جهازك."
@@ -1718,10 +1541,6 @@
         "switchedSelfHosted": {
           "title": "مستضاف ذاتيًا",
           "description": "استخدام خادمك الخاص."
-        },
-        "switchedEnterprise": {
-          "title": "مؤسسي",
-          "description": "استخدام الحساب السحابي لمؤسستك."
         }
       }
     },

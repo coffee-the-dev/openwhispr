@@ -50,7 +50,6 @@ test("dynamic prose and identity values keep their own direction", () => {
 test("technical output values remain LTR inside an Arabic document", () => {
   const expectations = [
     ["src/components/DeveloperSection.tsx", /<code\s+dir="ltr"[\s\S]*?\{logPath\}/],
-    ["src/components/ui/TechnicalErrorDetails.tsx", /<pre\s+dir="ltr"[\s\S]*?\{text\}/],
     ["src/components/ui/NixOsPasteInfo.tsx", /<div\s+dir="ltr"[\s\S]*?<pre/],
     [
       "src/components/dictation/AssistantPanel.tsx",
@@ -66,10 +65,6 @@ test("technical output values remain LTR inside an Arabic document", () => {
     ],
     ["src/components/ui/SidebarModal.tsx", /<span\s+dir="ltr"[\s\S]*?v\{version\}/],
     ["src/components/ui/ModelCardList.tsx", /<span\s+dir="ltr"[\s\S]*?\{model\.label\}/],
-    [
-      "src/components/onboarding/ProviderSetupStep.tsx",
-      /<span\s+dir="ltr">\s*\{models\.find[\s\S]*?\?\? selectedModel\}/,
-    ],
   ];
 
   for (const [file, pattern] of expectations) {

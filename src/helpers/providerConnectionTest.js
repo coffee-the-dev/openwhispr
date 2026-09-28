@@ -1,13 +1,3 @@
-const ENDPOINTS = {
-  openai: "https://api.openai.com/v1/models",
-  groq: "https://api.groq.com/openai/v1/models",
-  anthropic: "https://api.anthropic.com/v1/models",
-  gemini: "https://generativelanguage.googleapis.com/v1beta/models",
-  openrouter: "https://openrouter.ai/api/v1/models",
-  corti: "https://ai.eu.corti.app/v1/models",
-  tinfoil: "https://inference.tinfoil.sh/v1/models",
-};
-
 // Renderers translate errorCode via onboarding.rehaul.provider.errors.*; the
 // English `error` string stays for logs and older callers.
 class ConnectionTestError extends Error {
@@ -142,62 +132,32 @@ function buildModelEndpoints(base) {
   });
 }
 
+// Every connection test targets the user's own OpenAI-compatible server.
 function resolveProviderRequest(config) {
-  const provider = String(config?.provider || "").toLowerCase();
   const apiKey = typeof config?.apiKey === "string" ? config.apiKey.trim() : "";
-  let endpoints = ENDPOINTS[provider] ? [ENDPOINTS[provider]] : [];
-
-  if (provider === "openai") {
-    const override = normalizeBaseUrl(
-      process.env.OPENWHISPR_OPENAI_BASE_URL || process.env.OPENAI_BASE_URL
-    );
-    if (override) endpoints = buildModelEndpoints(override);
+  const raw = String(config?.baseUrl || "").trim();
+  if (!raw) {
+    throw new ConnectionTestError("endpointRequired", "Enter an endpoint URL before testing.");
   }
-
-  if (provider === "custom") {
-    const raw = String(config?.baseUrl || "").trim();
-    if (!raw) {
-      throw new ConnectionTestError("endpointRequired", "Enter an endpoint URL before testing.");
-    }
-    let parsed;
-    try {
-      parsed = new URL(raw.includes("://") ? raw : `https://${raw}`);
-    } catch {
-      throw new ConnectionTestError("invalidUrl", "The endpoint must be a valid URL.");
-    }
-    if (!new Set(["http:", "https:"]).has(parsed.protocol)) {
-      throw new ConnectionTestError("invalidUrl", "The endpoint must use HTTP or HTTPS.");
-    }
-    if (parsed.protocol === "http:" && !isPrivateHost(parsed.hostname)) {
-      throw new ConnectionTestError(
-        "httpsRequired",
-        "Public endpoints must use HTTPS. HTTP is only allowed on private addresses."
-      );
-    }
-    endpoints = buildModelEndpoints(parsed.toString());
+  let parsed;
+  try {
+    parsed = new URL(raw.includes("://") ? raw : `https://${raw}`);
+  } catch {
+    throw new ConnectionTestError("invalidUrl", "The endpoint must be a valid URL.");
   }
-
-  if (endpoints.length === 0) {
+  if (!new Set(["http:", "https:"]).has(parsed.protocol)) {
+    throw new ConnectionTestError("invalidUrl", "The endpoint must use HTTP or HTTPS.");
+  }
+  if (parsed.protocol === "http:" && !isPrivateHost(parsed.hostname)) {
     throw new ConnectionTestError(
-      "unsupportedProvider",
-      "Connection testing is not available for this provider."
+      "httpsRequired",
+      "Public endpoints must use HTTPS. HTTP is only allowed on private addresses."
     );
   }
-  if (!apiKey && provider !== "custom") {
-    throw new ConnectionTestError("apiKeyRequired", "Add an API key before testing.");
-  }
+  const endpoints = buildModelEndpoints(parsed.toString());
 
   const headers = { Accept: "application/json" };
-  if (apiKey) {
-    if (provider === "anthropic") {
-      headers["x-api-key"] = apiKey;
-      headers["anthropic-version"] = "2023-06-01";
-    } else if (provider === "gemini") {
-      headers["x-goog-api-key"] = apiKey;
-    } else {
-      headers.Authorization = `Bearer ${apiKey}`;
-    }
-  }
+  if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
   return { endpoint: endpoints[0], endpoints, headers };
 }
@@ -217,22 +177,22 @@ function pickFailure(current, next) {
   return FAILURE_PRIORITY[next.errorCode] > FAILURE_PRIORITY[current.errorCode] ? next : current;
 }
 
-function describeStatusFailure(status, provider) {
+function describeStatusFailure(status) {
   if (status === 401 || status === 403) {
     return {
       errorCode: "credentialsRejected",
-      error: "The provider rejected these credentials.",
+      error: "The server rejected these credentials.",
       status,
     };
   }
-  if (status === 404 && provider === "custom") {
+  if (status === 404) {
     return {
       errorCode: "endpointNotFound",
       error: "The endpoint does not expose an OpenAI-compatible model list.",
       status,
     };
   }
-  return { errorCode: "providerStatus", error: `The provider returned status ${status}.`, status };
+  return { errorCode: "providerStatus", error: `The server returned status ${status}.`, status };
 }
 
 function normalizeModelId(value) {
@@ -278,7 +238,6 @@ async function testProviderConnection(config, fetchImpl = fetch) {
     };
   }
 
-  const provider = String(config?.provider || "").toLowerCase();
   const model = String(config?.model || "").trim();
   let failure = null;
   for (const endpoint of request.endpoints) {
@@ -294,11 +253,11 @@ async function testProviderConnection(config, fetchImpl = fetch) {
         if (await responseOffersModel(response, model)) return { success: true };
         failure = pickFailure(failure, {
           errorCode: "modelNotFound",
-          error: "The selected model is not available from this provider.",
+          error: "The selected model is not available from this server.",
         });
         continue;
       }
-      failure = pickFailure(failure, describeStatusFailure(response.status, provider));
+      failure = pickFailure(failure, describeStatusFailure(response.status));
     } catch (error) {
       if (error?.name === "AbortError") {
         failure = pickFailure(failure, {
@@ -308,7 +267,7 @@ async function testProviderConnection(config, fetchImpl = fetch) {
       } else {
         failure = pickFailure(failure, {
           errorCode: "network",
-          error: "The provider could not be reached.",
+          error: "The server could not be reached.",
         });
       }
     } finally {

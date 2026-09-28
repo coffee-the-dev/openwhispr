@@ -22,11 +22,7 @@ async function loadAudioManager(t) {
         "export default { debug() {}, info() {}, warn() {}, error() {}, logReasoning() {} };",
       "/stores/settingsStore": `
         export const getSettings = () => globalThis.__wakeWordSettings;
-        export const getEffectiveCleanupModel = () => "cleanup-model";
-        export const isCloudCleanupMode = () => false;
-        export const isCloudDictationAgentMode = () => false;
-        export const isCloudTranslationMode = () => false;
-        export const selectResolvedLLMConfig = () => ({ model: "cleanup-model" });
+        export const selectResolvedLLMConfig = () => ({ mode: "local", model: "cleanup-model" });
       `,
       "/dictationAgentInference": `
         export const resolveDictationAgentInference = () => ({
@@ -34,11 +30,6 @@ async function loadAudioManager(t) {
           model: "agent-model",
           displayProvider: "test",
           config: { provider: "test" },
-        });
-        export const resolveDictationAgentVisionInference = () => ({
-          active: false,
-          model: "",
-          config: {},
         });
       `,
       "/dictationTranslationInference": `
@@ -127,7 +118,6 @@ test("generic auto-language routing infers Arabic before an English UI fallback"
     preferredLanguage: "auto",
     uiLanguage: "en",
     useCleanupModel: true,
-    cleanupCloudMode: "byok",
     cleanupDisableThinking: false,
     customDictionary: [],
     snippets: [],

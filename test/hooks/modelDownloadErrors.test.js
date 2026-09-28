@@ -39,7 +39,6 @@ async function createDownloadRenderer(t, electronAPI) {
       `,
       "/stores/settingsStore": `
         export function clearMissingLocalModelSelections() {}
-        export function isCloudCleanupMode() { return false; }
         export function getSettings() { return {}; }
       `,
       "/ProviderSetupStep": `export const SETUP_CARD_CLASS = "";`,

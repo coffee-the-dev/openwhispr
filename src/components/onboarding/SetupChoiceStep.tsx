@@ -1,10 +1,10 @@
 import { Fragment, forwardRef, useRef, useState } from "react";
 import {
   BanknoteCheck,
-  ChevronRight,
   GalleryVerticalEnd,
   KeyRound,
   Laptop,
+  Network,
   Server,
   WifiOff,
 } from "../icons";
@@ -15,27 +15,17 @@ import type { OnboardingSetupMode } from "./flow";
 import { LOCAL_ASR_ORGANIZATIONS } from "../../helpers/localASROrganization";
 import { getProviderIcon, isMonochromeProvider } from "@/utils/providerIcons";
 import { cn } from "../lib/utils";
-// Only the Local card opens the warning dialog now — BYOK goes
-// straight through from the "Choose your API setup" modal.
+// Only the Local card opens the warning dialog; self-hosted goes straight
+// to its server step.
 import warningBackdrop from "../../assets/onboarding-setup-warning-hero.webp";
-import apiSetupHero from "../../assets/onboarding-api-setup-hero.webp";
 
-type SetupMode = Exclude<OnboardingSetupMode, null | "cloud">;
-// Local opens the warning dialog; BYOK is selected directly from the
-// more-options modal, so a "byok" pending state is unreachable.
-type WarningSetupMode = Exclude<SetupMode, "byok">;
+type SetupMode = Exclude<OnboardingSetupMode, null>;
+type WarningSetupMode = Extract<SetupMode, "local">;
 
 const REFERENCE_LOCAL_MODEL_ID = "nemotron-3.5-asr-streaming-0.6b";
 
 interface SetupChoiceStepProps {
-  onSelect: (mode: SetupMode, options?: { selfHosted?: boolean }) => void;
-}
-
-interface MoreSetupOption {
-  id: "byok" | "self-hosted";
-  icon: typeof KeyRound;
-  title: string;
-  description: string;
+  onSelect: (mode: SetupMode) => void;
 }
 
 // Figma "Frame 49"–"Frame 52": row, gap 8, a tertiary 14px mark beside 14/140% body.
@@ -93,7 +83,6 @@ export default function SetupChoiceStep({ onSelect }: SetupChoiceStepProps) {
   const { t } = useTranslation();
   const [pending, setPending] = useState<WarningSetupMode | null>(null);
   const confirmRef = useRef<HTMLButtonElement>(null);
-  const [showMore, setShowMore] = useState(false);
 
   const localReferenceModel = getParakeetModelInfo(REFERENCE_LOCAL_MODEL_ID);
   // Two deliberately different numbers: the setup steps quote the transfer, so
@@ -127,24 +116,8 @@ export default function SetupChoiceStep({ onSelect }: SetupChoiceStepProps) {
         })
       )
     : [];
-  const moreSetupOptions: MoreSetupOption[] = [
-    {
-      id: "byok",
-      icon: KeyRound,
-      title: t("onboarding.rehaul.setupChoice.byok.title"),
-      description: t("onboarding.rehaul.setupChoice.byok.description"),
-    },
-    {
-      id: "self-hosted",
-      icon: Server,
-      title: t("onboarding.rehaul.setupChoice.moreOptions.selfHosted.title"),
-      description: t("onboarding.rehaul.setupChoice.moreOptions.selfHosted.description"),
-    },
-  ];
-
   return (
-    // Figma "Frame 2147259042": column, gap 32, centred — the card row above the
-    // Show More Options pill.
+    // Figma "Frame 2147259042": column, gap 32, centred — the card row.
     <div className="mx-auto mt-5 flex w-full flex-col items-center gap-4">
       {/* Frame 60: row, gap 16. */}
       <div className="onboarding-stagger flex items-start justify-center gap-3">
@@ -215,96 +188,39 @@ export default function SetupChoiceStep({ onSelect }: SetupChoiceStepProps) {
             {t("onboarding.rehaul.setupChoice.local.download")}
           </CardAction>
         </SetupCard>
-      </div>
 
-      {/* Frame 25: BYOK and self-hosted are not cards in the spec — they live
-          behind this pill, which opens the "Choose your API setup" modal. */}
-      <button
-        type="button"
-        onClick={() => setShowMore(true)}
-        className="onboarding-pressable rounded-[38px] border border-[var(--onboarding-control-border)] px-4 py-1.5 text-xs font-medium leading-[1.4] text-[var(--onboarding-text-primary)] hover:bg-[var(--onboarding-surface-hover)]"
-      >
-        {t("onboarding.rehaul.setupChoice.showMore")}
-      </button>
-
-      {/* Figma "Frame 2147258999": 460 wide, radius 28, pad 24/20/32/20, col gap
-          32, over a 20% black scrim at backdrop-blur(11). Picking a row goes
-          straight to that setup step — deliberately skipping the warning dialog
-          the cards use, since the user has already made an explicit choice here. */}
-      <Dialog open={showMore} onOpenChange={(open) => !open && setShowMore(false)}>
-        <DialogContent
-          overlayClassName="bg-[var(--onboarding-scrim)]! backdrop-blur-[11px]"
-          className="w-full max-w-sm gap-6 rounded-3xl border-0 bg-[var(--onboarding-surface)] px-4 pb-6 pt-5 text-start [&>button]:hidden"
-        >
-          {/* Frame 2147258979: 238 tall, radius 20, image fill. Source is 840x477,
-              so it lands at ~2x for the 420x238 slot. */}
-          <div
-            className="flex h-[190px] items-center justify-center rounded-2xl bg-cover bg-center"
-            style={{ backgroundImage: `url(${apiSetupHero})` }}
-          >
-            {/* Frame 35: pad 10 20, gap 7, radius 38, 16/140% medium. */}
-            <span className="inline-flex items-center gap-1.5 rounded-[38px] border border-[var(--onboarding-control-border)] bg-[var(--onboarding-surface)] px-4 py-2 text-sm font-medium leading-[1.4] text-[var(--onboarding-text-primary)]">
-              <KeyRound
-                className="size-5 shrink-0 text-[var(--onboarding-accent)]"
-                strokeWidth={1.667}
-              />
-              {/* Illustrative sample, not copy — deliberately not translated. */}
-              sk*********Jkn
-            </span>
-          </div>
-
-          {/* Frame 2147259001: col gap 20. */}
+        <SetupCard>
           <div className="flex flex-col gap-4">
-            <div className="flex flex-col items-center gap-2 text-center">
-              {/* Important modifiers are load-bearing: DialogTitle renders an h2, and both
-                  its own shadcn classes and the global h1–h6 rule set weight 600 and a
-                  tighter tracking that a plain utility loses to. */}
-              <DialogTitle className="text-xl! font-medium! leading-[1.4]! tracking-normal! text-[var(--onboarding-text-primary)]">
-                {t("onboarding.rehaul.setupChoice.moreOptions.title")}
-              </DialogTitle>
-              <DialogDescription className="w-full max-w-xs text-sm leading-[1.4] text-[var(--onboarding-text-secondary)]">
-                {t("onboarding.rehaul.setupChoice.moreOptions.description")}
-              </DialogDescription>
-            </div>
-
-            {/* Frame 16: pad 20 16, surface-secondary, radius 20. Rows follow the
-                shared rhythm — nothing above the first, divider between. */}
-            <div className="rounded-2xl bg-[var(--onboarding-surface-secondary)] px-3.5 py-4">
-              {moreSetupOptions.map((row, index) => (
-                <button
-                  key={row.id}
-                  type="button"
-                  onClick={() => {
-                    setShowMore(false);
-                    // Both rows land on the BYOK step; self-hosted differs only in
-                    // starting it with the self-hosted field set on.
-                    onSelect("byok", { selfHosted: row.id === "self-hosted" });
-                  }}
-                  className={`onboarding-pressable flex w-full items-center gap-[14px] text-start ${
-                    index === 0 ? "pb-4" : "border-t border-[var(--onboarding-control-border)] pt-4"
-                  }`}
-                >
-                  <span className="flex size-10 shrink-0 items-center justify-center rounded-full border-[1.47px] border-[var(--onboarding-control-border)] text-[var(--onboarding-accent)]">
-                    <row.icon className="size-[18px]" strokeWidth={1.667} />
-                  </span>
-                  <span className="flex min-w-0 flex-1 flex-col gap-[3px]">
-                    <span className="text-sm font-medium leading-[1.4] text-[var(--onboarding-text-primary)]">
-                      {row.title}
-                    </span>
-                    <span className="text-sm leading-[1.4] text-[var(--onboarding-text-secondary)]">
-                      {row.description}
-                    </span>
-                  </span>
-                  {/* Frame 25: 32px surface-tertiary disc with a tertiary chevron. */}
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[var(--onboarding-surface-tertiary)] text-[var(--onboarding-text-tertiary)]">
-                    <ChevronRight className="size-4 rtl:rotate-180" strokeWidth={1.667} />
-                  </span>
-                </button>
-              ))}
+            <span className="flex size-9 items-center justify-center rounded-full bg-[var(--onboarding-inverse-surface)] text-[var(--onboarding-inverse-text)] ring-[1.33px] ring-[var(--onboarding-surface)]">
+              <Server className="size-4" />
+            </span>
+            <div className="flex flex-col gap-4">
+              <div className="flex flex-col gap-1.5">
+                <h2 className="onboarding-card-title text-[var(--onboarding-text-primary)]">
+                  {t("onboarding.rehaul.setupChoice.selfHosted.title")}
+                </h2>
+                <p className="text-sm leading-[1.4] text-[var(--onboarding-text-secondary)]">
+                  {t("onboarding.rehaul.setupChoice.selfHosted.description")}
+                </p>
+              </div>
+              <ul className="flex flex-col gap-2">
+                <Feature icon={Network}>
+                  {t("onboarding.rehaul.setupChoice.selfHosted.features.network")}
+                </Feature>
+                <Feature icon={KeyRound}>
+                  {t("onboarding.rehaul.setupChoice.selfHosted.features.key")}
+                </Feature>
+                <Feature icon={GalleryVerticalEnd}>
+                  {t("onboarding.rehaul.setupChoice.selfHosted.features.models")}
+                </Feature>
+              </ul>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
+          <CardAction onClick={() => onSelect("self-hosted")}>
+            {t("onboarding.rehaul.setupChoice.selfHosted.connect")}
+          </CardAction>
+        </SetupCard>
+      </div>
 
       <Dialog open={pending !== null} onOpenChange={(open) => !open && setPending(null)}>
         <DialogContent

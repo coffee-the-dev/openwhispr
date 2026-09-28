@@ -64,7 +64,7 @@ test("note formatting asks for enough output tokens to hold a long meeting summa
     "## Meeting Transcript\n" + "Alice: we agreed to ship on Friday.\n".repeat(500),
     "hash",
     ACTION,
-    { modelId: "gpt-4.1", isCloudMode: true, isMeetingNote: true },
+    { modelId: "qwen3.5-9b-q4_k_m", isMeetingNote: true },
     LABELS
   );
 
@@ -90,7 +90,7 @@ test("a truncated summary is still saved rather than discarded", async (t) => {
     "some notes",
     "hash",
     ACTION,
-    { modelId: "gpt-4.1", isCloudMode: true, isMeetingNote: true },
+    { modelId: "qwen3.5-9b-q4_k_m", isMeetingNote: true },
     LABELS
   );
 
@@ -109,7 +109,7 @@ test("a blank result is reported as an error and never saved as the enhanced not
     "## Meeting Transcript\nYou: ship on Friday.",
     "hash",
     ACTION,
-    { modelId: "gpt-4.1", isCloudMode: true, isMeetingNote: true },
+    { modelId: "qwen3.5-9b-q4_k_m", isMeetingNote: true },
     LABELS
   );
 
@@ -128,7 +128,7 @@ test("note formatting requests carry the noteFormatting scope, which is what buy
     "## Meeting Transcript\nYou: ship on Friday.",
     "hash",
     ACTION,
-    { modelId: "gpt-5.6-terra", isCloudMode: true, isMeetingNote: true },
+    { modelId: "qwen3.5-9b-q4_k_m", isMeetingNote: true },
     LABELS
   );
 

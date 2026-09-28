@@ -51,7 +51,6 @@ test("Prompt Studio labels dictation-agent runs as agent requests", async (t) =>
           if (source.endsWith("/hooks/useDialogs")) return "\0prompt-studio-dialogs";
           if (source.endsWith("/utils/agentName")) return "\0prompt-studio-agent-name";
           if (source.endsWith("/services/ReasoningService")) return "\0prompt-studio-reasoning";
-          if (source.endsWith("/models/ModelRegistry")) return "\0prompt-studio-models";
           if (source.endsWith("/utils/logger")) return "\0prompt-studio-logger";
           if (source.endsWith("/config/prompts")) return "\0prompt-studio-prompts";
           if (source.endsWith("/stores/settingsStore")) return "\0prompt-studio-settings";
@@ -130,9 +129,6 @@ test("Prompt Studio labels dictation-agent runs as agent requests", async (t) =>
               };
             `;
           }
-          if (id === "\0prompt-studio-models") {
-            return `export function getModelProvider() { return "openai"; }`;
-          }
           if (id === "\0prompt-studio-logger") {
             return `export default { debug() {}, error() {} };`;
           }
@@ -149,15 +145,14 @@ test("Prompt Studio labels dictation-agent runs as agent requests", async (t) =>
                 useCleanupModel: true,
                 cleanupModel: "",
                 useDictationAgent: true,
-                dictationAgentMode: "openwhispr",
-                dictationAgentProvider: "openwhispr",
-                dictationAgentModel: "auto",
+                dictationAgentMode: "local",
+                dictationAgentProvider: "qwen",
+                dictationAgentModel: "qwen3.5-9b-q4_k_m",
                 useDictationTranslation: true,
-                translationMode: "openwhispr",
-                translationProvider: "openwhispr",
-                translationModel: "auto",
+                translationMode: "local",
+                translationProvider: "qwen",
+                translationModel: "qwen3.5-9b-q4_k_m",
                 translationRemoteUrl: "",
-                translationCloudBaseUrl: "",
                 translationCustomApiKey: "",
                 translationDisableThinking: false,
                 translationTargetLanguage: "es",
@@ -168,9 +163,11 @@ test("Prompt Studio labels dictation-agent runs as agent requests", async (t) =>
               };
               export function useSettingsStore(selector) { return selector(state); }
               useSettingsStore.getState = () => state;
-              export const selectIsCloudCleanupMode = () => true;
-              export const selectIsCloudDictationAgentMode = () => true;
-              export const selectIsCloudTranslationMode = () => true;
+              export const selectResolvedLLMConfig = () => ({
+                mode: "local",
+                provider: "qwen",
+                model: "",
+              });
             `;
           }
           if (id === "\0prompt-studio-language") {
@@ -184,9 +181,9 @@ test("Prompt Studio labels dictation-agent runs as agent requests", async (t) =>
               export function resolveDictationAgentInference() {
                 return {
                   reachable: true,
-                  model: "auto",
-                  displayProvider: "openwhispr",
-                  config: { provider: "openwhispr" },
+                  model: "qwen3.5-9b-q4_k_m",
+                  displayProvider: "local",
+                  config: { provider: "local" },
                 };
               }
             `;
@@ -196,9 +193,9 @@ test("Prompt Studio labels dictation-agent runs as agent requests", async (t) =>
               export function resolveDictationTranslationInference() {
                 return {
                   reachable: true,
-                  model: "auto",
-                  displayProvider: "openwhispr",
-                  config: { provider: "openwhispr" },
+                  model: "qwen3.5-9b-q4_k_m",
+                  displayProvider: "local",
+                  config: { provider: "local" },
                 };
               }
             `;

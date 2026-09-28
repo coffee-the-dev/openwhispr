@@ -33,7 +33,6 @@ test("the Voice Assistant scope is seeded from Chat once for profiles that never
     assert.equal(state.dictationAgentMode, "local");
     assert.equal(state.dictationAgentProvider, "llama");
     assert.equal(state.dictationAgentModel, "qwen3-8b");
-    assert.equal(state.dictationAgentCloudMode, "byok");
     assert.equal(storage.getItem("_dictationAgentSeeded"), "key-pending");
   });
 
@@ -49,35 +48,35 @@ test("the Voice Assistant scope is seeded from Chat once for profiles that never
   });
 
   await t.test("a Voice Assistant scope the user configured is left alone", async () => {
-    const state = await load({ ...localChat, dictationAgentMode: "openwhispr" });
-    assert.equal(state.dictationAgentMode, "openwhispr");
-    assert.equal(state.dictationAgentProvider, "");
+    const state = await load({ ...localChat, dictationAgentMode: "self-hosted" });
+    assert.equal(state.dictationAgentMode, "self-hosted");
+    assert.equal(state.dictationAgentRemoteUrl, "");
     assert.equal(storage.getItem("_dictationAgentSeeded"), "1");
   });
 
   await t.test("a scope with only a provider and model written counts as configured", async () => {
     const state = await load({
       ...localChat,
-      dictationAgentProvider: "groq",
-      dictationAgentModel: "openai/gpt-oss-20b",
+      dictationAgentProvider: "gemma",
+      dictationAgentModel: "gemma-4-e4b-q4_k_m",
     });
     assert.equal(state.dictationAgentMode, "local");
-    assert.equal(state.dictationAgentProvider, "groq");
-    assert.equal(state.dictationAgentModel, "openai/gpt-oss-20b");
+    assert.equal(state.dictationAgentProvider, "gemma");
+    assert.equal(state.dictationAgentModel, "gemma-4-e4b-q4_k_m");
   });
 
-  // The provider-settings and agent-mode migrations leave a fresh profile's Chat
-  // scope on the cloud default, so the copy is a no-op in effect.
-  await t.test("a fresh profile inherits the same cloud default Chat was migrated to", async () => {
+  // A fresh profile's Chat scope settles on the local runtime, so the copy is a
+  // no-op in effect.
+  await t.test("a fresh profile inherits the local default Chat settled on", async () => {
     const state = await load({});
-    assert.equal(storage.getItem("chatAgentMode"), "openwhispr");
-    assert.equal(state.dictationAgentMode, "openwhispr");
+    assert.equal(storage.getItem("chatAgentMode"), "local");
+    assert.equal(state.dictationAgentMode, "local");
     assert.equal(state.dictationAgentProvider, "");
   });
 
   await t.test("a seeded profile is not seeded again after Chat changes", async () => {
     const state = await load({ ...localChat, _dictationAgentSeeded: "1" });
-    assert.equal(state.dictationAgentMode, "local", "the store default, not Chat's mode");
-    assert.equal(storage.getItem("dictationAgentMode"), null);
+    assert.equal(state.dictationAgentMode, "local", "settled local, not copied from Chat");
+    assert.equal(state.dictationAgentModel, "", "Chat's model was not copied");
   });
 });

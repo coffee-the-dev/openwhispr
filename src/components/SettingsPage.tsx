@@ -580,11 +580,8 @@ interface AiModelsSectionProps {
 }
 
 const CLEANUP_MODE_TOAST_KEY: Record<InferenceMode, string> = {
-  openwhispr: "switchedCloud",
-  providers: "switchedProviders",
   local: "switchedLocal",
   "self-hosted": "switchedSelfHosted",
-  enterprise: "switchedEnterprise",
 };
 
 function NoteFormattingSettings() {

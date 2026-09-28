@@ -489,16 +489,15 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
           // Apply AI reasoning if enabled
           if (!handledTranslation && useCleanupModel) {
             try {
-              const [
-                { default: ReasoningService },
-                { getEffectiveCleanupModel, isCloudCleanupMode, getSettings },
-              ] = await Promise.all([
-                import("../services/ReasoningService"),
-                import("../stores/settingsStore"),
-              ]);
-              const model = getEffectiveCleanupModel();
-              const isCloud = isCloudCleanupMode();
-              if (model || isCloud) {
+              const [{ default: ReasoningService }, { selectResolvedLLMConfig, getSettings }] =
+                await Promise.all([
+                  import("../services/ReasoningService"),
+                  import("../stores/settingsStore"),
+                ]);
+              const cleanup = selectResolvedLLMConfig(getSettings(), "dictationCleanup");
+              const model = cleanup.model;
+              // A self-hosted server picks its default model when none is named.
+              if (cleanup.mode === "self-hosted" ? !!cleanup.remoteUrl?.trim() : !!model) {
                 const agentName = getAgentName();
                 const reasonedText = await ReasoningService.processText(rawText, model, agentName, {
                   disableThinking: getSettings().cleanupDisableThinking,
