@@ -161,28 +161,19 @@
     "continue": "繼續",
     "retry": "重試",
     "back": "返回",
-    "logout": "登出",
-    "next": "下一步",
-    "complete": "完成",
     "reset": "重設",
     "refresh": "重新整理",
     "download": "下載",
     "cancel": "取消",
     "recommended": "推薦",
     "active": "使用中",
-    "cloud": "雲端",
-    "local": "本機",
-    "apiKey": "API Key",
     "model": "模型",
     "loading": "載入中...",
     "unknown": "未知",
     "availableModels": "可用模型",
-    "fast": "快速",
     "hold": "按住",
-    "private": "私密",
     "tap": "點按",
     "close": "關閉",
-    "dismiss": "忽略",
     "save": "儲存",
     "actions": "操作",
     "error": "發生錯誤",
@@ -217,8 +208,6 @@
       },
       "assistantHotkey": {
         "title": "設定 OpenWhispr Assistant",
-        "titleLineOne": "設定",
-        "titleLineTwo": "OpenWhispr Assistant",
         "description": "說出你的請求，OpenWhispr Assistant 會為你寫好結果。"
       },
       "hotkey": {
@@ -238,8 +227,6 @@
       },
       "assistantDemo": {
         "title": "認識 OpenWhispr Assistant",
-        "titleLineOne": "來認識",
-        "titleLineTwo": "OpenWhispr Assistant",
         "email": {
           "subject": "下週喝杯咖啡？",
           "senderName": "Maria Alvarez",
@@ -273,7 +260,6 @@
         "typing": "正在輸入…"
       },
       "notes": {
-        "title": "用 OpenWhispr Notes 錄製會議，無需機器人加入",
         "titleLineOne": "不需機器人也能錄製會議",
         "titleLineTwoPrefix": "使用 OpenWhispr",
         "titleLineTwoBrand": "Notes",
@@ -375,68 +361,28 @@
         "downloadInProgress": "下載進行中",
         "cancelDownload": "取消下載 {{model}}",
         "downloads": "模型下載",
-        "downloading": "正在下載… {{progress}}%",
         "installing": "安裝中"
       }
     },
-    "steps": {
-      "welcome": "歡迎",
-      "setup": "設定",
-      "permissions": "權限",
-      "activation": "聽寫",
-      "useCase": "關於你",
-      "meeting": "會議",
-      "finish": "完成"
-    },
     "hotkey": {
-      "couldNotRegisterTitle": "無法註冊該快捷鍵",
       "couldNotRegisterDescription": "該組合鍵可能已被使用。請嘗試其他組合。"
     },
-    "setup": {
-      "title": "設定",
-      "description": "選擇語言並授予權限",
-      "language": "語言"
-    },
     "permissions": {
-      "title": "權限",
       "microphoneTitle": "麥克風",
       "microphoneDescription": "將你的語音轉為文字。按下快捷鍵之前不會錄製任何內容。",
-      "grant": "授權",
       "grantAccess": "授予存取權限",
       "accessibilityTitle": "輔助使用",
       "accessibilityDescription": "將完成的文字直接輸入到你正在使用的應用程式 — 文件、郵件、聊天。",
-      "testAndGrant": "測試並授權",
-      "requiredForApp": "OpenWhispr 運作所需",
-      "microphoneRequired": "需要麥克風存取權限",
-      "openSystemSettings": "打開系統設定",
       "systemAudioTitle": "系統音訊",
       "systemAudioDescription": "讓會議錄音機聽到通話另一方的聲音 — 會議、講座、Podcast。你可以稍後在「設定」中開啟。",
       "optional": "可選",
       "recommended": "建議",
       "accessibilityTroubleshooting": "在系統設定 → 輔助使用中，將 OpenWhispr 的開關關閉再重新開啟。如果清單中根本沒有 OpenWhispr，請點按 + 並從「應用程式」資料夾加入。還是不行？請寄信至 support@openwhispr.com。"
     },
-    "transcription": {
-      "title": "轉錄設定",
-      "description": "選擇模式和服務供應商",
-      "preferredLanguage": "偏好語言"
-    },
     "activation": {
-      "title": "聽寫設定",
-      "description": "設定觸發語音輸入的方式",
-      "hotkey": "快捷鍵",
-      "mode": "模式",
       "tapDescription": "按一下開始/停止",
       "holdDescription": "按住時說話",
-      "test": "測試",
-      "hotkeyToStartStop": "{{hotkey}} 開始/停止",
-      "holdHotkey": "按住 {{hotkey}}",
-      "textareaPlaceholder": "點擊這裡，然後使用快捷鍵開始語音輸入..."
-    },
-    "connectivity": {
-      "title": "無法從此網路連線到 OpenWhispr Cloud",
-      "body": "{{cause}} 你可以切換到本機引擎，或繼續並稍後再試。",
-      "useLocal": "使用本機引擎",
-      "continue": "仍然繼續"
+      "holdHotkey": "按住 {{hotkey}}"
     },
     "useCase": {
       "title": "你會如何使用 OpenWhispr？",
@@ -471,27 +417,9 @@
           "title": "轉寫音訊檔案",
           "description": "上傳音訊檔案進行轉寫。"
         }
-      },
-      "selectHint": "可複選"
-    },
-    "meeting": {
-      "title": "會議筆記",
-      "description": "擷取並總結你的會議",
-      "autoDetect": "OpenWhispr 會自動偵測你是否正在開會，並提議開始記錄 — 未經你確認不會錄製任何內容。",
-      "hotkeyLabel": "會議快捷鍵",
-      "hotkeyHint": "選填 — 在任何會議中按下即可立即開始記錄。"
+      }
     },
     "welcomeSubtitle": "你的聲音，由你掌控。"
-  },
-  "streaming": {
-    "errors": {
-      "cloudUnreachable": {
-        "dnsBlocked": "DNS 無法解析 openwhispr.com — 廣告封鎖器或過濾器可能阻擋了它。",
-        "refused": "連線被拒絕 — 可能是防火牆或 VPN。",
-        "timeout": "網路逾時 — VPN、強制入口頁或連線不穩定。",
-        "tls": "TLS 交握失敗 — 請檢查系統時鐘或企業 Proxy。"
-      }
-    }
   },
   "controlPanel": {
     "accessibilityMissing": {
@@ -541,7 +469,6 @@
       "showInFolderWindows": "在檔案總管中顯示",
       "showInFolderLinux": "在檔案管理員中顯示",
       "retryTranscription": "重新轉錄",
-      "retrying": "正在重新轉錄…",
       "retrySuccess": "轉錄已更新",
       "retryError": "重新轉錄失敗",
       "audioNotFound": "找不到音訊檔案或檔案已過期",
@@ -570,12 +497,7 @@
       "enableButton": "啟用 GPU",
       "dismissButton": "暫時不要"
     },
-    "backToNotes": "返回筆記",
-    "cloudNudge": {
-      "title": "你已登入",
-      "description": "聽寫仍在使用你自己的設定。你可以隨時切換至 OpenWhispr Cloud。",
-      "action": "開啟設定"
-    }
+    "backToNotes": "返回筆記"
   },
   "reasoning": {
     "custom": {
@@ -583,8 +505,6 @@
       "httpsRequired": "需使用 HTTPS（僅限本機網路可使用 HTTP）。",
       "endpointUnauthorized": "端點拒絕了請求（401/403）。請新增 API Key 或調整伺服器驗證設定。",
       "endpointTitle": "端點 URL",
-      "ollama": "（Ollama）",
-      "localAi": "（LocalAI）",
       "apiKeyOptional": "API Key（選填）",
       "apiKeyHelp": "選填。作為 Bearer token 傳送以進行驗證。",
       "applyAndRefresh": "套用並重新整理",
@@ -631,18 +551,12 @@
       "description": "確定要刪除此模型嗎？如果之後要使用，需要重新下載。"
     },
     "parakeet": {
-      "multilingual": "25 種語言",
-      "english": "英文",
       "requiresMacOS": "macOS {{version}}+",
       "unavailable": "無法使用"
     },
     "fallback": {
       "whisperModelDescription": "模型",
       "parakeetModelDescription": "NVIDIA Parakeet 模型"
-    },
-    "whisperModels": "Whisper 模型",
-    "corti": {
-      "apiKey": "API Key"
     }
   },
   "hooks": {
@@ -676,7 +590,6 @@
         "description": "部分錄音內容無法轉錄。"
       },
       "errorDescriptions": {
-        "dailyLimitReached": "已達今日的轉錄上限。請明天再試或升級你的方案。",
         "providerRateLimited": "你的轉錄服務商限制了請求頻率。請稍候再試。",
         "agentReasoningFailed": "語音助理無法處理該指令，已改為插入原始逐字稿。",
         "screenContextSkipped": "截圖無法傳送，因此已在沒有螢幕內容的情況下執行你的指令。",
@@ -807,31 +720,8 @@
       "micUnavailable": "此環境中無法使用麥克風 API。請重新啟動應用程式。",
       "titles": {
         "microphoneUnavailable": "麥克風無法使用",
-        "microphonePermissionRequired": "需要麥克風權限",
-        "accessibilityNeeded": "需要輔助使用權限",
-        "readyToGo": "準備就緒！",
-        "waylandClipboardMode": "Wayland 剪貼簿模式",
-        "optionalPasteTool": "選用：安裝貼上工具"
+        "microphonePermissionRequired": "需要麥克風權限"
       },
-      "descriptions": {
-        "accessibilityNeeded": "請在系統設定中授予輔助使用權限，以啟用自動貼上功能。",
-        "windowsReady": "Windows 不需要特殊權限即可自動貼上。一切就緒！",
-        "linuxReadyWithMethod": "已使用 {{method}} 啟用自動貼上。一切就緒！",
-        "waylandClipboardMode": "此 Wayland 工作階段不支援自動貼上。OpenWhispr 會將文字複製到剪貼簿，你可以使用 Ctrl+V 貼上。",
-        "optionalPasteTool": "如需自動貼上，請安裝 {{tool}}：\n\n{{installCmd}}{{waylandNote}}\n\n沒有安裝也可以使用 OpenWhispr，文字會複製到剪貼簿，你可以使用 Ctrl+V 貼上。"
-      },
-      "alerts": {
-        "accessibilityNeeded": "需要輔助使用權限！請在系統設定中授權。"
-      },
-      "notes": {
-        "waylandWtype": "\n\n注意：XWayland 應用程式也可使用 xdotool。",
-        "waylandXwaylandOnly": "\n\n注意：自動貼上僅適用於 XWayland 應用程式。"
-      },
-      "labels": {
-        "defaultPasteTool": "xdotool",
-        "xdotoolXwayland": "xdotool（XWayland 應用程式）"
-      },
-      "accessibilityTestText": "OpenWhispr 輔助使用測試",
       "warning": {
         "messages": {
           "macos": "請檢查聲音設定以選擇輸入裝置",
@@ -910,61 +800,10 @@
     }
   },
   "dictionarySuffix": "字典後綴",
-  "emailVerification": {
-    "verifiedDescription": "你的帳號已設定完成。"
-  },
   "errorBoundary": {
     "description": "發生意外錯誤。請重新載入後再試。",
     "reload": "重新載入",
     "title": "發生錯誤"
-  },
-  "forgotPassword": {
-    "back": "返回"
-  },
-  "actionPrompt": "動作提示詞",
-  "hotkeyGuidance": {
-    "blockedDescription": "這些快捷鍵已被封鎖，因為它們通常是系統保留的。",
-    "blockedTitle": "已封鎖的快捷鍵",
-    "description": "參考這些平台規則來選擇不會與系統衝突的快捷鍵。",
-    "examplesTitle": "有效範例",
-    "platforms": {
-      "linux": "Linux",
-      "macos": "macOS",
-      "windows": "Windows"
-    },
-    "recommended": {
-      "linux": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Super+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Ctrl+Shift+J",
-        "4": "Alt+Space"
-      },
-      "macos": {
-        "0": "⌥Space",
-        "1": "⌃⌥S",
-        "2": "⌃⌥D",
-        "3": "Fn",
-        "4": "⌘⇧J"
-      },
-      "windows": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Ctrl+Shift+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Win+Alt+K"
-      }
-    },
-    "recommendedTitle": "推薦的快捷鍵",
-    "rulesTitle": "快捷鍵規則",
-    "showAll": "顯示全部",
-    "showFewer": "顯示較少",
-    "title": "快捷鍵指南",
-    "validationRules": {
-      "0": "必須使用至少一個修飾鍵（Ctrl、Alt、Shift 等）",
-      "1": "不可使用系統保留的快捷鍵",
-      "2": "不允許單獨使用單一按鍵",
-      "3": "部分組合可能與其他應用程式衝突"
-    }
   },
   "hotkeyInput": {
     "ariaLabel": "按下按鍵組合以設定快捷鍵",
@@ -1000,7 +839,6 @@
     "inputDevice": "輸入裝置",
     "noBuiltInDetected": "未偵測到內建麥克風。使用系統預設裝置。",
     "preferBuiltIn": {
-      "description": "外接麥克風可能造成延遲或降低轉錄品質",
       "label": "優先使用內建麥克風"
     },
     "selectPlaceholder": "選擇麥克風",
@@ -1023,7 +861,6 @@
     "checking": "正在檢查系統功能...",
     "installCommands": {
       "archLinux": "# Arch Linux",
-      "debianUbuntu": "# Debian / Ubuntu",
       "debianUbuntuPop": "# Debian / Ubuntu / Pop!_OS",
       "debianUbuntuMint": "# Debian / Ubuntu / Mint",
       "fedoraRhel": "# Fedora / RHEL",
@@ -1227,7 +1064,6 @@
       "clearDictionaryTitle": "清除詞典？",
       "clearDictionaryDescription": "這將移除自訂詞典中的所有字詞。此操作無法復原。",
       "clearAll": "全部清除",
-      "agentNameAutoManaged": "自動管理 — 與助理名稱同步",
       "removeWord": "移除字詞",
       "noWords": "尚無字詞",
       "wordsAppearHere": "你新增的字詞將顯示在這裡",
@@ -1484,7 +1320,6 @@
     },
     "transcription": {
       "customSetup": "自訂設定",
-      "customSetupDescription": "使用你自己的供應商和 API Key。",
       "description": "選擇 OpenWhispr 轉錄語音的方式",
       "modes": {
         "local": "本機",
@@ -1492,8 +1327,6 @@
         "localDesc": "裝置端模型，完全私密。",
         "selfHostedDesc": "你的伺服器，在你的網路上。"
       },
-      "openwhisprCloud": "OpenWhispr Cloud",
-      "openwhisprCloudDescription": "準確可靠，無需設定。",
       "title": "語音轉文字",
       "toasts": {
         "switchedLocal": {
@@ -1663,7 +1496,6 @@
     },
     "sidebar": {
       "newNote": "新增筆記",
-      "searchNotes": "搜尋筆記",
       "actions": "動作"
     },
     "spaces": {
@@ -1681,7 +1513,6 @@
         "meetings": "會議",
         "videos": "影片"
       },
-      "title": "資料夾",
       "soon": "即將推出",
       "folderName": "資料夾名稱",
       "couldNotCreate": "無法建立資料夾",
@@ -1712,15 +1543,12 @@
       "noteTitle": "筆記標題",
       "stop": "停止",
       "transcribe": "轉錄",
-      "processing": "處理中...",
-      "export": "匯出",
       "asMarkdown": "匯出為 Markdown",
       "asPlainText": "匯出為純文字",
       "asTranscriptText": "匯出為純文字 (.txt)",
       "asSubtitles": "匯出為字幕 (.srt)",
       "asJson": "匯出為 JSON (.json)",
       "asTranscriptMarkdown": "匯出為 Markdown (.md)",
-      "raw": "原始",
       "aiSummary": "AI 摘要",
       "saving": "儲存中",
       "transcriptEmptyTitle": "尚未錄製任何內容",
@@ -1729,11 +1557,9 @@
       "generateSummary": "產生 AI 摘要",
       "startWriting": "開始撰寫...",
       "staleIndicator": "內容在增強後已變更",
-      "live": "即時",
       "transcript": "轉錄",
       "notes": "你的筆記",
       "conversationWillAppear": "對話將顯示在這裡...",
-      "linkedEvent": "關聯行程",
       "noFolder": "無資料夾",
       "participants": "參與者",
       "table": {
@@ -1805,8 +1631,6 @@
       "noProviderTitle": "尚未設定轉錄服務供應商",
       "noProviderDescription": "新增 API Key 或下載本機模型以開始轉錄。",
       "noProviderAction": "開啟轉錄設定",
-      "byokTooLarge": "第三方 API 金鑰僅支援 {{size}} MB 以內的檔案。",
-      "byokTooLargeDetail": "超過 {{size}} MB 的檔案由 OpenWhispr Cloud 負責分割、平行處理和重組——無需依賴第三方服務限制，即可獲得可靠的結果。",
       "orDivider": "或",
       "urlPlaceholder": "貼上 YouTube 或音訊 URL",
       "urlDownloading": "正在下載音訊...",
@@ -1828,9 +1652,6 @@
       "numSpeakersLabel": "說話人數",
       "numSpeakersHint": "設定準確的人數可以提高準確度，尤其是長錄音。",
       "downloadingModels": "正在下載模型...",
-      "openaiDiarizeNote": "將替換您的轉錄模型為 gpt-4o-transcribe-diarize，這是唯一支援說話人偵測的 OpenAI 模型。費用可能與您選擇的模型不同。",
-      "mistralDiarizeNote": "使用 Voxtral 時說話人偵測無需額外費用。",
-      "groqDiarizeNote": "Groq 不支援說話人偵測。將改用本地分離。",
       "batchCancelled": "已取消",
       "batchTranscriptionFailed": "轉錄失敗",
       "batchSaveFailed": "儲存筆記失敗",
@@ -1846,8 +1667,6 @@
     },
     "meeting": {
       "title": "會議筆記",
-      "description": "轉錄與結構化摘要",
-      "back": "返回",
       "remoteTranscriptionWarning": "轉錄伺服器沒有回應，即時轉錄中可能缺少部分語音。錄製仍在繼續。",
       "systemAudioSilent": {
         "title": "尚未偵測到會議音訊",
@@ -1960,10 +1779,6 @@
         "enabled": "已啟用"
       }
     },
-    "realtimeBanner": {
-      "message": "Pro 方案可使用即時轉錄",
-      "upgrade": "升級"
-    },
     "enhance": {
       "title": "增強錯誤"
     },
@@ -1972,19 +1787,11 @@
       "them": "對方",
       "unknown": "未知發言者",
       "label": "發言者 {{n}}",
-      "identifyingSpeakers": "正在辨識發言者...",
-      "liveAccuracyHint": "仍在辨識發言者。通話結束後，標籤準確度會提升。",
-      "speakersIdentified": "已辨識發言者",
-      "typeNamePlaceholder": "輸入姓名",
       "knownSpeakers": "已知發言者",
       "meetingAttendees": "會議參與者",
-      "assignName": "指派姓名",
-      "isThisPerson": "這是{{name}}嗎？",
       "selected": "已選 {{n}} 個",
       "assignTo": "指派給…",
       "deselectAll": "取消全選",
-      "confirmed": "已確認",
-      "nameAssigned": "姓名已指派",
       "state": {
         "provisional": "暫定",
         "confirmed": "已確認",
@@ -2098,9 +1905,7 @@
     "agentDefault": "預設加入"
   },
   "insights": {
-    "title": "統計",
     "yourUsage": "你的使用情況",
-    "description": "私密檢視你的聽寫習慣與持續狀況。",
     "wordsSpoken": "已聽寫字數",
     "currentStreak": "目前連續天數",
     "wordsPerMinute": "每分鐘字數",
@@ -2112,7 +1917,6 @@
     "longestStreak_other": "最長：{{count}} 天",
     "wpmCoverage": "根據 {{count}}% 已測量的字數",
     "activity": "聽寫活躍度",
-    "activityDescription": "過去 6 個月內聽寫的字數",
     "activityLabel": "6 個月聽寫活躍度熱圖",
     "activityLess": "較少",
     "activityMore": "較多",
@@ -2144,7 +1948,6 @@
     "archived": "已封存",
     "noConversations": "開始你的第一個對話",
     "selectChat": "選擇一個對話或開始新的對話",
-    "noResults": "沒有符合的對話",
     "today": "今天",
     "yesterday": "昨天",
     "previousWeek": "最近 7 天",
@@ -2153,11 +1956,7 @@
     "unarchive": "取消封存",
     "delete": "刪除",
     "deleteConfirm": "此對話將被永久刪除，無法復原。",
-    "editTitle": "雙擊編輯標題",
-    "untitled": "無標題",
     "searchChats": "搜尋聊天",
-    "searchTitle": "搜尋對話",
-    "searchDescription": "搜尋所有對話",
     "newChatEmpty": "詢問關於筆記、轉錄或其他任何內容"
   },
   "support": {
@@ -2209,10 +2008,6 @@
       },
       "addedToDict": "已將 {{words}} 加入到你的詞典",
       "undo": "復原",
-      "accessibilityMissing": {
-        "title": "需要輔助使用權限",
-        "description": "OpenWhispr 需要輔助使用權限來偵測快捷鍵和貼上文字。請在控制面板中啟用。"
-      },
       "gpuFallback": {
         "title": "GPU 加速無法使用",
         "description": "OpenWhispr 已切換為 CPU 轉錄。",
@@ -2228,7 +2023,6 @@
       }
     },
     "mic": {
-      "hotkeyToSpeak": "{{hotkey}} 說話",
       "recording": "錄音中...",
       "processing": "處理中...",
       "clickToSpeak": "點擊開始說話",
@@ -2399,16 +2193,6 @@
         "description": "直接讀取你的本機筆記。無需登入或 API 金鑰 — OpenWhispr 執行時即可使用。"
       }
     },
-    "plan": {
-      "title": "您的方案",
-      "current": "目前",
-      "free": "免費",
-      "freeLimit": "每月5次會議",
-      "essential": "Essential",
-      "essentialLimit": "每月20次會議",
-      "proLimit": "無限",
-      "upgrade": "升級"
-    },
     "notABot": {
       "title": "OpenWhispr 是會議錄製工具，不是機器人",
       "description": "OpenWhispr 直接從您的系統擷取音訊 — 它不會以參與者身分加入您的會議。只需連接日曆，正常記錄筆記即可。"
@@ -2418,29 +2202,6 @@
       "description": "要轉錄會議，OpenWhispr 需要系統音訊權限來錄製其他參與者的音訊。我們絕不會錄製您的螢幕。您將被引導至系統設定以啟用此權限。",
       "openSettings": "打開系統設定"
     }
-  },
-  "calendar": {
-    "title": "Google 日曆",
-    "status": "狀態",
-    "connected": "已連接",
-    "disconnected": "未連接",
-    "notConnectedDescription": "連接以偵測和錄製會議",
-    "connectCta": {
-      "title": "日曆整合",
-      "description": "自動偵測會議並錄製轉錄"
-    },
-    "connect": "連接 Google 日曆",
-    "connecting": "連接中...",
-    "disconnect": "中斷連接",
-    "disconnecting": "中斷中...",
-    "sync": "同步",
-    "syncing": "同步中...",
-    "calendarsTitle": "日曆",
-    "upcomingTitle": "即將到來",
-    "noUpcoming": "沒有即將到來的事件",
-    "meetingStarting": "會議即將開始",
-    "today": "今天",
-    "tomorrow": "明天"
   },
   "upcoming": {
     "title": "即將開始",
@@ -2459,29 +2220,7 @@
     "connectCalendarDescription": "無需離開 OpenWhispr 即可查看並加入您的會議。",
     "connectCalendarButton": "連接日曆"
   },
-  "notesView": {
-    "searchPlaceholder": "搜尋筆記…",
-    "newNote": "新建筆記",
-    "empty": {
-      "title": "尚無筆記",
-      "description": "建立你的第一則筆記開始使用。"
-    },
-    "searchEmpty": {
-      "title": "無結果",
-      "description": "找不到與「{{query}}」相符的筆記。"
-    },
-    "noteType": {
-      "personal": "個人",
-      "meeting": "會議",
-      "upload": "上傳"
-    }
-  },
   "noteEditor": {
-    "saved": "已儲存",
-    "deleteNote": "刪除筆記",
-    "deleteConfirmTitle": "刪除筆記？",
-    "deleteConfirmDescription": "此筆記將被永久刪除，無法復原。",
-    "deleteConfirm": "刪除",
     "share": {
       "dialog": {
         "export": "匯出"
@@ -2506,11 +2245,6 @@
       "dismiss": "關閉"
     }
   },
-  "permissionsGate": {
-    "title": "需要權限",
-    "description": "OpenWhispr 需要一些權限才能在此電腦上正常運作。",
-    "continue": "繼續"
-  },
   "embeddedChat": {
     "askPlaceholder": "隨便問點什麼...",
     "send": "傳送",
@@ -2524,9 +2258,6 @@
   },
   "transcriptionPreview": {
     "label": "預覽",
-    "listening": "正在聆聽...",
-    "polishing": "正在潤飾...",
-    "ready": "就緒",
     "copy": "複製",
     "copied": "已複製",
     "collapse": "收合轉錄",
@@ -2545,10 +2276,7 @@
     "enabledDescription": "透過翻譯快捷鍵開始的聽寫會先整理再翻譯，然後貼上",
     "sourceLanguage": "口說語言",
     "sourceLanguageDescription": "你聽寫時使用的語言——自動偵測也能處理混合語言聽寫",
-    "targetLanguage": "翻譯為",
-    "targetLanguageDescription": "貼上文字的語言",
     "targetLanguageMissing": "請選擇目標語言以啟用翻譯快捷鍵",
-    "selectLanguage": "選擇語言…",
     "prompt": {
       "title": "翻譯提示詞",
       "description": "自訂模型翻譯聽寫內容的方式"

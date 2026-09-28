@@ -39,14 +39,6 @@ export type SelfHostedType = "openai-compatible" | "lan";
 
 export type TranscriptionStatus = "completed" | "failed" | "pending" | "discarded";
 
-export interface CloudFailureMetadata {
-  error?: string;
-  code?: string;
-  status?: number;
-  minAppVersion?: string;
-  details?: unknown;
-}
-
 export type TranscriptionErrorCode =
   | "TIMEOUT"
   | "NETWORK"
@@ -851,10 +843,6 @@ declare global {
 
       // Space operations
       getSpaces?: () => Promise<SpaceItem[]>;
-      updateSpace?: (
-        id: number,
-        updates: { name?: string; emoji?: string | null }
-      ) => Promise<{ success: boolean; space?: SpaceItem; error?: string }>;
 
       // Note files (markdown mirror)
       noteFilesSetEnabled?: (
@@ -1097,12 +1085,11 @@ declare global {
         freed_mb?: number;
         error?: string;
       }>;
-      cancelParakeetDownload: () => Promise<
-        {
-          success: boolean;
-          message?: string;
-        } & CloudFailureMetadata
-      >;
+      cancelParakeetDownload: () => Promise<{
+        success: boolean;
+        message?: string;
+        error?: string;
+      }>;
       getParakeetDiagnostics: () => Promise<ParakeetDiagnosticsResult>;
 
       // Local AI model management
@@ -1124,12 +1111,6 @@ declare global {
       }>;
       modelDeleteAll: () => Promise<{
         success: boolean;
-        error?: string;
-        code?: string;
-        details?: string;
-      }>;
-      modelCheckRuntime: () => Promise<{
-        available: boolean;
         error?: string;
         code?: string;
         details?: string;
@@ -1595,16 +1576,15 @@ declare global {
         noteId?: number | null;
         sessionId: string;
         autoEndEligible: boolean;
-      }) => Promise<
-        {
-          success: boolean;
-          sessionId?: string;
-          error?: string;
-          systemAudioMode?: SystemAudioMode;
-          systemAudioStrategy?: SystemAudioStrategy;
-          oneOnOneAttendee?: { displayName: string; email: string | null } | null;
-        } & CloudFailureMetadata
-      >;
+      }) => Promise<{
+        success: boolean;
+        sessionId?: string;
+        error?: string;
+        systemAudioMode?: SystemAudioMode;
+        systemAudioStrategy?: SystemAudioStrategy;
+        oneOnOneAttendee?: { displayName: string; email: string | null } | null;
+        code?: string;
+      }>;
       meetingTranscriptionSend?: (buffer: ArrayBuffer, source: "mic" | "system") => void;
       meetingTranscriptionSetSystemAudioAvailable?: (
         sessionId: string,
@@ -1850,10 +1830,6 @@ declare global {
       completeDictationPreview?: (payload: { text?: string }) => Promise<{ success: boolean }>;
       hideDictationPreview?: () => Promise<{ success: boolean }>;
       sendDictationPreviewAudio?: (data: ArrayBuffer) => void;
-
-      broadcastDictionaryUpdated?: () => Promise<{ success: boolean }>;
-
-      broadcastSnippetsUpdated?: () => Promise<{ success: boolean }>;
     };
 
     api?: {

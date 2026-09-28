@@ -55,8 +55,3 @@ export interface CalendarAttendee {
   responseStatus: CalendarResponseStatus | null;
   self: boolean;
 }
-
-export interface Contact {
-  email: string;
-  display_name: string | null;
-}

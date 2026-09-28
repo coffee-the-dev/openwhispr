@@ -161,28 +161,19 @@
     "continue": "Continua",
     "retry": "Riprova",
     "back": "Indietro",
-    "logout": "Disconnetti",
-    "next": "Avanti",
-    "complete": "Completa",
     "reset": "Reimposta",
     "refresh": "Aggiorna",
     "download": "Scarica",
     "cancel": "Annulla",
     "recommended": "Consigliato",
     "active": "Attivo",
-    "cloud": "Cloud",
-    "local": "Locale",
-    "apiKey": "Chiave API",
     "model": "Modello",
     "loading": "Caricamento...",
     "unknown": "Sconosciuto",
     "availableModels": "Modelli disponibili",
-    "fast": "Veloce",
     "hold": "Tieni premuto",
-    "private": "Privato",
     "tap": "Tocca",
     "close": "Chiudi",
-    "dismiss": "Ignora",
     "save": "Salva",
     "actions": "Azioni",
     "error": "Si è verificato un errore",
@@ -217,8 +208,6 @@
       },
       "assistantHotkey": {
         "title": "Configura OpenWhispr Assistant",
-        "titleLineOne": "Configura",
-        "titleLineTwo": "OpenWhispr Assistant",
         "description": "Pronuncia una richiesta. OpenWhispr Assistant scrive il risultato per te."
       },
       "hotkey": {
@@ -238,8 +227,6 @@
       },
       "assistantDemo": {
         "title": "Scopri OpenWhispr Assistant",
-        "titleLineOne": "Ecco",
-        "titleLineTwo": "OpenWhispr Assistant",
         "email": {
           "subject": "Un caffè la prossima settimana?",
           "senderName": "Maria Alvarez",
@@ -273,7 +260,6 @@
         "typing": "Sta scrivendo…"
       },
       "notes": {
-        "title": "Registra le riunioni senza bot con OpenWhispr Notes",
         "titleLineOne": "Registra le riunioni senza bot",
         "titleLineTwoPrefix": "con OpenWhispr",
         "titleLineTwoBrand": "Notes",
@@ -375,68 +361,28 @@
         "downloadInProgress": "Download in corso",
         "cancelDownload": "Annulla il download di {{model}}",
         "downloads": "Download dei modelli",
-        "downloading": "Download in corso… {{progress}}%",
         "installing": "Installazione"
       }
     },
-    "steps": {
-      "welcome": "Benvenuto",
-      "setup": "Configurazione",
-      "permissions": "Permessi",
-      "activation": "Dettatura",
-      "useCase": "Su di te",
-      "meeting": "Riunioni",
-      "finish": "Fine"
-    },
     "hotkey": {
-      "couldNotRegisterTitle": "Impossibile registrare questa scorciatoia",
       "couldNotRegisterDescription": "Questa combinazione potrebbe essere già in uso. Prova con un'altra."
     },
-    "setup": {
-      "title": "Configurazione",
-      "description": "Scegli la lingua e concedi i permessi",
-      "language": "Lingua"
-    },
     "permissions": {
-      "title": "Permessi",
       "microphoneTitle": "Microfono",
       "microphoneDescription": "Trasforma la tua voce in testo. Non viene registrato nulla finché non premi la scorciatoia.",
-      "grant": "Concedi",
       "grantAccess": "Concedi accesso",
       "accessibilityTitle": "Accessibilità",
       "accessibilityDescription": "Digita il testo finale direttamente nell'app in cui ti trovi — documenti, email, chat.",
-      "testAndGrant": "Testa e concedi",
-      "requiredForApp": "Necessario per usare OpenWhispr",
-      "microphoneRequired": "Accesso al microfono richiesto",
-      "openSystemSettings": "Apri Impostazioni di Sistema",
       "systemAudioTitle": "Audio di Sistema",
       "systemAudioDescription": "Permette al registratore delle riunioni di sentire l'altro lato delle tue chiamate — riunioni, lezioni, podcast. Puoi attivarlo più tardi nelle Impostazioni.",
       "optional": "Facoltativo",
       "recommended": "Consigliato",
       "accessibilityTroubleshooting": "In Impostazioni di Sistema → Accessibilità, disattiva l'interruttore di OpenWhispr e riattivalo. Se OpenWhispr non compare nell'elenco, fai clic su + e aggiungilo dalla cartella Applicazioni. Ancora problemi? Scrivi a support@openwhispr.com."
     },
-    "transcription": {
-      "title": "Configurazione trascrizione",
-      "description": "Scegli modalità e provider",
-      "preferredLanguage": "Lingua preferita"
-    },
     "activation": {
-      "title": "Configurazione dettatura",
-      "description": "Configura come avviare la dettatura",
-      "hotkey": "Scorciatoia",
-      "mode": "Modalità",
       "tapDescription": "Premi per avviare/fermare",
       "holdDescription": "Tieni premuto mentre parli",
-      "test": "Test",
-      "hotkeyToStartStop": "{{hotkey}} per avviare/fermare",
-      "holdHotkey": "Tieni premuto {{hotkey}}",
-      "textareaPlaceholder": "Clicca qui e usa la scorciatoia per dettare..."
-    },
-    "connectivity": {
-      "title": "Non riusciamo a raggiungere OpenWhispr Cloud da questa rete",
-      "body": "{{cause}} Puoi passare al motore locale o continuare e riprovare più tardi.",
-      "useLocal": "Usa motore locale",
-      "continue": "Continua comunque"
+      "holdHotkey": "Tieni premuto {{hotkey}}"
     },
     "useCase": {
       "title": "Come userai OpenWhispr?",
@@ -471,27 +417,9 @@
           "title": "Trascrivi file audio",
           "description": "Carica file audio da trascrivere."
         }
-      },
-      "selectHint": "Seleziona tutte le opzioni pertinenti"
-    },
-    "meeting": {
-      "title": "Note delle riunioni",
-      "description": "Cattura e riassumi le tue riunioni",
-      "autoDetect": "OpenWhispr rileva automaticamente quando sei in riunione e ti propone di avviare le note — nulla viene registrato senza di te.",
-      "hotkeyLabel": "Scorciatoia riunione",
-      "hotkeyHint": "Facoltativa — premila in qualsiasi riunione per avviare subito una nota."
+      }
     },
     "welcomeSubtitle": "Il potere della tua voce. Alle tue condizioni."
-  },
-  "streaming": {
-    "errors": {
-      "cloudUnreachable": {
-        "dnsBlocked": "Il DNS non risolve openwhispr.com — potrebbe esserci un ad blocker o un filtro.",
-        "refused": "Connessione rifiutata — probabilmente un firewall o una VPN.",
-        "timeout": "Timeout di rete — VPN, captive portal o connessione instabile.",
-        "tls": "Handshake TLS fallito — controlla l'orologio di sistema o un proxy aziendale."
-      }
-    }
   },
   "controlPanel": {
     "accessibilityMissing": {
@@ -541,7 +469,6 @@
       "showInFolderWindows": "Mostra in Esplora file",
       "showInFolderLinux": "Mostra nel gestore file",
       "retryTranscription": "Ritrascrivi",
-      "retrying": "Ritrascrizione in corso…",
       "retrySuccess": "Trascrizione aggiornata",
       "retryError": "Ritrascrizione non riuscita",
       "audioNotFound": "File audio non trovato o scaduto",
@@ -570,12 +497,7 @@
       "enableButton": "Attiva GPU",
       "dismissButton": "Non ora"
     },
-    "backToNotes": "Torna alle note",
-    "cloudNudge": {
-      "title": "Accesso effettuato",
-      "description": "La dettatura usa ancora la tua configurazione. Puoi passare a OpenWhispr Cloud in qualsiasi momento.",
-      "action": "Apri Impostazioni"
-    }
+    "backToNotes": "Torna alle note"
   },
   "reasoning": {
     "custom": {
@@ -583,8 +505,6 @@
       "httpsRequired": "HTTPS richiesto (HTTP consentito solo in rete locale).",
       "endpointUnauthorized": "L'endpoint ha rifiutato la richiesta (401/403). Aggiungi una chiave API o modifica le impostazioni di autenticazione del server.",
       "endpointTitle": "URL endpoint",
-      "ollama": "(Ollama)",
-      "localAi": "(LocalAI)",
       "apiKeyOptional": "Chiave API (opzionale)",
       "apiKeyHelp": "Opzionale. Inviata come token Bearer per l'autenticazione.",
       "applyAndRefresh": "Applica e aggiorna",
@@ -631,18 +551,12 @@
       "description": "Vuoi davvero eliminare questo modello? Per usarlo di nuovo dovrai riscaricarlo."
     },
     "parakeet": {
-      "multilingual": "25 lingue",
-      "english": "Inglese",
       "requiresMacOS": "macOS {{version}}+",
       "unavailable": "Non disponibile"
     },
     "fallback": {
       "whisperModelDescription": "Modello",
       "parakeetModelDescription": "Modello NVIDIA Parakeet"
-    },
-    "whisperModels": "Modelli Whisper",
-    "corti": {
-      "apiKey": "Chiave API"
     }
   },
   "hooks": {
@@ -676,7 +590,6 @@
         "description": "Non è stato possibile trascrivere una parte della registrazione."
       },
       "errorDescriptions": {
-        "dailyLimitReached": "Hai raggiunto il limite di trascrizioni di oggi. Riprova domani o aggiorna il tuo piano.",
         "providerRateLimited": "Il tuo provider di trascrizione ha limitato la richiesta. Attendi un momento e riprova.",
         "agentReasoningFailed": "L'assistente vocale non è riuscito a elaborare il comando; è stata inserita la trascrizione grezza.",
         "screenContextSkipped": "Non è stato possibile inviare lo screenshot, quindi il comando è stato eseguito senza contesto dello schermo.",
@@ -807,31 +720,8 @@
       "micUnavailable": "Le API del microfono non sono disponibili in questo ambiente. Riavvia l'app.",
       "titles": {
         "microphoneUnavailable": "Microfono non disponibile",
-        "microphonePermissionRequired": "Permesso microfono richiesto",
-        "accessibilityNeeded": "Permessi di accessibilità necessari",
-        "readyToGo": "Tutto pronto!",
-        "waylandClipboardMode": "Modalità appunti su Wayland",
-        "optionalPasteTool": "Opzionale: installa strumento di incollaggio"
+        "microphonePermissionRequired": "Permesso microfono richiesto"
       },
-      "descriptions": {
-        "accessibilityNeeded": "Concedi i permessi di accessibilità nelle impostazioni di sistema per abilitare l'incollaggio automatico.",
-        "windowsReady": "Windows non richiede permessi speciali per l'incollaggio automatico. È tutto pronto!",
-        "linuxReadyWithMethod": "L'incollaggio automatico è disponibile tramite {{method}}. È tutto pronto!",
-        "waylandClipboardMode": "L'incollaggio automatico non è disponibile in questa sessione Wayland. OpenWhispr copierà il testo negli appunti e potrai incollare con Ctrl+V.",
-        "optionalPasteTool": "Per l'incollaggio automatico, installa {{tool}}:\n\n{{installCmd}}{{waylandNote}}\n\nAnche senza questo puoi usare OpenWhispr: il testo verrà copiato negli appunti e potrai incollare con Ctrl+V."
-      },
-      "alerts": {
-        "accessibilityNeeded": "Permessi di accessibilità necessari! Concedili nelle impostazioni di sistema."
-      },
-      "notes": {
-        "waylandWtype": "\n\nNota: per le app XWayland, funziona anche xdotool.",
-        "waylandXwaylandOnly": "\n\nNota: l'incollaggio automatico funziona solo per le app XWayland."
-      },
-      "labels": {
-        "defaultPasteTool": "xdotool",
-        "xdotoolXwayland": "xdotool (app XWayland)"
-      },
-      "accessibilityTestText": "Test accessibilità OpenWhispr",
       "warning": {
         "messages": {
           "macos": "Controlla le impostazioni Audio per selezionare il dispositivo di ingresso",
@@ -910,61 +800,10 @@
     }
   },
   "dictionarySuffix": "Suffisso dizionario",
-  "emailVerification": {
-    "verifiedDescription": "Il tuo account è pronto."
-  },
   "errorBoundary": {
     "description": "Si è verificato un errore imprevisto. Ricarica per riprovare.",
     "reload": "Ricarica",
     "title": "Qualcosa è andato storto"
-  },
-  "forgotPassword": {
-    "back": "Indietro"
-  },
-  "actionPrompt": "Prompt di azione",
-  "hotkeyGuidance": {
-    "blockedDescription": "Queste scorciatoie sono bloccate perché comunemente usate dal sistema.",
-    "blockedTitle": "Scorciatoie bloccate",
-    "description": "Usa queste regole per scegliere una scorciatoia che non entri in conflitto con il sistema.",
-    "examplesTitle": "Esempi validi",
-    "platforms": {
-      "linux": "Linux",
-      "macos": "macOS",
-      "windows": "Windows"
-    },
-    "recommended": {
-      "linux": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Super+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Ctrl+Shift+J",
-        "4": "Alt+Space"
-      },
-      "macos": {
-        "0": "⌥Space",
-        "1": "⌃⌥S",
-        "2": "⌃⌥D",
-        "3": "Fn",
-        "4": "⌘⇧J"
-      },
-      "windows": {
-        "0": "Ctrl+Alt+Space",
-        "1": "Ctrl+Shift+S",
-        "2": "Ctrl+Alt+D",
-        "3": "Win+Alt+K"
-      }
-    },
-    "recommendedTitle": "Scorciatoie consigliate",
-    "rulesTitle": "Regole per le scorciatoie",
-    "showAll": "Mostra tutto",
-    "showFewer": "Mostra meno",
-    "title": "Guida alle scorciatoie",
-    "validationRules": {
-      "0": "È necessario almeno un tasto modificatore (Ctrl, Alt, Shift, ecc.)",
-      "1": "Non è possibile usare scorciatoie riservate dal sistema",
-      "2": "I tasti singoli non sono consentiti",
-      "3": "Alcune combinazioni potrebbero entrare in conflitto con altre app"
-    }
   },
   "hotkeyInput": {
     "ariaLabel": "Premi una combinazione di tasti per impostare la scorciatoia",
@@ -1000,7 +839,6 @@
     "inputDevice": "Dispositivo di ingresso",
     "noBuiltInDetected": "Nessun microfono integrato rilevato. Verrà usato quello predefinito di sistema.",
     "preferBuiltIn": {
-      "description": "I microfoni esterni possono causare latenza o ridurre la qualità della trascrizione",
       "label": "Preferisci microfono integrato"
     },
     "selectPlaceholder": "Seleziona un microfono",
@@ -1023,7 +861,6 @@
     "checking": "Verifica delle funzionalità di sistema...",
     "installCommands": {
       "archLinux": "# Arch Linux",
-      "debianUbuntu": "# Debian / Ubuntu",
       "debianUbuntuPop": "# Debian / Ubuntu / Pop!_OS",
       "debianUbuntuMint": "# Debian / Ubuntu / Mint",
       "fedoraRhel": "# Fedora / RHEL",
@@ -1227,7 +1064,6 @@
       "clearDictionaryTitle": "Svuotare il dizionario?",
       "clearDictionaryDescription": "Verranno rimosse tutte le parole dal tuo dizionario personalizzato. Questa azione non può essere annullata.",
       "clearAll": "Cancella tutto",
-      "agentNameAutoManaged": "Gestito automaticamente — sincronizzato con il nome dell'assistente",
       "removeWord": "Rimuovi parola",
       "noWords": "Nessuna parola ancora",
       "wordsAppearHere": "Le parole aggiunte appariranno qui",
@@ -1484,7 +1320,6 @@
     },
     "transcription": {
       "customSetup": "Configurazione personalizzata",
-      "customSetupDescription": "Usa il tuo provider e la tua chiave API.",
       "description": "Scegli come OpenWhispr trascrive la tua voce",
       "modes": {
         "local": "Locale",
@@ -1492,8 +1327,6 @@
         "localDesc": "Modelli sul dispositivo. Totalmente privato.",
         "selfHostedDesc": "Il tuo server nella tua rete."
       },
-      "openwhisprCloud": "OpenWhispr Cloud",
-      "openwhisprCloudDescription": "Risultati affidabili. Nessuna configurazione necessaria.",
       "title": "Riconoscimento vocale",
       "toasts": {
         "switchedLocal": {
@@ -1663,7 +1496,6 @@
     },
     "sidebar": {
       "newNote": "Nuova nota",
-      "searchNotes": "Cerca note",
       "actions": "Azioni"
     },
     "spaces": {
@@ -1681,7 +1513,6 @@
         "meetings": "Riunioni",
         "videos": "Video"
       },
-      "title": "Cartelle",
       "soon": "Presto",
       "folderName": "Nome cartella",
       "couldNotCreate": "Impossibile creare la cartella",
@@ -1712,15 +1543,12 @@
       "noteTitle": "Titolo della nota",
       "stop": "Ferma",
       "transcribe": "Trascrivi",
-      "processing": "Elaborazione...",
-      "export": "Esporta",
       "asMarkdown": "Come Markdown",
       "asPlainText": "Come testo semplice",
       "asTranscriptText": "Come testo semplice (.txt)",
       "asSubtitles": "Come sottotitoli (.srt)",
       "asJson": "Come JSON (.json)",
       "asTranscriptMarkdown": "Come Markdown (.md)",
-      "raw": "Originale",
       "aiSummary": "Riepilogo AI",
       "saving": "Salvataggio",
       "transcriptEmptyTitle": "Nessuna registrazione",
@@ -1729,11 +1557,9 @@
       "generateSummary": "Genera riepilogo AI",
       "startWriting": "Inizia a scrivere...",
       "staleIndicator": "Il contenuto è cambiato dall'ultimo miglioramento",
-      "live": "Dal vivo",
       "transcript": "Trascrizione",
       "notes": "Le tue note",
       "conversationWillAppear": "La conversazione apparirà qui...",
-      "linkedEvent": "Evento collegato",
       "noFolder": "Nessuna cartella",
       "participants": "Partecipanti",
       "table": {
@@ -1805,8 +1631,6 @@
       "noProviderTitle": "Nessun provider di trascrizione configurato",
       "noProviderDescription": "Aggiungi una chiave API o scarica un modello locale per iniziare a trascrivere.",
       "noProviderAction": "Apri impostazioni di trascrizione",
-      "byokTooLarge": "Le chiavi API di terze parti supportano solo file fino a {{size}} MB.",
-      "byokTooLargeDetail": "Per file superiori a {{size}} MB, OpenWhispr Cloud gestisce la suddivisione, l'elaborazione parallela e il riassemblaggio — per risultati affidabili senza dipendere dai limiti dei provider di terze parti.",
       "orDivider": "oppure",
       "urlPlaceholder": "Incolla un URL di YouTube o audio",
       "urlDownloading": "Download dell'audio in corso...",
@@ -1828,9 +1652,6 @@
       "numSpeakersLabel": "Numero di parlanti",
       "numSpeakersHint": "Indicare il numero esatto migliora la precisione, soprattutto nelle registrazioni lunghe.",
       "downloadingModels": "Download modelli in corso...",
-      "openaiDiarizeNote": "Sostituisce il tuo modello di trascrizione con gpt-4o-transcribe-diarize, l’unico modello OpenAI con rilevamento dei parlanti. I costi potrebbero differire dal modello selezionato.",
-      "mistralDiarizeNote": "Rilevamento dei parlanti incluso senza costi aggiuntivi con Voxtral.",
-      "groqDiarizeNote": "Il rilevamento dei parlanti non è disponibile con Groq. Verrà usata la diarizzazione locale.",
       "batchCancelled": "Annullato",
       "batchTranscriptionFailed": "Trascrizione non riuscita",
       "batchSaveFailed": "Salvataggio nota non riuscito",
@@ -1846,8 +1667,6 @@
     },
     "meeting": {
       "title": "Note delle riunioni",
-      "description": "Trascrizioni e riassunti strutturati",
-      "back": "Indietro",
       "remoteTranscriptionWarning": "Il server di trascrizione non ha risposto, quindi parte del parlato potrebbe mancare dalla trascrizione dal vivo. La registrazione continua.",
       "systemAudioSilent": {
         "title": "Nessun audio della riunione rilevato finora",
@@ -1960,10 +1779,6 @@
         "enabled": "Attivato"
       }
     },
-    "realtimeBanner": {
-      "message": "Trascrizione in tempo reale disponibile con Pro",
-      "upgrade": "Passa a Pro"
-    },
     "enhance": {
       "title": "Errore di miglioramento"
     },
@@ -1972,19 +1787,11 @@
       "them": "Loro",
       "unknown": "Partecipante sconosciuto",
       "label": "Partecipante {{n}}",
-      "identifyingSpeakers": "Identificazione dei partecipanti...",
-      "liveAccuracyHint": "Identificazione dei partecipanti in corso. La precisione delle etichette migliorerà al termine della chiamata.",
-      "speakersIdentified": "Partecipanti identificati",
-      "typeNamePlaceholder": "Digita un nome",
       "knownSpeakers": "Parlanti noti",
       "meetingAttendees": "Partecipanti alla riunione",
-      "assignName": "Assegna nome",
-      "isThisPerson": "È {{name}}?",
       "selected": "{{n}} selezionati",
       "assignTo": "Assegna a…",
       "deselectAll": "Deseleziona tutto",
-      "confirmed": "Confermato",
-      "nameAssigned": "Nome assegnato",
       "state": {
         "provisional": "Provvisorio",
         "confirmed": "Confermato",
@@ -2098,9 +1905,7 @@
     "agentDefault": "Aggiunto di default"
   },
   "insights": {
-    "title": "Statistiche",
     "yourUsage": "Il tuo utilizzo",
-    "description": "Una visione privata delle tue abitudini di dettatura e della tua costanza.",
     "wordsSpoken": "Parole dettate",
     "currentStreak": "Serie attuale",
     "wordsPerMinute": "Parole al minuto",
@@ -2112,7 +1917,6 @@
     "longestStreak_other": "Record: {{count}} giorni",
     "wpmCoverage": "Basato sul {{count}} % delle parole misurate",
     "activity": "Attività di dettatura",
-    "activityDescription": "Parole dettate negli ultimi 6 mesi",
     "activityLabel": "Mappa di calore dell'attività di dettatura su 6 mesi",
     "activityLess": "Meno",
     "activityMore": "Più",
@@ -2144,7 +1948,6 @@
     "archived": "Archiviate",
     "noConversations": "Inizia la tua prima conversazione",
     "selectChat": "Seleziona una conversazione o avviane una nuova",
-    "noResults": "Nessuna conversazione corrispondente",
     "today": "Oggi",
     "yesterday": "Ieri",
     "previousWeek": "Ultimi 7 giorni",
@@ -2153,11 +1956,7 @@
     "unarchive": "Ripristina",
     "delete": "Elimina",
     "deleteConfirm": "Questa conversazione verrà eliminata permanentemente. Non è possibile annullare.",
-    "editTitle": "Doppio clic per modificare il titolo",
-    "untitled": "Senza titolo",
     "searchChats": "Cerca chat",
-    "searchTitle": "Cerca conversazioni",
-    "searchDescription": "Cerca in tutte le conversazioni",
     "newChatEmpty": "Chiedi delle tue note, trascrizioni o qualsiasi altra cosa"
   },
   "support": {
@@ -2209,10 +2008,6 @@
       },
       "addedToDict": "{{words}} aggiunto al tuo dizionario",
       "undo": "Annulla",
-      "accessibilityMissing": {
-        "title": "Autorizzazioni di accessibilità richieste",
-        "description": "OpenWhispr necessita delle autorizzazioni di accessibilità per rilevare il tasto di scelta rapida e incollare il testo. Abilitale nel Pannello di controllo."
-      },
       "gpuFallback": {
         "title": "Accelerazione GPU non disponibile",
         "description": "OpenWhispr sta usando la trascrizione CPU.",
@@ -2228,7 +2023,6 @@
       }
     },
     "mic": {
-      "hotkeyToSpeak": "{{hotkey}} per parlare",
       "recording": "Registrazione...",
       "processing": "Elaborazione...",
       "clickToSpeak": "Clicca per parlare",
@@ -2399,16 +2193,6 @@
         "description": "Leggi le tue note locali direttamente. Nessun login o chiave API — funziona mentre OpenWhispr è aperto."
       }
     },
-    "plan": {
-      "title": "Il tuo Piano",
-      "current": "Attuale",
-      "free": "Gratis",
-      "freeLimit": "5 riunioni / mese",
-      "essential": "Essential",
-      "essentialLimit": "20 riunioni / mese",
-      "proLimit": "Illimitato",
-      "upgrade": "Aggiorna"
-    },
     "notABot": {
       "title": "OpenWhispr è un registratore di riunioni, non un bot",
       "description": "OpenWhispr cattura l'audio direttamente dal tuo sistema — non entra mai nelle tue riunioni come partecipante. Basta collegare il calendario e prendere appunti normalmente."
@@ -2418,29 +2202,6 @@
       "description": "Per trascrivere le riunioni, OpenWhispr necessita dell'autorizzazione Audio di Sistema per catturare l'audio degli altri partecipanti. Non registriamo mai il tuo schermo. Verrai reindirizzato alle Impostazioni di Sistema per attivarla.",
       "openSettings": "Apri Impostazioni di Sistema"
     }
-  },
-  "calendar": {
-    "title": "Google Calendar",
-    "status": "Stato",
-    "connected": "Connesso",
-    "disconnected": "Disconnesso",
-    "notConnectedDescription": "Connetti per rilevare e registrare le riunioni",
-    "connectCta": {
-      "title": "Integrazione Calendario",
-      "description": "Rileva automaticamente le riunioni e registra le trascrizioni"
-    },
-    "connect": "Connetti Google Calendar",
-    "connecting": "Connessione...",
-    "disconnect": "Disconnetti",
-    "disconnecting": "Disconnessione...",
-    "sync": "Sincronizza",
-    "syncing": "Sincronizzazione...",
-    "calendarsTitle": "Calendari",
-    "upcomingTitle": "In programma",
-    "noUpcoming": "Nessun evento in programma",
-    "meetingStarting": "La riunione inizia ora",
-    "today": "Oggi",
-    "tomorrow": "Domani"
   },
   "upcoming": {
     "title": "In arrivo",
@@ -2459,29 +2220,7 @@
     "connectCalendarDescription": "Vedi le tue riunioni e partecipa senza uscire da OpenWhispr.",
     "connectCalendarButton": "Collega calendario"
   },
-  "notesView": {
-    "searchPlaceholder": "Cerca note…",
-    "newNote": "Nuova nota",
-    "empty": {
-      "title": "Nessuna nota ancora",
-      "description": "Crea la tua prima nota per iniziare."
-    },
-    "searchEmpty": {
-      "title": "Nessun risultato",
-      "description": "Nessuna nota trovata per «{{query}}»."
-    },
-    "noteType": {
-      "personal": "personale",
-      "meeting": "riunione",
-      "upload": "caricamento"
-    }
-  },
   "noteEditor": {
-    "saved": "Salvato",
-    "deleteNote": "Elimina nota",
-    "deleteConfirmTitle": "Eliminare la nota?",
-    "deleteConfirmDescription": "Questa nota verrà eliminata definitivamente e non potrà essere recuperata.",
-    "deleteConfirm": "Elimina",
     "share": {
       "dialog": {
         "export": "Esporta"
@@ -2506,11 +2245,6 @@
       "dismiss": "Chiudi"
     }
   },
-  "permissionsGate": {
-    "title": "Autorizzazioni necessarie",
-    "description": "OpenWhispr ha bisogno di alcune autorizzazioni per funzionare su questo computer.",
-    "continue": "Continua"
-  },
   "embeddedChat": {
     "askPlaceholder": "Chiedi qualcosa...",
     "send": "Invia",
@@ -2524,9 +2258,6 @@
   },
   "transcriptionPreview": {
     "label": "Anteprima",
-    "listening": "In ascolto...",
-    "polishing": "Rifinitura...",
-    "ready": "Pronto",
     "copy": "Copia",
     "copied": "Copiato",
     "collapse": "Comprimi trascrizione",
@@ -2545,10 +2276,7 @@
     "enabledDescription": "Le dettature avviate con la hotkey di traduzione vengono ripulite e poi tradotte prima di essere incollate",
     "sourceLanguage": "Lingua parlata",
     "sourceLanguageDescription": "La lingua in cui detti: Automatico gestisce anche dettature miste",
-    "targetLanguage": "Traduci in",
-    "targetLanguageDescription": "La lingua del testo incollato",
     "targetLanguageMissing": "Scegli una lingua di destinazione per attivare la hotkey di traduzione",
-    "selectLanguage": "Seleziona lingua…",
     "prompt": {
       "title": "Prompt di Traduzione",
       "description": "Personalizza come il modello traduce la tua dettatura"

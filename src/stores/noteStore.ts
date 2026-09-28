@@ -472,19 +472,6 @@ export async function deleteFolder(id: number): Promise<{ success: boolean; erro
   return result;
 }
 
-export async function updateSpaceMeta(
-  id: number,
-  updates: { name?: string; emoji?: string | null }
-): Promise<{ success: boolean; space?: SpaceItem; error?: string }> {
-  const result = (await window.electronAPI.updateSpace?.(id, updates)) ?? { success: false };
-  if (result.success && result.space) {
-    const updated = result.space;
-    const { spaces } = useNoteStore.getState();
-    useNoteStore.setState({ spaces: spaces.map((s) => (s.id === id ? updated : s)) });
-  }
-  return result;
-}
-
 export function setActiveNoteId(id: number | null): void {
   if (useNoteStore.getState().activeNoteId === id) return;
   useNoteStore.setState({ activeNoteId: id });
@@ -534,10 +521,6 @@ export function getActiveFolderIdValue(): number | null {
 /** Live (non-hook) reads for deferred callbacks like undo toasts. */
 export function getFoldersValue(): FolderItem[] {
   return useNoteStore.getState().folders;
-}
-
-export function getSpacesValue(): SpaceItem[] {
-  return useNoteStore.getState().spaces;
 }
 
 export function useNotes(): NoteItem[] {

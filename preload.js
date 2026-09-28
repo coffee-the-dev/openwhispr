@@ -199,7 +199,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   // Space functions
   getSpaces: () => ipcRenderer.invoke("db-get-spaces"),
-  updateSpace: (id, updates) => ipcRenderer.invoke("db-update-space", id, updates),
 
   // Note files (markdown mirror) functions
   noteFilesSetEnabled: (enabled, customPath, options) =>
@@ -497,7 +496,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   modelDownload: (modelId) => ipcRenderer.invoke("model-download", modelId),
   modelDelete: (modelId) => ipcRenderer.invoke("model-delete", modelId),
   modelDeleteAll: () => ipcRenderer.invoke("model-delete-all"),
-  modelCheckRuntime: () => ipcRenderer.invoke("model-check-runtime"),
   modelCancelDownload: (modelId) => ipcRenderer.invoke("model-cancel-download", modelId),
   onModelDownloadProgress: registerListener("model-download-progress"),
 
@@ -768,9 +766,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
   unarchiveAgentConversation: (id) => ipcRenderer.invoke("db-unarchive-agent-conversation", id),
   semanticSearchConversations: (query, limit) =>
     ipcRenderer.invoke("db-semantic-search-conversations", query, limit),
-
-  broadcastDictionaryUpdated: () => ipcRenderer.invoke("db-broadcast-dictionary-updated"),
-  broadcastSnippetsUpdated: () => ipcRenderer.invoke("db-broadcast-snippets-updated"),
 
   // Calendar events (shared cache)
   calendarGetUpcomingEvents: (windowMinutes) =>

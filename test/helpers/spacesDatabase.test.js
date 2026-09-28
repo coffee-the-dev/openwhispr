@@ -334,13 +334,6 @@ test("getSpaces lists the private space", (t) => {
   assert.equal(spaces.length, 1);
   assert.equal(spaces[0].kind, "private");
   assert.equal(db.getSpace(spaces[0].id).id, spaces[0].id);
-
-  assert.deepEqual(db.updateSpace(spaces[0].id, { name: "Renamed" }), {
-    success: false,
-    error: "Cannot rename the private space",
-  });
-  const withEmoji = db.updateSpace(spaces[0].id, { emoji: "📓" });
-  assert.equal(withEmoji.space.emoji, "📓");
 });
 
 test("a relaunch purges tombstones left by cloud sync once", (t) => {

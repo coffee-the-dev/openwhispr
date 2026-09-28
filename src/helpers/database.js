@@ -2262,38 +2262,6 @@ class DatabaseManager {
     }
   }
 
-  updateSpace(id, { name, emoji } = {}) {
-    try {
-      if (!this.db) throw new Error("Database not initialized");
-      const space = this.getSpace(id);
-      if (!space) return { success: false, error: "Space not found" };
-      const fields = [];
-      const values = [];
-      if (name !== undefined) {
-        if (space.kind === "private") {
-          return { success: false, error: "Cannot rename the private space" };
-        }
-        const trimmed = (name || "").trim();
-        if (!trimmed) return { success: false, error: "Space name is required" };
-        fields.push("name = ?");
-        values.push(trimmed);
-      }
-      if (emoji !== undefined) {
-        fields.push("emoji = ?");
-        values.push(emoji);
-      }
-      if (fields.length === 0) return { success: false };
-      fields.push("updated_at = datetime('now')");
-      values.push(id);
-      this.db.prepare(`UPDATE spaces SET ${fields.join(", ")} WHERE id = ?`).run(...values);
-      const updated = this.db.prepare("SELECT * FROM spaces WHERE id = ?").get(id);
-      return { success: true, space: updated };
-    } catch (error) {
-      debugLogger.error("Error updating space", { error: error.message }, "spaces");
-      throw error;
-    }
-  }
-
   // Speaker rows cascade on note delete (ON DELETE CASCADE), but only while
   // foreign_keys is on, so deletes clear them explicitly.
   _deleteSpeakerRowsForNotes(noteIdSubquery, ...params) {

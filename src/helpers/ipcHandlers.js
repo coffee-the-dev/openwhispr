@@ -1236,14 +1236,6 @@ class IPCHandlers {
       return this.databaseManager.applyDictionaryChanges({ add, remove });
     });
 
-    ipcMain.handle("db-broadcast-dictionary-updated", async () => {
-      // Emit the normalized list straight from SQLite so renderers see the
-      // post-dedupe truth, never a caller-supplied payload.
-      const words = this.databaseManager.getDictionary();
-      broadcastToWindows("dictionary-updated", words);
-      return { success: true };
-    });
-
     ipcMain.handle("db-get-snippets", async () => {
       return this.databaseManager.getSnippets();
     });
@@ -1253,12 +1245,6 @@ class IPCHandlers {
         throw new Error("snippets must be an array");
       }
       return this.databaseManager.setSnippets(snippets);
-    });
-
-    ipcMain.handle("db-broadcast-snippets-updated", async () => {
-      const snippets = this.databaseManager.getSnippets();
-      broadcastToWindows("snippets-updated", snippets);
-      return { success: true };
     });
 
     ipcMain.handle("undo-learned-corrections", async (_event, words) => {
@@ -1440,10 +1426,6 @@ class IPCHandlers {
 
     ipcMain.handle("db-get-spaces", async () => {
       return this.databaseManager.getSpaces();
-    });
-
-    ipcMain.handle("db-update-space", async (event, id, updates) => {
-      return this.databaseManager.updateSpace(id, updates);
     });
 
     ipcMain.handle("db-get-actions", async () => {
@@ -3336,21 +3318,6 @@ class IPCHandlers {
         return {
           success: false,
           error: error.message,
-        };
-      }
-    });
-
-    ipcMain.handle("model-check-runtime", async (event) => {
-      try {
-        const modelManager = require("./modelManagerBridge").default;
-        await modelManager.ensureLlamaCpp();
-        return { available: true };
-      } catch (error) {
-        return {
-          available: false,
-          error: error.message,
-          code: error.code,
-          details: error.details,
         };
       }
     });
