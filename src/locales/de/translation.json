@@ -2321,6 +2321,27 @@
         "selfHosted": "Selbst gehostet",
         "localDesc": "Modelle auf dem Gerät. Vollständig privat.",
         "selfHostedDesc": "Eigener Server in Ihrem Netzwerk."
+      },
+      "webSearch": {
+        "title": "Websuche",
+        "description": "Lässt Chat und Sprachassistent über deine eigene SearXNG-Instanz im Web suchen. Nur die Suchanfrage wird gesendet. Beim Modell muss Tool-Aufrufe aktiviert sein.",
+        "enable": "Websuche aktivieren",
+        "enableDescription": "Fügt das Websuche-Tool hinzu, sobald eine SearXNG-URL eingetragen ist.",
+        "urlLabel": "SearXNG-URL",
+        "urlHelp": "Die Instanz muss JSON-Ausgabe erlauben (json unter search.formats in der settings.yml ergänzen).",
+        "test": "Testen",
+        "testing": "Wird getestet…",
+        "testSuccess": "Verbunden. Gelieferte Ergebnisse: {{count}}",
+        "testFailed": "Test fehlgeschlagen: {{error}}",
+        "errors": {
+          "invalidUrl": "Gib eine gültige URL ein.",
+          "httpsRequired": "Öffentliche Hosts müssen HTTPS verwenden. HTTP ist nur für private Adressen erlaubt.",
+          "jsonDisabled": "SearXNG hat die JSON-Ausgabe abgelehnt. Ergänze json unter search.formats in der settings.yml.",
+          "rateLimited": "SearXNG hat die Anfrage gedrosselt. Deaktiviere den Limiter für dieses Gerät.",
+          "timeout": "SearXNG hat nicht rechtzeitig geantwortet.",
+          "network": "SearXNG ist nicht erreichbar.",
+          "invalidResponse": "SearXNG hat kein JSON zurückgegeben. Ergänze json unter search.formats in der settings.yml."
+        }
       }
     },
     "chat": {

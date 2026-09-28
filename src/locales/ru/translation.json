@@ -2295,6 +2295,27 @@
         "selfHosted": "Свой сервер",
         "localDesc": "Модели на устройстве. Полная приватность.",
         "selfHostedDesc": "Ваш сервер в вашей сети."
+      },
+      "webSearch": {
+        "title": "Веб-поиск",
+        "description": "Позволяет чату и голосовому ассистенту искать в интернете через ваш собственный экземпляр SearXNG. Отправляется только поисковый запрос. У модели должен быть включён вызов инструментов.",
+        "enable": "Включить веб-поиск",
+        "enableDescription": "Добавляет инструмент веб-поиска, когда указан URL SearXNG.",
+        "urlLabel": "URL SearXNG",
+        "urlHelp": "Экземпляр должен разрешать вывод JSON (добавьте json в search.formats в его settings.yml).",
+        "test": "Проверить",
+        "testing": "Проверка…",
+        "testSuccess": "Подключено. Получено результатов: {{count}}",
+        "testFailed": "Проверка не удалась: {{error}}",
+        "errors": {
+          "invalidUrl": "Введите корректный URL.",
+          "httpsRequired": "Публичные хосты должны использовать HTTPS. HTTP разрешён только для частных адресов.",
+          "jsonDisabled": "SearXNG отклонил вывод JSON. Добавьте json в search.formats в settings.yml.",
+          "rateLimited": "SearXNG ограничил запрос. Отключите для этого устройства limiter.",
+          "timeout": "SearXNG не ответил вовремя.",
+          "network": "Не удалось подключиться к SearXNG.",
+          "invalidResponse": "SearXNG не вернул JSON. Добавьте json в search.formats в settings.yml."
+        }
       }
     },
     "chat": {

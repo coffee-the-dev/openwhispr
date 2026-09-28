@@ -5,6 +5,7 @@ import { createNoteTool } from "./createNoteTool";
 import { updateNoteTool } from "./updateNoteTool";
 import { listFoldersTool } from "./listFoldersTool";
 import { clipboardTool } from "./clipboardTool";
+import { createWebSearchTool } from "./webSearchTool";
 import { calendarTool } from "./calendarTool";
 import { calendarAvailabilityTool } from "./calendarAvailabilityTool";
 import { createSnippetTool, createUpdateSnippetsTool, type SnippetActions } from "./snippetTool";
@@ -16,6 +17,8 @@ export type { ToolDefinition, ToolResult } from "./ToolRegistry";
 
 interface ToolRegistrySettings {
   calendarConnected: boolean;
+  /** The SearXNG instance web_search queries; the tool is left out without one. */
+  webSearchUrl?: string;
   /** Pins search_notes to a container (overview chat); the LLM cannot widen it. */
   searchScope?: ContainerScope;
   /** Live dictionary and snippet access; enables the vocabulary tools. */
@@ -37,6 +40,10 @@ export function createToolRegistry(settings: ToolRegistrySettings): ToolRegistry
     if (snippets.length > 0) registry.register(createSnippetTool(snippets));
     registry.register(createUpdateDictionaryTool(settings.vocabulary));
     registry.register(createUpdateSnippetsTool(settings.vocabulary));
+  }
+
+  if (settings.webSearchUrl) {
+    registry.register(createWebSearchTool(settings.webSearchUrl));
   }
 
   if (settings.calendarConnected) {

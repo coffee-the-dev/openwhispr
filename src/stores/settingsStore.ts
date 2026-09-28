@@ -220,6 +220,7 @@ const BOOLEAN_SETTINGS = new Set([
   "useCleanupModel",
   "useDictationAgent",
   "voiceAgentScreenContext",
+  "webSearchEnabled",
   "useDictationTranslation",
   "translationDisableThinking",
   "preferBuiltInMic",
@@ -1035,6 +1036,10 @@ export interface SettingsState
   // Voice-agent screen context: opt-in screenshot capture.
   voiceAgentScreenContext: boolean;
 
+  // Agent web_search tool, served by the user's SearXNG instance.
+  webSearchEnabled: boolean;
+  webSearchUrl: string;
+
   cleanupDisableThinking: boolean;
   dictationAgentDisableThinking: boolean;
   noteFormattingDisableThinking: boolean;
@@ -1057,6 +1062,8 @@ export interface SettingsState
   setDictationAgentCustomApiKey: (key: string) => void;
 
   setVoiceAgentScreenContext: (value: boolean) => void;
+  setWebSearchEnabled: (value: boolean) => void;
+  setWebSearchUrl: (value: string) => void;
 
   setTranscriptionMode: (mode: TranscriptionMode) => void;
   setRemoteTranscriptionType: (type: SelfHostedType) => void;
@@ -1610,6 +1617,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   dictationAgentCustomApiKey: readString("dictationAgentCustomApiKey", ""),
 
   voiceAgentScreenContext: readBoolean("voiceAgentScreenContext", false),
+  webSearchEnabled: readBoolean("webSearchEnabled", false),
+  webSearchUrl: readString("webSearchUrl", ""),
 
   cleanupDisableThinking: readBoolean("cleanupDisableThinking", true),
   dictationAgentDisableThinking: readBoolean("dictationAgentDisableThinking", true),
@@ -1641,6 +1650,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   ),
 
   setVoiceAgentScreenContext: createBooleanSetter("voiceAgentScreenContext"),
+  setWebSearchEnabled: createBooleanSetter("webSearchEnabled"),
+  setWebSearchUrl: createStringSetter("webSearchUrl"),
 
   setCleanupDisableThinking: createBooleanSetter("cleanupDisableThinking"),
   setDictationAgentDisableThinking: createBooleanSetter("dictationAgentDisableThinking"),

@@ -85,6 +85,7 @@ const WAV_UPLOAD_LIMIT_BYTES = 25 * 1024 * 1024;
 const AUTO_LEARN_DEBOUNCE_MS = 1500;
 
 const { testProviderConnection, listRemoteModels } = require("./providerConnectionTest");
+const { searxngSearch } = require("./searxngSearch");
 const {
   SELF_HOSTED_CHUNK_SECONDS,
   SELF_HOSTED_UPLOAD_LIMIT_BYTES,
@@ -6018,6 +6019,34 @@ class IPCHandlers {
         debugLogger.error("Failed to open note from agent:", error);
         return { success: false, error: error.message };
       }
+    });
+
+    // The renderer passes its saved SearXNG URL; only the query and the model's
+    // search options go to that server. Result bodies are never logged.
+    ipcMain.handle("agent-web-search", async (_event, query, numResults, options = {}) => {
+      const result = await searxngSearch(
+        {
+          baseUrl: options?.baseUrl,
+          query,
+          numResults,
+          timeRange: options?.timeRange,
+        },
+        { fetchImpl: (url, init) => net.fetch(url, { ...init, useSessionCookies: false }) }
+      );
+      if (result.success) {
+        debugLogger.debug(
+          "Agent web search completed",
+          { resultCount: result.results.length, hasAnswers: !!result.answers },
+          "web-search"
+        );
+      } else {
+        debugLogger.warn(
+          "Agent web search failed",
+          { errorCode: result.errorCode, error: result.error },
+          "web-search"
+        );
+      }
+      return result;
     });
 
     // Unknown ids are a no-op; the renderer fires this for every cancel.

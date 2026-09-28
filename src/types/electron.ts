@@ -1534,6 +1534,23 @@ declare global {
 
       // Agent tools
       agentOpenNote?: (noteId: number) => Promise<{ success: boolean; error?: string }>;
+      agentWebSearch?: (
+        query: string,
+        numResults?: number,
+        options?: { baseUrl: string; timeRange?: "day" | "week" | "month" | "year" }
+      ) => Promise<{
+        success: boolean;
+        results?: Array<{
+          title: string;
+          url: string;
+          text: string;
+          publishedDate: string | null;
+        }>;
+        answers?: string[];
+        infobox?: { title: string; text: string; url: string | null };
+        error?: string;
+        errorCode?: string;
+      }>;
 
       // Calendar events (shared cache)
       calendarGetUpcomingEvents?: (

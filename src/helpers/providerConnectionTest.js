@@ -50,7 +50,7 @@ function isPrivateHost(hostname) {
   }
 
   const isIPv6 = h.includes(":");
-  if (isIPv6 && (h.startsWith("fe80") || h.startsWith("fc") || h.startsWith("fd"))) return true;
+  if (isIPv6 && (/^fe[89ab]/.test(h) || h.startsWith("fc") || h.startsWith("fd"))) return true;
   if (h.endsWith(".local")) return true;
   if (h.endsWith(".ts.net")) return true;
 
@@ -319,4 +319,4 @@ async function testProviderConnection(config, fetchImpl = fetch) {
   );
 }
 
-module.exports = { resolveProviderRequest, testProviderConnection, listRemoteModels };
+module.exports = { resolveProviderRequest, testProviderConnection, listRemoteModels, isPrivateHost };

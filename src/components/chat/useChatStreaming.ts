@@ -252,12 +252,14 @@ export function useChatStreaming({
         const calendarConnected = settings.appleCalendarConnected;
         // Triggers ride in the tool description, so a snippet edit rebuilds the registry.
         const snippetKey = settings.snippets.map((s) => s.trigger).join("|");
-        const cacheKey = `${calendarConnected}-${scopeKey}-${snippetKey}`;
+        const webSearchUrl = settings.webSearchEnabled ? settings.webSearchUrl.trim() : "";
+        const cacheKey = `${calendarConnected}-${scopeKey}-${snippetKey}-${webSearchUrl}`;
         if (toolRegistryRef.current?.key === cacheKey) {
           registry = toolRegistryRef.current.registry;
         } else {
           registry = createToolRegistry({
             calendarConnected,
+            webSearchUrl,
             searchScope: scope,
             vocabulary: {
               getDictionary: () => getSettings().customDictionary,

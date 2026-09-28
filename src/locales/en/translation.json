@@ -2321,6 +2321,27 @@
         "selfHosted": "Self-Hosted",
         "localDesc": "On-device models. Fully private.",
         "selfHostedDesc": "Your own server on your network."
+      },
+      "webSearch": {
+        "title": "Web search",
+        "description": "Lets chat and the voice assistant search the web through your own SearXNG instance. Only the search query is sent to it. The model must have tool calling on.",
+        "enable": "Enable web search",
+        "enableDescription": "Adds the web search tool once a SearXNG URL is set.",
+        "urlLabel": "SearXNG URL",
+        "urlHelp": "The instance must allow JSON output (add json under search.formats in its settings.yml).",
+        "test": "Test",
+        "testing": "Testing…",
+        "testSuccess": "Connected. Results returned: {{count}}",
+        "testFailed": "Test failed: {{error}}",
+        "errors": {
+          "invalidUrl": "Enter a valid URL.",
+          "httpsRequired": "Public hosts must use HTTPS. HTTP is only allowed on private addresses.",
+          "jsonDisabled": "SearXNG refused JSON output. Add json under search.formats in settings.yml.",
+          "rateLimited": "SearXNG rate-limited the request. Turn off its limiter for this device.",
+          "timeout": "SearXNG did not respond in time.",
+          "network": "Could not reach SearXNG.",
+          "invalidResponse": "SearXNG did not return JSON. Add json under search.formats in settings.yml."
+        }
       }
     },
     "chat": {

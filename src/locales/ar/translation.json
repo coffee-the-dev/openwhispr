@@ -673,6 +673,27 @@
         "selfHosted": "مستضاف ذاتيًا",
         "localDesc": "نماذج على الجهاز. خاصة بالكامل.",
         "selfHostedDesc": "الخادم الخاص بك على شبكتك."
+      },
+      "webSearch": {
+        "title": "البحث على الويب",
+        "description": "يتيح للدردشة والمساعد الصوتي البحث على الويب عبر نسخة SearXNG الخاصة بك. لا يُرسل إليها سوى استعلام البحث. يجب تفعيل استدعاء الأدوات في النموذج.",
+        "enable": "تفعيل البحث على الويب",
+        "enableDescription": "يضيف أداة البحث على الويب عند تعيين عنوان SearXNG.",
+        "urlLabel": "عنوان SearXNG",
+        "urlHelp": "يجب أن تسمح النسخة بإخراج JSON (أضف json ضمن search.formats في ملف settings.yml الخاص بها).",
+        "test": "اختبار",
+        "testing": "جارٍ الاختبار…",
+        "testSuccess": "تم الاتصال. عدد النتائج: {{count}}",
+        "testFailed": "فشل الاختبار: {{error}}",
+        "errors": {
+          "invalidUrl": "أدخل عنوان URL صالحًا.",
+          "httpsRequired": "يجب أن تستخدم المضيفات العامة HTTPS. يُسمح بـ HTTP على العناوين الخاصة فقط.",
+          "jsonDisabled": "رفض SearXNG إخراج JSON. أضف json ضمن search.formats في settings.yml.",
+          "rateLimited": "قيّد SearXNG الطلب. أوقف المحدِّد لهذا الجهاز.",
+          "timeout": "لم يستجب SearXNG في الوقت المحدد.",
+          "network": "تعذّر الوصول إلى SearXNG.",
+          "invalidResponse": "لم يُرجع SearXNG بيانات JSON. أضف json ضمن search.formats في settings.yml."
+        }
       }
     },
     "chat": {

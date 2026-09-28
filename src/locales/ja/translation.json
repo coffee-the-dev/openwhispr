@@ -2281,6 +2281,27 @@
         "selfHosted": "セルフホスト",
         "localDesc": "デバイス上のモデル。完全プライベート。",
         "selfHostedDesc": "ネットワーク上の自分のサーバー。"
+      },
+      "webSearch": {
+        "title": "ウェブ検索",
+        "description": "チャットと音声アシスタントが、あなた自身の SearXNG インスタンス経由でウェブを検索できるようにします。送信されるのは検索クエリだけです。モデルのツール呼び出しを有効にしておく必要があります。",
+        "enable": "ウェブ検索を有効にする",
+        "enableDescription": "SearXNG の URL を設定すると、ウェブ検索ツールが追加されます。",
+        "urlLabel": "SearXNG の URL",
+        "urlHelp": "インスタンスで JSON 出力を許可する必要があります（settings.yml の search.formats に json を追加）。",
+        "test": "テスト",
+        "testing": "テスト中…",
+        "testSuccess": "接続しました。取得した結果: {{count}} 件",
+        "testFailed": "テストに失敗しました: {{error}}",
+        "errors": {
+          "invalidUrl": "有効な URL を入力してください。",
+          "httpsRequired": "公開ホストでは HTTPS が必要です。HTTP はプライベートアドレスでのみ使用できます。",
+          "jsonDisabled": "SearXNG が JSON 出力を拒否しました。settings.yml の search.formats に json を追加してください。",
+          "rateLimited": "SearXNG がリクエストを制限しました。このデバイスに対してリミッターを無効にしてください。",
+          "timeout": "SearXNG が時間内に応答しませんでした。",
+          "network": "SearXNG に接続できませんでした。",
+          "invalidResponse": "SearXNG が JSON を返しませんでした。settings.yml の search.formats に json を追加してください。"
+        }
       }
     },
     "chat": {

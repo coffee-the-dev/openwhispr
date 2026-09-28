@@ -2281,6 +2281,27 @@
         "selfHosted": "自托管",
         "localDesc": "设备端模型，完全私密。",
         "selfHostedDesc": "你自己网络上的服务器。"
+      },
+      "webSearch": {
+        "title": "网页搜索",
+        "description": "让聊天和语音助手通过你自己的 SearXNG 实例搜索网页。只会发送搜索词。模型需要开启工具调用。",
+        "enable": "启用网页搜索",
+        "enableDescription": "设置 SearXNG 地址后添加网页搜索工具。",
+        "urlLabel": "SearXNG 地址",
+        "urlHelp": "实例必须允许 JSON 输出（在其 settings.yml 的 search.formats 中添加 json）。",
+        "test": "测试",
+        "testing": "正在测试…",
+        "testSuccess": "已连接。返回结果数：{{count}}",
+        "testFailed": "测试失败：{{error}}",
+        "errors": {
+          "invalidUrl": "请输入有效的网址。",
+          "httpsRequired": "公网主机必须使用 HTTPS。HTTP 仅允许用于私有地址。",
+          "jsonDisabled": "SearXNG 拒绝了 JSON 输出。请在 settings.yml 的 search.formats 中添加 json。",
+          "rateLimited": "SearXNG 限制了该请求。请为此设备关闭其限流器。",
+          "timeout": "SearXNG 未及时响应。",
+          "network": "无法连接到 SearXNG。",
+          "invalidResponse": "SearXNG 未返回 JSON。请在 settings.yml 的 search.formats 中添加 json。"
+        }
       }
     },
     "chat": {

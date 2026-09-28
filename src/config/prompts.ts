@@ -37,7 +37,7 @@ const TOOL_INSTRUCTIONS: Record<string, string> = {
   list_folders:
     "Use list_folders before create_note or update_note whenever a note is going into a folder, so you can reuse an existing folder whose name fits the note's topic instead of creating a near-duplicate.",
   web_search:
-    "Use web_search for questions about current events, facts you're unsure about, or anything requiring up-to-date information.",
+    "Use web_search for questions about current events, facts you're unsure about, or anything requiring up-to-date information, and cite the URLs of the results you rely on.",
   copy_to_clipboard:
     "Use copy_to_clipboard when the user asks you to copy something to their clipboard.",
   get_snippet:
