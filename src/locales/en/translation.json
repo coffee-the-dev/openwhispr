@@ -14,15 +14,26 @@
       "chineseScriptTraditional": "Traditional (繁體)"
     },
     "noteFiles": {
-      "title": "Save notes as files",
-      "description": "Automatically save notes and transcripts as files on disk, organized by folder",
+      "title": "Export to Markdown / Obsidian vault",
+      "description": "Write every note and meeting transcript as a Markdown file with frontmatter, organized by folder. Point it at a folder inside your Obsidian vault.",
       "path": "Save location",
       "changePath": "Change location",
       "rebuild": "Rebuild all files",
-      "rebuildDescription": "Re-sync all notes and transcripts to disk",
+      "rebuildDescription": "Rewrite every note and transcript file, and rename files from older exports to the current naming",
       "rebuildError": {
         "title": "Rebuild failed",
         "description": "Could not rebuild note files. Make sure the feature is enabled and the folder is writable."
+      },
+      "enable": "Export notes as Markdown files",
+      "oneWayNotice": "One-way export: OpenWhispr overwrites a note's files the next time that note changes, so edits made in the vault are not kept. Other files in the folder are never touched.",
+      "meetingsPath": "Meetings are saved to:",
+      "baseTag": "Base tag",
+      "baseTagDescription": "Added to every exported file's tags, next to the note type (for example openwhispr, meeting)",
+      "exportDictations": "Also export dictations",
+      "exportDictationsDescription": "Append each completed dictation to a daily file in Dictations/YYYY-MM-DD.md",
+      "export": {
+        "notesHeading": "Notes",
+        "transcriptLink": "Transcript"
       }
     },
     "granolaImport": {
@@ -1985,7 +1996,8 @@
       "searchFolders": "Search folders...",
       "noResults": "No folders found",
       "newFolder": "New folder",
-      "showInFileManager": "Show in {{manager}}"
+      "showInFileManager": "Show in {{manager}}",
+      "openInObsidian": "Open in Obsidian"
     },
     "actions": {
       "done": "Done",

@@ -14,15 +14,26 @@
       "chineseScriptTraditional": "Tradicional (繁體)"
     },
     "noteFiles": {
-      "title": "Salvar notas como arquivos",
-      "description": "Salvar notas e transcrições automaticamente como arquivos no disco, organizados por pasta",
+      "title": "Exportar para Markdown / cofre do Obsidian",
+      "description": "Grava cada nota e transcrição de reunião como um arquivo Markdown com metadados, organizado por pasta. Escolha uma pasta dentro do seu cofre do Obsidian.",
       "path": "Local de salvamento",
       "changePath": "Alterar local",
       "rebuild": "Reconstruir todos os arquivos",
-      "rebuildDescription": "Ressincronizar todas as notas e transcrições no disco",
+      "rebuildDescription": "Regrava todos os arquivos de notas e transcrições e renomeia arquivos de exportações antigas para o formato atual",
       "rebuildError": {
         "title": "Falha na reconstrução",
         "description": "Não foi possível reconstruir os arquivos de notas. Verifique se o recurso está ativado e se a pasta permite gravação."
+      },
+      "enable": "Exportar notas como arquivos Markdown",
+      "oneWayNotice": "Exportação unidirecional: o OpenWhispr sobrescreve os arquivos de uma nota na próxima vez que ela mudar, então edições feitas no cofre não são mantidas. Outros arquivos da pasta nunca são alterados.",
+      "meetingsPath": "As reuniões são salvas em:",
+      "baseTag": "Tag base",
+      "baseTagDescription": "Adicionada às tags de cada arquivo exportado, junto ao tipo de nota (por exemplo openwhispr, meeting)",
+      "exportDictations": "Exportar também os ditados",
+      "exportDictationsDescription": "Acrescenta cada ditado concluído a um arquivo diário em Dictations/YYYY-MM-DD.md",
+      "export": {
+        "notesHeading": "Notas",
+        "transcriptLink": "Transcrição"
       }
     },
     "granolaImport": {
@@ -1866,7 +1877,8 @@
       "searchFolders": "Pesquisar pastas...",
       "noResults": "Nenhuma pasta encontrada",
       "newFolder": "Nova pasta",
-      "showInFileManager": "Mostrar no {{manager}}"
+      "showInFileManager": "Mostrar no {{manager}}",
+      "openInObsidian": "Abrir no Obsidian"
     },
     "actions": {
       "manage": "Gerenciar ações...",

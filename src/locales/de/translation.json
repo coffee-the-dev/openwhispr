@@ -14,15 +14,26 @@
       "chineseScriptTraditional": "Traditionell (繁體)"
     },
     "noteFiles": {
-      "title": "Notizen als Dateien speichern",
-      "description": "Notizen und Transkripte automatisch als Dateien auf der Festplatte speichern, nach Ordner sortiert",
+      "title": "Export nach Markdown / Obsidian-Vault",
+      "description": "Speichert jede Notiz und jedes Meeting-Transkript als Markdown-Datei mit Frontmatter, nach Ordnern sortiert. Wähle einen Ordner in deinem Obsidian-Vault.",
       "path": "Speicherort",
       "changePath": "Speicherort ändern",
       "rebuild": "Alle Dateien neu erstellen",
-      "rebuildDescription": "Alle Notizen und Transkripte erneut auf die Festplatte synchronisieren",
+      "rebuildDescription": "Schreibt alle Notiz- und Transkriptdateien neu und benennt Dateien früherer Exporte nach dem aktuellen Schema um",
       "rebuildError": {
         "title": "Neuerstellung fehlgeschlagen",
         "description": "Die Notizdateien konnten nicht neu erstellt werden. Stellen Sie sicher, dass die Funktion aktiviert ist und der Ordner beschreibbar ist."
+      },
+      "enable": "Notizen als Markdown-Dateien exportieren",
+      "oneWayNotice": "Export in eine Richtung: OpenWhispr überschreibt die Dateien einer Notiz, sobald sich diese Notiz das nächste Mal ändert – Änderungen im Vault bleiben also nicht erhalten. Andere Dateien im Ordner werden nie angefasst.",
+      "meetingsPath": "Meetings werden gespeichert unter:",
+      "baseTag": "Basis-Tag",
+      "baseTagDescription": "Wird zu den Tags jeder exportierten Datei hinzugefügt, neben dem Notiztyp (zum Beispiel openwhispr, meeting)",
+      "exportDictations": "Auch Diktate exportieren",
+      "exportDictationsDescription": "Hängt jedes abgeschlossene Diktat an eine Tagesdatei in Dictations/YYYY-MM-DD.md an",
+      "export": {
+        "notesHeading": "Notizen",
+        "transcriptLink": "Transkript"
       }
     },
     "granolaImport": {
@@ -1985,7 +1996,8 @@
       "searchFolders": "Ordner suchen...",
       "noResults": "Keine Ordner gefunden",
       "newFolder": "Neuer Ordner",
-      "showInFileManager": "Im {{manager}} anzeigen"
+      "showInFileManager": "Im {{manager}} anzeigen",
+      "openInObsidian": "In Obsidian öffnen"
     },
     "actions": {
       "done": "Fertig",

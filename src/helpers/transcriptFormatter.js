@@ -202,11 +202,52 @@ function formatMd(note, segments, speakerMappings) {
   return lines.join("\n");
 }
 
+// Speaker turns only — the Markdown export's body without its title and date
+// header, for callers (the note-files mirror) that carry those in frontmatter.
+function formatMdTurns(note, segments, speakerMappings) {
+  const merged = mergeSegments(normalizeSegmentTimestamps(segments, note));
+  const lines = [];
+  for (const seg of merged) {
+    lines.push(`**${resolveSpeaker(seg, speakerMappings)}** \`${formatTimestamp(seg.timestamp)}\``);
+    lines.push(`${seg.text}`, "");
+  }
+  return lines.join("\n");
+}
+
+// Names a person gave a speaker (a mapping or an explicit segment name) —
+// never the generated "Speaker N" / "You" / "Others" fallbacks.
+function namedSpeakers(segments, speakerMappings) {
+  const names = [];
+  for (const seg of segments) {
+    if (seg.speakerName && !seg.speakerIsPlaceholder) names.push(seg.speakerName);
+    else if (seg.speaker && speakerMappings[seg.speaker]) names.push(speakerMappings[seg.speaker]);
+  }
+  return names;
+}
+
+// Some stored transcripts mix relative seconds with a stray absolute epoch-ms
+// timestamp; anything past a day is not a plausible recording offset.
+const MAX_PLAUSIBLE_OFFSET_SECONDS = 24 * 60 * 60;
+
+function transcriptDurationSeconds(note, segments) {
+  let end = 0;
+  for (const seg of normalizeSegmentTimestamps(segments, note)) {
+    for (const ts of [seg.timestamp, seg.endTimestamp]) {
+      if (typeof ts !== "number" || !Number.isFinite(ts)) continue;
+      if (ts > end && ts <= MAX_PLAUSIBLE_OFFSET_SECONDS) end = ts;
+    }
+  }
+  return end;
+}
+
 module.exports = {
   formatTxt,
   formatSrt,
   formatJson,
   formatMd,
+  formatMdTurns,
+  namedSpeakers,
+  transcriptDurationSeconds,
   parseNoteDate,
   normalizeSegmentTimestamps,
 };

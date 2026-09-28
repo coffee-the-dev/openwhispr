@@ -14,15 +14,26 @@
       "chineseScriptTraditional": "Tradizionale (繁體)"
     },
     "noteFiles": {
-      "title": "Salva note come file",
-      "description": "Salva automaticamente note e trascrizioni come file su disco, organizzati per cartella",
+      "title": "Esporta in Markdown / vault di Obsidian",
+      "description": "Salva ogni nota e trascrizione di riunione come file Markdown con frontmatter, organizzati per cartella. Scegli una cartella all'interno del tuo vault di Obsidian.",
       "path": "Percorso di salvataggio",
       "changePath": "Cambia percorso",
       "rebuild": "Ricostruisci tutti i file",
-      "rebuildDescription": "Risincronizza tutte le note e trascrizioni su disco",
+      "rebuildDescription": "Riscrive tutti i file di note e trascrizioni e rinomina i file delle esportazioni precedenti secondo lo schema attuale",
       "rebuildError": {
         "title": "Ricostruzione non riuscita",
         "description": "Impossibile ricostruire i file delle note. Assicurati che la funzione sia abilitata e che la cartella sia scrivibile."
+      },
+      "enable": "Esporta le note come file Markdown",
+      "oneWayNotice": "Esportazione unidirezionale: OpenWhispr sovrascrive i file di una nota la volta successiva che la nota cambia, quindi le modifiche fatte nel vault non vengono mantenute. Gli altri file nella cartella non vengono mai toccati.",
+      "meetingsPath": "Le riunioni vengono salvate in:",
+      "baseTag": "Tag di base",
+      "baseTagDescription": "Aggiunto ai tag di ogni file esportato, accanto al tipo di nota (ad esempio openwhispr, meeting)",
+      "exportDictations": "Esporta anche le dettature",
+      "exportDictationsDescription": "Aggiunge ogni dettatura completata a un file giornaliero in Dictations/YYYY-MM-DD.md",
+      "export": {
+        "notesHeading": "Note",
+        "transcriptLink": "Trascrizione"
       }
     },
     "granolaImport": {
@@ -1866,7 +1877,8 @@
       "searchFolders": "Cerca cartelle...",
       "noResults": "Nessuna cartella trovata",
       "newFolder": "Nuova cartella",
-      "showInFileManager": "Mostra in {{manager}}"
+      "showInFileManager": "Mostra in {{manager}}",
+      "openInObsidian": "Apri in Obsidian"
     },
     "actions": {
       "manage": "Gestisci azioni...",

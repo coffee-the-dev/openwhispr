@@ -21,6 +21,7 @@ const { i18nMain, changeLanguage } = require("./i18nMain");
 const { ONBOARDING_DEMO_KINDS, ONBOARDING_DEMO_STATUSES } = require("./onboardingInputPolicy");
 const { focusWindowsHotkeyCaptureWindow } = require("./hotkeyCaptureFocus");
 const AudioStorageManager = require("./audioStorage");
+const { NoteFilesSync } = require("./noteFilesSync");
 const LocalModelDownloadStatus = require("./localModelDownloadStatus");
 const createMeetingTranscriptionLifecycle = require("./meetingTranscriptionLifecycle");
 const liveSpeakerIdentifier = require("./liveSpeakerIdentifier");
@@ -245,7 +246,11 @@ class IPCHandlers {
     this._retentionCleanupInterval = null;
     this._retentionSettings = { ...DEFAULT_RETENTION_SETTINGS }; // Synced from renderer
     this._retentionSettingsSynced = false;
-    this._noteFilesEnabled = false;
+    this.noteFilesSync = new NoteFilesSync({
+      databaseManager: this.databaseManager,
+      stateFilePath: () => path.join(app.getPath("userData"), "note-files-state.json"),
+      translate: (key) => i18nMain.t(key),
+    });
     this._granolaImportPending = null;
     this._analyticsHistoryBackfillPromise = null;
     this.speakerDiarizationEnabled = true;
@@ -472,57 +477,6 @@ class IPCHandlers {
     this.getSemanticSearch?.()?.notifyChanges();
   }
 
-  _mirrorDeleteFolderIfUnshared(folderName) {
-    if (!this._noteFilesEnabled) return;
-    // Folder names are only unique per space — a live same-named folder in
-    // another space shares the mirror directory, so leave it on disk.
-    const stillLive = this.databaseManager.db
-      .prepare("SELECT 1 FROM folders WHERE name = ? AND deleted_at IS NULL")
-      .get(folderName);
-    if (stillLive) return;
-    const markdownMirror = require("./markdownMirror");
-    markdownMirror.deleteFolder(folderName);
-  }
-
-  _asyncMirrorWrite(note) {
-    if (!this._noteFilesEnabled) {
-      debugLogger.debug(
-        "Mirror write skipped: note files disabled",
-        { noteId: note.id },
-        "note-files"
-      );
-      return;
-    }
-    setImmediate(() => {
-      const markdownMirror = require("./markdownMirror");
-      const folderName = this._getFolderName(note.folder_id);
-      markdownMirror.writeNote(note, folderName);
-      if (note.transcript) {
-        markdownMirror.writeTranscript(note, folderName, this._buildSpeakerMappings(note.id));
-      }
-    });
-  }
-
-  _asyncMirrorDelete(noteId) {
-    if (!this._noteFilesEnabled) {
-      debugLogger.debug("Mirror delete skipped: note files disabled", { noteId }, "note-files");
-      return;
-    }
-    setImmediate(() => {
-      const markdownMirror = require("./markdownMirror");
-      markdownMirror.deleteNote(noteId);
-    });
-  }
-
-  _buildFolderMap() {
-    const folders = this.databaseManager.getFolders();
-    const map = {};
-    for (const f of folders) {
-      map[f.id] = f.name;
-    }
-    return map;
-  }
-
   _buildSpeakerMappings(noteId) {
     const arr = this.databaseManager.getSpeakerMappings(noteId);
     const map = {};
@@ -622,27 +576,6 @@ class IPCHandlers {
       { noteId, expectedCount },
       "speaker"
     );
-  }
-
-  _rebuildMirror(basePath) {
-    const markdownMirror = require("./markdownMirror");
-    if (basePath) markdownMirror.init(basePath);
-    const notes = this.databaseManager.getNotes(null, 99999);
-    const speakerMappingsMap = {};
-    for (const note of notes) {
-      if (note.transcript) {
-        speakerMappingsMap[note.id] = this._buildSpeakerMappings(note.id);
-      }
-    }
-    markdownMirror.rebuildAll(notes, this._buildFolderMap(), speakerMappingsMap);
-  }
-
-  _getFolderName(folderId) {
-    if (!folderId) return "Personal";
-    const folder = this.databaseManager.db
-      .prepare("SELECT name FROM folders WHERE id = ?")
-      .get(folderId);
-    return folder?.name || "Personal";
   }
 
   _getDictionarySafe() {
@@ -1038,6 +971,9 @@ class IPCHandlers {
       if (result?.success && result?.transcription) {
         setImmediate(() => {
           broadcastToWindows("transcription-added", result.transcription);
+          if (result.transcription.status === "completed") {
+            this.noteFilesSync.appendDictation(result.transcription.text);
+          }
         });
       }
       return result;
@@ -1364,7 +1300,6 @@ class IPCHandlers {
         if (result?.success && result?.note) {
           setImmediate(() => broadcastToWindows("note-added", result.note));
           this.notifyVectorChanges();
-          this._asyncMirrorWrite(result.note);
         }
         return result;
       }
@@ -1387,7 +1322,6 @@ class IPCHandlers {
       if (result?.success && result?.note) {
         setImmediate(() => broadcastToWindows("note-updated", result.note));
         this.notifyVectorChanges();
-        this._asyncMirrorWrite(result.note);
         if (updates.participants) {
           this._tryAutoLabelOneOnOne(id);
           this._refreshMeetingSpeakerConfigFromNote(id, result.note);
@@ -1476,39 +1410,25 @@ class IPCHandlers {
       if (result?.success && result?.folder) {
         setImmediate(() => {
           broadcastToWindows("folder-created", result.folder);
-          if (this._noteFilesEnabled) {
-            const markdownMirror = require("./markdownMirror");
-            markdownMirror.ensureFolder(result.folder.name);
-          }
+          this.noteFilesSync.ensureFolder(result.folder.name);
         });
       }
       return result;
     });
 
     ipcMain.handle("db-delete-folder", async (event, id) => {
-      const folderName = this._noteFilesEnabled ? this._getFolderName(id) : null;
       const result = this.databaseManager.deleteFolder(id);
       if (result?.success) {
         this.notifyVectorChanges();
-        setImmediate(() => {
-          broadcastToWindows("folder-deleted", { id });
-          if (folderName) this._mirrorDeleteFolderIfUnshared(folderName);
-        });
+        setImmediate(() => broadcastToWindows("folder-deleted", { id }));
       }
       return result;
     });
 
     ipcMain.handle("db-rename-folder", async (event, id, name) => {
-      const oldName = this._noteFilesEnabled ? this._getFolderName(id) : null;
       const result = this.databaseManager.renameFolder(id, name);
       if (result?.success && result?.folder) {
-        setImmediate(() => {
-          broadcastToWindows("folder-renamed", result.folder);
-          if (this._noteFilesEnabled && oldName) {
-            const markdownMirror = require("./markdownMirror");
-            markdownMirror.renameFolder(oldName, name);
-          }
-        });
+        setImmediate(() => broadcastToWindows("folder-renamed", result.folder));
       }
       return result;
     });
@@ -4263,6 +4183,7 @@ class IPCHandlers {
 
         this.databaseManager.updateTranscriptionText(id, result.text, result.text);
         this.databaseManager.updateTranscriptionStatus(id, "completed");
+        this.noteFilesSync.appendDictation(result.text);
         const providerName = result.source || "local";
         const modelName = result.model || null;
         const existingRow = this.databaseManager.getTranscriptionById(id);
@@ -6679,14 +6600,16 @@ class IPCHandlers {
     // Note files (markdown mirror) handlers
     ipcMain.handle("note-files-set-enabled", async (_event, enabled, customPath, options) => {
       try {
-        this._noteFilesEnabled = !!enabled;
-        if (!enabled) return { success: true };
-        const basePath = customPath || path.join(app.getPath("userData"), "notes");
-        if (options?.skipRebuild) {
-          require("./markdownMirror").init(basePath);
-        } else {
-          this._rebuildMirror(basePath);
+        if (!enabled) {
+          this.noteFilesSync.disable();
+          return { success: true };
         }
+        const basePath = customPath || path.join(app.getPath("userData"), "notes");
+        this.noteFilesSync.enable(basePath, {
+          skipRebuild: !!options?.skipRebuild,
+          baseTag: options?.baseTag,
+          exportDictations: options?.exportDictations,
+        });
         return { success: true };
       } catch (error) {
         debugLogger.error(
@@ -6698,10 +6621,30 @@ class IPCHandlers {
       }
     });
 
+    ipcMain.handle("note-files-set-options", async (_event, options) => {
+      try {
+        this.noteFilesSync.setOptions({
+          baseTag: typeof options?.baseTag === "string" ? options.baseTag : undefined,
+          exportDictations:
+            typeof options?.exportDictations === "boolean" ? options.exportDictations : undefined,
+        });
+        return { success: true };
+      } catch (error) {
+        debugLogger.error(
+          "Failed to set note-files options",
+          { error: error.message },
+          "note-files"
+        );
+        return { success: false, error: error.message };
+      }
+    });
+
     ipcMain.handle("note-files-set-path", async (_event, newPath) => {
       try {
-        if (!this._noteFilesEnabled) return { success: false, error: "Note files not enabled" };
-        this._rebuildMirror(newPath);
+        if (!this.noteFilesSync.enabled) {
+          return { success: false, error: "Note files not enabled" };
+        }
+        this.noteFilesSync.rebuild(newPath);
         return { success: true };
       } catch (error) {
         debugLogger.error("Failed to set note-files path", { error: error.message }, "note-files");
@@ -6711,8 +6654,10 @@ class IPCHandlers {
 
     ipcMain.handle("note-files-rebuild", async () => {
       try {
-        if (!this._noteFilesEnabled) return { success: false, error: "Note files not enabled" };
-        this._rebuildMirror();
+        if (!this.noteFilesSync.enabled) {
+          return { success: false, error: "Note files not enabled" };
+        }
+        this.noteFilesSync.rebuild();
         return { success: true };
       } catch (error) {
         debugLogger.error("Failed to rebuild note files", { error: error.message }, "note-files");
@@ -6724,10 +6669,29 @@ class IPCHandlers {
       return path.join(app.getPath("userData"), "notes");
     });
 
+    ipcMain.handle("note-files-get-resolved-paths", async () => {
+      if (!this.noteFilesSync.enabled) return null;
+      const mirror = this.noteFilesSync.mirror;
+      const basePath = mirror.getBasePath();
+      if (!basePath) return null;
+      return {
+        basePath,
+        meetingsPath: mirror.getFolderDisplayPath("Meetings"),
+        dictationsPath: mirror.getFolderDisplayPath(mirror.DICTATIONS_FOLDER),
+      };
+    });
+
+    ipcMain.handle("note-files-has-note-file", async (_event, noteId) => {
+      try {
+        return !!this.noteFilesSync.getNotePath(noteId);
+      } catch {
+        return false;
+      }
+    });
+
     ipcMain.handle("show-note-file", async (_event, noteId) => {
       try {
-        const markdownMirror = require("./markdownMirror");
-        const filePath = markdownMirror.getNotePath(noteId);
+        const filePath = this.noteFilesSync.getNotePath(noteId);
         if (!filePath) return { success: false };
         shell.showItemInFolder(filePath);
         return { success: true };
@@ -6741,10 +6705,29 @@ class IPCHandlers {
       }
     });
 
+    // The URL is built here from a path the mirror owns, so the renderer can
+    // never hand an arbitrary obsidian:// URL to the OS.
+    ipcMain.handle("note-files-open-in-obsidian", async (_event, noteId) => {
+      try {
+        const filePath = this.noteFilesSync.getNotePath(noteId);
+        if (!filePath) return { success: false };
+        await openExternalUrl(`obsidian://open?path=${encodeURIComponent(filePath)}`);
+        return { success: true };
+      } catch (error) {
+        debugLogger.error(
+          "Failed to open note in Obsidian",
+          { noteId, error: error.message },
+          "note-files"
+        );
+        return { success: false };
+      }
+    });
+
     ipcMain.handle("show-folder-in-explorer", async (_event, folderName) => {
       try {
-        const markdownMirror = require("./markdownMirror");
-        const dirPath = markdownMirror.getFolderPath(folderName);
+        const dirPath = this.noteFilesSync.enabled
+          ? this.noteFilesSync.mirror.getFolderPath(folderName)
+          : null;
         if (!dirPath) return { success: false };
         await shell.openPath(dirPath);
         return { success: true };
@@ -6852,13 +6835,11 @@ class IPCHandlers {
       try {
         const result = this.databaseManager.importNotes(pending.notes);
         if (result.imported > 0) {
-          // One-shot side effects: a single index wake-up (the SQLite triggers
-          // already journaled every imported note) and a single mirror rebuild —
-          // never per-note work (sync storm / O(notes × files) mirror scans).
+          // One index wake-up: the SQLite triggers already journaled every
+          // imported note, and the note-files mirror hears each insert itself.
           setImmediate(() => {
             try {
               this.notifyVectorChanges();
-              if (this._noteFilesEnabled) this._rebuildMirror();
             } catch (sideEffectError) {
               debugLogger.error(
                 "Granola import side effects failed",
@@ -7469,7 +7450,6 @@ class IPCHandlers {
     if (result?.success) {
       setImmediate(() => broadcastToWindows("note-deleted", { id }));
       this.notifyVectorChanges();
-      this._asyncMirrorDelete(id);
     }
     return result;
   }

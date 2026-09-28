@@ -14,15 +14,26 @@
       "chineseScriptTraditional": "繁体"
     },
     "noteFiles": {
-      "title": "将笔记保存为文件",
-      "description": "自动将笔记和转录保存为磁盘上的文件，按文件夹分类",
+      "title": "导出为 Markdown / Obsidian 库",
+      "description": "将每条笔记和会议转录写成带 frontmatter 的 Markdown 文件，按文件夹整理。请选择 Obsidian 库中的一个文件夹。",
       "path": "保存位置",
       "changePath": "更改位置",
       "rebuild": "重建所有文件",
-      "rebuildDescription": "将所有笔记和转录重新同步到磁盘",
+      "rebuildDescription": "重写所有笔记和转录文件，并将旧版导出的文件重命名为当前命名方式",
       "rebuildError": {
         "title": "重建失败",
         "description": "无法重建笔记文件。请确保已启用该功能，并且文件夹可写。"
+      },
+      "enable": "将笔记导出为 Markdown 文件",
+      "oneWayNotice": "单向导出：笔记下次变更时，OpenWhispr 会覆盖该笔记的文件，因此在库中所做的编辑不会保留。文件夹中的其他文件绝不会被改动。",
+      "meetingsPath": "会议保存到：",
+      "baseTag": "基础标签",
+      "baseTagDescription": "添加到每个导出文件的标签中，与笔记类型并列（例如 openwhispr, meeting）",
+      "exportDictations": "同时导出听写",
+      "exportDictationsDescription": "将每次完成的听写追加到 Dictations/YYYY-MM-DD.md 的每日文件中",
+      "export": {
+        "notesHeading": "笔记",
+        "transcriptLink": "转录"
       }
     },
     "granolaImport": {
@@ -1866,7 +1877,8 @@
       "searchFolders": "搜索文件夹...",
       "noResults": "未找到文件夹",
       "newFolder": "新建文件夹",
-      "showInFileManager": "在{{manager}}中显示"
+      "showInFileManager": "在{{manager}}中显示",
+      "openInObsidian": "在 Obsidian 中打开"
     },
     "actions": {
       "manage": "管理操作...",

@@ -425,7 +425,6 @@ class CliBridge {
           const note = unwrapMutationResult(result, "note");
           setImmediate(() => broadcastToWindows("note-added", note));
           ipc.notifyVectorChanges();
-          ipc._asyncMirrorWrite(note);
           return { data: note };
         },
         201
@@ -436,7 +435,6 @@ class CliBridge {
         const note = unwrapMutationResult(result, "note");
         setImmediate(() => broadcastToWindows("note-updated", note));
         ipc.notifyVectorChanges();
-        ipc._asyncMirrorWrite(note);
         return { data: note };
       }),
       param("DELETE", "/v1/notes/", "", "id", ({ params }) => {

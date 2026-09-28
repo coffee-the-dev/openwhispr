@@ -956,6 +956,10 @@ export default function SettingsPage({
     setNoteFilesEnabled,
     noteFilesPath,
     setNoteFilesPath,
+    noteFilesBaseTag,
+    setNoteFilesBaseTag,
+    noteFilesExportDictations,
+    setNoteFilesExportDictations,
     dictationSileroEnabled,
     setDictationSileroEnabled,
     noteRecordingSileroEnabled,
@@ -1251,20 +1255,40 @@ export default function SettingsPage({
 
   const [noteFilesDefaultPath, setNoteFilesDefaultPath] = useState("");
   const [noteFilesRebuilding, setNoteFilesRebuilding] = useState(false);
+  const [noteFilesMeetingsPath, setNoteFilesMeetingsPath] = useState<string | null>(null);
+  const [noteFilesTagDraft, setNoteFilesTagDraft] = useState(noteFilesBaseTag);
+
+  const refreshNoteFilesPaths = useCallback(() => {
+    window.electronAPI
+      ?.noteFilesGetResolvedPaths?.()
+      .then((paths) => setNoteFilesMeetingsPath(paths?.meetingsPath ?? null))
+      .catch(() => setNoteFilesMeetingsPath(null));
+  }, []);
 
   useEffect(() => {
     if (!noteFilesEnabled) return;
     window.electronAPI?.noteFilesGetDefaultPath?.().then((p) => {
       if (p) setNoteFilesDefaultPath(p);
     });
-  }, [noteFilesEnabled]);
+    refreshNoteFilesPaths();
+  }, [noteFilesEnabled, noteFilesPath, refreshNoteFilesPaths]);
 
   const handleNoteFilesToggle = useCallback(
     async (enabled: boolean) => {
       setNoteFilesEnabled(enabled);
-      await window.electronAPI?.noteFilesSetEnabled?.(enabled, noteFilesPath || undefined);
+      await window.electronAPI?.noteFilesSetEnabled?.(enabled, noteFilesPath || undefined, {
+        baseTag: noteFilesBaseTag,
+        exportDictations: noteFilesExportDictations,
+      });
+      refreshNoteFilesPaths();
     },
-    [setNoteFilesEnabled, noteFilesPath]
+    [
+      setNoteFilesEnabled,
+      noteFilesPath,
+      noteFilesBaseTag,
+      noteFilesExportDictations,
+      refreshNoteFilesPaths,
+    ]
   );
 
   const handleNoteFilesChangePath = useCallback(async () => {
@@ -1272,7 +1296,24 @@ export default function SettingsPage({
     if (result?.canceled || !result?.path) return;
     setNoteFilesPath(result.path);
     await window.electronAPI?.noteFilesSetPath?.(result.path);
-  }, [setNoteFilesPath]);
+    refreshNoteFilesPaths();
+  }, [setNoteFilesPath, refreshNoteFilesPaths]);
+
+  const commitNoteFilesBaseTag = useCallback(async () => {
+    const next = noteFilesTagDraft.trim().replace(/^#+/, "") || "openwhispr";
+    setNoteFilesTagDraft(next);
+    if (next === noteFilesBaseTag) return;
+    setNoteFilesBaseTag(next);
+    await window.electronAPI?.noteFilesSetOptions?.({ baseTag: next });
+  }, [noteFilesTagDraft, noteFilesBaseTag, setNoteFilesBaseTag]);
+
+  const handleNoteFilesExportDictations = useCallback(
+    async (enabled: boolean) => {
+      setNoteFilesExportDictations(enabled);
+      await window.electronAPI?.noteFilesSetOptions?.({ exportDictations: enabled });
+    },
+    [setNoteFilesExportDictations]
+  );
 
   const handleNoteFilesRebuild = useCallback(async () => {
     setNoteFilesRebuilding(true);
@@ -1687,13 +1728,16 @@ export default function SettingsPage({
               </SettingsPanel>
             </div>
 
-            {/* Save Notes as Files */}
+            {/* Export to Markdown / Obsidian */}
             <div>
-              <SectionHeader title={t("settings.noteFiles.title")} />
+              <SectionHeader
+                title={t("settings.noteFiles.title")}
+                description={t("settings.noteFiles.oneWayNotice")}
+              />
               <SettingsPanel>
                 <SettingsPanelRow>
                   <SettingsRow
-                    label={t("settings.noteFiles.title")}
+                    label={t("settings.noteFiles.enable")}
                     description={t("settings.noteFiles.description")}
                   >
                     <Toggle checked={noteFilesEnabled} onChange={handleNoteFilesToggle} />
@@ -1705,9 +1749,19 @@ export default function SettingsPage({
                       <SettingsRow
                         label={t("settings.noteFiles.path")}
                         description={
-                          <span dir="ltr" className="block break-all">
-                            {noteFilesPath || noteFilesDefaultPath || "..."}
-                          </span>
+                          <>
+                            <span dir="ltr" className="block break-all">
+                              {noteFilesPath || noteFilesDefaultPath || "..."}
+                            </span>
+                            {noteFilesMeetingsPath && (
+                              <span className="mt-1 block">
+                                {t("settings.noteFiles.meetingsPath")}{" "}
+                                <span dir="ltr" className="break-all">
+                                  {noteFilesMeetingsPath}
+                                </span>
+                              </span>
+                            )}
+                          </>
                         }
                       >
                         <Button
@@ -1718,6 +1772,35 @@ export default function SettingsPage({
                         >
                           {t("settings.noteFiles.changePath")}
                         </Button>
+                      </SettingsRow>
+                    </SettingsPanelRow>
+                    <SettingsPanelRow>
+                      <SettingsRow
+                        label={t("settings.noteFiles.baseTag")}
+                        description={t("settings.noteFiles.baseTagDescription")}
+                      >
+                        <Input
+                          value={noteFilesTagDraft}
+                          onChange={(e) => setNoteFilesTagDraft(e.target.value)}
+                          onBlur={commitNoteFilesBaseTag}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") e.currentTarget.blur();
+                          }}
+                          dir="auto"
+                          aria-label={t("settings.noteFiles.baseTag")}
+                          className="h-7 w-36 text-xs"
+                        />
+                      </SettingsRow>
+                    </SettingsPanelRow>
+                    <SettingsPanelRow>
+                      <SettingsRow
+                        label={t("settings.noteFiles.exportDictations")}
+                        description={t("settings.noteFiles.exportDictationsDescription")}
+                      >
+                        <Toggle
+                          checked={noteFilesExportDictations}
+                          onChange={handleNoteFilesExportDictations}
+                        />
                       </SettingsRow>
                     </SettingsPanelRow>
                     <SettingsPanelRow>

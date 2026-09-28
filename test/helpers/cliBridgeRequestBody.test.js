@@ -68,7 +68,6 @@ test("CLI request body limit counts UTF-8 bytes, not JavaScript characters", asy
       },
     },
     notifyVectorChanges() {},
-    _asyncMirrorWrite() {},
   });
   bridge.token = "test-token";
   bridge.port = 8200;
@@ -99,7 +98,6 @@ test("multibyte content split across request chunks is preserved", async () => {
       },
     },
     notifyVectorChanges() {},
-    _asyncMirrorWrite() {},
   });
   bridge.token = "test-token";
   bridge.port = 8200;
@@ -127,7 +125,6 @@ test("a JSON body exactly at the byte limit is accepted", async () => {
       },
     },
     notifyVectorChanges() {},
-    _asyncMirrorWrite() {},
   });
   bridge.token = "test-token";
   bridge.port = 8200;

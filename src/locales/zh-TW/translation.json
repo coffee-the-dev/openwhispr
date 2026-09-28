@@ -14,15 +14,26 @@
       "chineseScriptTraditional": "繁體"
     },
     "noteFiles": {
-      "title": "將筆記儲存為檔案",
-      "description": "自動將筆記和逐字稿儲存為檔案到磁碟，按資料夾分類",
+      "title": "匯出為 Markdown / Obsidian 儲存庫",
+      "description": "將每則筆記和會議逐字稿寫成含 frontmatter 的 Markdown 檔案，依資料夾整理。請選擇 Obsidian 儲存庫中的一個資料夾。",
       "path": "儲存位置",
       "changePath": "變更位置",
       "rebuild": "重建所有檔案",
-      "rebuildDescription": "將所有筆記和逐字稿重新同步到磁碟",
+      "rebuildDescription": "重寫所有筆記和逐字稿檔案，並將舊版匯出的檔案重新命名為目前的命名方式",
       "rebuildError": {
         "title": "重建失敗",
         "description": "無法重建筆記檔案。請確認功能已啟用，且資料夾可寫入。"
+      },
+      "enable": "將筆記匯出為 Markdown 檔案",
+      "oneWayNotice": "單向匯出：筆記下次變更時，OpenWhispr 會覆寫該筆記的檔案，因此在儲存庫中所做的編輯不會保留。資料夾中的其他檔案絕不會被更動。",
+      "meetingsPath": "會議儲存至：",
+      "baseTag": "基礎標籤",
+      "baseTagDescription": "加入每個匯出檔案的標籤中，與筆記類型並列（例如 openwhispr, meeting）",
+      "exportDictations": "同時匯出聽寫",
+      "exportDictationsDescription": "將每次完成的聽寫附加到 Dictations/YYYY-MM-DD.md 的每日檔案中",
+      "export": {
+        "notesHeading": "筆記",
+        "transcriptLink": "逐字稿"
       }
     },
     "granolaImport": {
@@ -1866,7 +1877,8 @@
       "searchFolders": "搜尋資料夾...",
       "noResults": "找不到資料夾",
       "newFolder": "新增資料夾",
-      "showInFileManager": "在{{manager}}中顯示"
+      "showInFileManager": "在{{manager}}中顯示",
+      "openInObsidian": "在 Obsidian 中開啟"
     },
     "actions": {
       "manage": "管理動作...",

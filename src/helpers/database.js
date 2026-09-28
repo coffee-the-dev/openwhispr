@@ -39,7 +39,24 @@ const SELECTED_CALENDAR_EVENT_FILTER = `(
 class DatabaseManager {
   constructor() {
     this.db = null;
+    this._noteChangeListener = null;
     this.initDatabase();
+  }
+
+  // One observer (the note-files mirror) hears every write that changes what a
+  // note exports as: { type: "upsert", noteId } | { type: "delete", noteId,
+  // clientNoteId } | { type: "folder-vacated", name }.
+  setNoteChangeListener(listener) {
+    this._noteChangeListener = listener;
+  }
+
+  _emitNoteChange(change) {
+    if (!this._noteChangeListener) return;
+    try {
+      this._noteChangeListener(change);
+    } catch (error) {
+      debugLogger.error("Note change listener failed", { error: error.message }, "notes");
+    }
   }
 
   _purgeSyncTombstones() {
@@ -1842,6 +1859,7 @@ class DatabaseManager {
 
       const fetchStmt = this.db.prepare("SELECT * FROM notes WHERE id = ?");
       const note = fetchStmt.get(result.lastInsertRowid);
+      this._emitNoteChange({ type: "upsert", noteId: note.id });
 
       return { success: true, note };
     } catch (error) {
@@ -1914,6 +1932,7 @@ class DatabaseManager {
           }
         }
       })();
+      for (const noteId of noteIds) this._emitNoteChange({ type: "upsert", noteId });
 
       return { success: true, imported, skipped, folderId, noteIds, errors };
     } catch (error) {
@@ -2080,6 +2099,7 @@ class DatabaseManager {
         .run(...values);
       if (result.changes === 0) return { success: false, error: "Note not found" };
       const note = this.db.prepare("SELECT * FROM notes WHERE id = ?").get(id);
+      this._emitNoteChange({ type: "upsert", noteId: id });
       return { success: true, note };
     } catch (error) {
       debugLogger.error("Error updating note", { error: error.message }, "notes");
@@ -2138,10 +2158,10 @@ class DatabaseManager {
       if (!folder) return { success: false, error: "Folder not found" };
       if (folder.is_default) return { success: false, error: "Cannot delete default folders" };
       const childNotes = "SELECT id FROM notes WHERE folder_id = ?";
-      const noteIds = this.db
-        .prepare(childNotes)
-        .all(id)
-        .map((row) => row.id);
+      const childRows = this.db
+        .prepare("SELECT id, client_note_id FROM notes WHERE folder_id = ?")
+        .all(id);
+      const noteIds = childRows.map((row) => row.id);
       this.db.transaction(() => {
         this._deleteConversationsWhere(`note_id IN (${childNotes})`, [id]);
         this._deleteSpeakerRowsForNotes(childNotes, id);
@@ -2149,6 +2169,10 @@ class DatabaseManager {
         this._deleteConversationsWhere("folder_id = ?", [id]);
         this.db.prepare("DELETE FROM folders WHERE id = ?").run(id);
       })();
+      for (const row of childRows) {
+        this._emitNoteChange({ type: "delete", noteId: row.id, clientNoteId: row.client_note_id });
+      }
+      this._emitNoteChange({ type: "folder-vacated", name: folder.name });
       return { success: true, id, noteIds, name: folder.name };
     } catch (error) {
       debugLogger.error("Error deleting folder", { error: error.message }, "notes");
@@ -2172,6 +2196,12 @@ class DatabaseManager {
         .prepare("UPDATE folders SET name = ?, updated_at = datetime('now') WHERE id = ?")
         .run(trimmed, id);
       const updated = this.db.prepare("SELECT * FROM folders WHERE id = ?").get(id);
+      if (trimmed !== folder.name) {
+        for (const row of this.db.prepare("SELECT id FROM notes WHERE folder_id = ?").all(id)) {
+          this._emitNoteChange({ type: "upsert", noteId: row.id });
+        }
+        this._emitNoteChange({ type: "folder-vacated", name: folder.name });
+      }
       return { success: true, folder: updated };
     } catch (error) {
       debugLogger.error("Error renaming folder", { error: error.message }, "notes");
@@ -2462,11 +2492,19 @@ class DatabaseManager {
       if (!this.db) {
         throw new Error("Database not initialized");
       }
+      const existing = this.db.prepare("SELECT client_note_id FROM notes WHERE id = ?").get(id);
       const result = this.db.transaction(() => {
         this._deleteConversationsWhere("note_id = ?", [id]);
         this._deleteSpeakerRowsForNotes("SELECT ?", id);
         return this.db.prepare("DELETE FROM notes WHERE id = ?").run(id);
       })();
+      if (result.changes > 0) {
+        this._emitNoteChange({
+          type: "delete",
+          noteId: id,
+          clientNoteId: existing?.client_note_id ?? null,
+        });
+      }
       return { success: result.changes > 0, id };
     } catch (error) {
       debugLogger.error("Error deleting note", { error: error.message }, "notes");
@@ -3243,6 +3281,9 @@ class DatabaseManager {
 
     const finalEmail = winner.email || loser.email || null;
     const finalName = winner.display_name || loser.display_name;
+    const affectedNotes = this.db
+      .prepare("SELECT DISTINCT note_id FROM speaker_mappings WHERE profile_id = ?")
+      .all(loser.id);
 
     const tx = this.db.transaction(() => {
       this.db
@@ -3258,6 +3299,7 @@ class DatabaseManager {
       this.db.prepare("DELETE FROM speaker_profiles WHERE id = ?").run(loser.id);
     });
     tx();
+    for (const row of affectedNotes) this._emitNoteChange({ type: "upsert", noteId: row.note_id });
 
     return this.db.prepare("SELECT * FROM speaker_profiles WHERE id = ?").get(winner.id);
   }
@@ -3285,6 +3327,7 @@ class DatabaseManager {
           "INSERT OR REPLACE INTO speaker_mappings (note_id, speaker_id, profile_id, display_name) VALUES (?, ?, ?, ?)"
         )
         .run(noteId, speakerId, profileId, displayName);
+      this._emitNoteChange({ type: "upsert", noteId });
       return { success: true };
     } catch (error) {
       debugLogger.error("Error setting speaker mapping", { error: error.message }, "database");
@@ -3372,6 +3415,7 @@ class DatabaseManager {
       this.db
         .prepare("DELETE FROM speaker_mappings WHERE note_id = ? AND speaker_id = ?")
         .run(noteId, speakerId);
+      this._emitNoteChange({ type: "upsert", noteId });
       return { success: true };
     } catch (error) {
       debugLogger.error("Error removing speaker mapping", { error: error.message }, "database");

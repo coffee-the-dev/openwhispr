@@ -237,6 +237,7 @@ const BOOLEAN_SETTINGS = new Set([
   "dataRetentionEnabled",
   "saveDiscardedTranscriptions",
   "noteFilesEnabled",
+  "noteFilesExportDictations",
   "showTranscriptionPreview",
   "cleanupDisableThinking",
   "dictationAgentDisableThinking",
@@ -979,6 +980,8 @@ export interface SettingsState
   keepTranscriptionInClipboard: boolean;
   noteFilesEnabled: boolean;
   noteFilesPath: string;
+  noteFilesBaseTag: string;
+  noteFilesExportDictations: boolean;
 
   transcriptionMode: TranscriptionMode;
   remoteTranscriptionType: SelfHostedType;
@@ -1173,6 +1176,8 @@ export interface SettingsState
   setKeepTranscriptionInClipboard: (value: boolean) => void;
   setNoteFilesEnabled: (value: boolean) => void;
   setNoteFilesPath: (value: string) => void;
+  setNoteFilesBaseTag: (value: string) => void;
+  setNoteFilesExportDictations: (value: boolean) => void;
 
   setChatAgentModel: (value: string) => void;
   setChatAgentProvider: (value: string) => void;
@@ -1466,6 +1471,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   keepTranscriptionInClipboard: readBoolean("keepTranscriptionInClipboard", false),
   noteFilesEnabled: readBoolean("noteFilesEnabled", false),
   noteFilesPath: readString("noteFilesPath", ""),
+  noteFilesBaseTag: readString("noteFilesBaseTag", "openwhispr"),
+  noteFilesExportDictations: readBoolean("noteFilesExportDictations", false),
 
   transcriptionMode: readTranscriptionMode("transcriptionMode"),
   remoteTranscriptionType: (() => {
@@ -1972,6 +1979,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setKeepTranscriptionInClipboard: createBooleanSetter("keepTranscriptionInClipboard"),
   setNoteFilesEnabled: createBooleanSetter("noteFilesEnabled"),
   setNoteFilesPath: createStringSetter("noteFilesPath"),
+  setNoteFilesBaseTag: createStringSetter("noteFilesBaseTag"),
+  setNoteFilesExportDictations: createBooleanSetter("noteFilesExportDictations"),
 
   setChatAgentModel: createStringSetter("chatAgentModel"),
   setChatAgentProvider: createStringSetter("chatAgentProvider"),

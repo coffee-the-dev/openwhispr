@@ -1,3 +1,5 @@
+process.env.TZ = "UTC";
+
 const test = require("node:test");
 const assert = require("node:assert/strict");
 const fs = require("node:fs");
@@ -15,140 +17,218 @@ Module._load = function loadWithElectronStub(request, parent, isMain) {
 };
 
 let markdownMirror;
+let parseFrontmatter;
 try {
   markdownMirror = require("../../src/helpers/markdownMirror");
+  ({ parseFrontmatter } = require("../../src/helpers/noteExportFormat"));
 } finally {
   Module._load = originalLoad;
 }
 
-test("a note title ending in transcript keeps both mirrored files", (t) => {
+function tempBase(t) {
   const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
   t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
+  markdownMirror.init(basePath, { baseTag: "openwhispr" });
+  return basePath;
+}
 
-  const note = {
-    id: 7,
-    title: "Meeting transcript",
-    content: "Decisions and action items",
-    created_at: "2026-07-21T12:00:00Z",
-    transcript: JSON.stringify([
-      { speaker: "speaker_0", timestamp: 0, text: "Hello from the meeting." },
-    ]),
+const transcript = (text = "Hello from the meeting.") =>
+  JSON.stringify([{ speaker: "speaker_0", timestamp: 0, text }]);
+
+function meeting(overrides = {}) {
+  return {
+    id: 42,
+    client_note_id: "uid-42",
+    title: "Weekly sync",
+    content: "Initial notes",
+    note_type: "meeting",
+    created_at: "2026-07-21 12:00:00",
+    updated_at: "2026-07-21 13:00:00",
+    transcript: transcript(),
+    ...overrides,
   };
+}
 
-  markdownMirror.init(basePath);
-  markdownMirror.writeNote(note, "Personal");
-  markdownMirror.writeTranscript(note, "Personal", {});
+const ls = (dir) => fs.readdirSync(dir).sort();
 
-  const folderPath = path.join(basePath, "Personal");
-  const notePath = path.join(folderPath, "7-meeting-transcript.md");
-  const transcriptPath = path.join(folderPath, "7-meeting-transcript-transcript.md");
+test("notes and transcripts get dated, human-readable file names in their folder", (t) => {
+  const basePath = tempBase(t);
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
 
-  assert.equal(fs.existsSync(notePath), true);
-  assert.equal(fs.existsSync(transcriptPath), true);
-  assert.equal(markdownMirror.getNotePath(note.id), notePath);
-});
-
-test("folder names cannot escape the configured mirror directory", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
-
-  markdownMirror.init(basePath);
-  markdownMirror.writeNote({ id: 13, title: "Safe note", content: "Body" }, "../outside");
-
-  const escapedPath = path.resolve(basePath, "..", "outside", "13-safe-note.md");
-  const notePath = markdownMirror.getNotePath(13);
-  assert.equal(fs.existsSync(escapedPath), false);
-  assert.ok(notePath);
-  assert.equal(path.relative(basePath, notePath).startsWith(`..${path.sep}`), false);
-  assert.equal(readFrontmatter(fs.readFileSync(notePath, "utf8")).folder, "../outside");
-});
-
-test("unsafe folder names do not collide with portable folder names", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
-
-  markdownMirror.init(basePath);
-  markdownMirror.writeNote({ id: 14, title: "Nested", content: "Unsafe folder" }, "team/docs");
-  markdownMirror.writeNote({ id: 15, title: "Flat", content: "Portable folder" }, "team-docs");
-
-  const unsafeFolderPath = markdownMirror.getFolderPath("team/docs");
-  const portableFolderPath = markdownMirror.getFolderPath("team-docs");
-  assert.ok(unsafeFolderPath);
-  assert.ok(portableFolderPath);
-  assert.notEqual(unsafeFolderPath, portableFolderPath);
-  assert.equal(portableFolderPath, path.join(basePath, "team-docs"));
-
-  markdownMirror.deleteFolder("team/docs");
-
-  assert.equal(fs.existsSync(unsafeFolderPath), false);
-  assert.equal(fs.existsSync(path.join(portableFolderPath, "15-flat.md")), true);
-});
-
-test("encoded folder keys cannot collide with logical folder names", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
-
-  markdownMirror.init(basePath);
-  markdownMirror.ensureFolder("team/docs");
-  const encodedName = path.basename(markdownMirror.getFolderPath("team/docs"));
-  markdownMirror.ensureFolder(encodedName);
-
-  assert.notEqual(
-    markdownMirror.getFolderPath("team/docs"),
-    markdownMirror.getFolderPath(encodedName)
+  const dir = path.join(basePath, "Meetings");
+  assert.deepEqual(ls(dir), [
+    "2026-07-21 Weekly sync (transcript).md",
+    "2026-07-21 Weekly sync.md",
+  ]);
+  assert.equal(
+    markdownMirror.getNotePath(42, "uid-42"),
+    path.join(dir, "2026-07-21 Weekly sync.md")
   );
 });
 
-test("writes reject a symlinked folder that resolves outside the mirror", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  const outsidePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-outside-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
-  t.after(() => fs.rmSync(outsidePath, { recursive: true, force: true }));
-  fs.symlinkSync(outsidePath, path.join(basePath, "linked"), "dir");
+test("a retitled note is renamed in place, never duplicated", (t) => {
+  const basePath = tempBase(t);
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
+  markdownMirror.writeNote(meeting({ title: "Renamed sync", content: "Updated" }), {
+    folderName: "Meetings",
+  });
 
-  markdownMirror.init(basePath);
-  markdownMirror.writeNote({ id: 16, title: "Escaped", content: "Body" }, "linked");
-
-  assert.equal(fs.existsSync(path.join(outsidePath, "16-escaped.md")), false);
-  assert.equal(markdownMirror.getFolderPath("linked"), null);
+  const dir = path.join(basePath, "Meetings");
+  assert.deepEqual(ls(dir), [
+    "2026-07-21 Renamed sync (transcript).md",
+    "2026-07-21 Renamed sync.md",
+  ]);
+  assert.match(fs.readFileSync(path.join(dir, "2026-07-21 Renamed sync.md"), "utf8"), /Updated/);
 });
 
-test("writes reject a symlinked note file without changing its target", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  const outsidePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-outside-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
-  t.after(() => fs.rmSync(outsidePath, { recursive: true, force: true }));
-  const outsideFile = path.join(outsidePath, "outside.md");
-  fs.writeFileSync(outsideFile, "unchanged", "utf8");
+test("a name taken by a file the mirror does not own is disambiguated, not overwritten", (t) => {
+  const basePath = tempBase(t);
+  const dir = path.join(basePath, "Meetings");
+  fs.mkdirSync(dir, { recursive: true });
+  const userFile = path.join(dir, "2026-07-21 Weekly sync.md");
+  fs.writeFileSync(userFile, "my own note", "utf8");
 
-  markdownMirror.init(basePath);
-  markdownMirror.ensureFolder("Personal");
-  fs.symlinkSync(outsideFile, path.join(basePath, "Personal", "17-linked.md"), "file");
-  markdownMirror.writeNote({ id: 17, title: "Linked", content: "Replacement" }, "Personal");
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
 
-  assert.equal(fs.readFileSync(outsideFile, "utf8"), "unchanged");
-  assert.equal(markdownMirror.getNotePath(17), null);
+  assert.equal(fs.readFileSync(userFile, "utf8"), "my own note");
+  assert.ok(fs.existsSync(path.join(dir, "2026-07-21 Weekly sync (ow42).md")));
+  assert.ok(fs.existsSync(path.join(dir, "2026-07-21 Weekly sync (ow42) (transcript).md")));
 });
 
-test("Windows-reserved and trailing-character folder names use distinct portable keys", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
-  const folderNames = ["CON", "NUL.txt", "folder.", "folder "];
+test("a file with another database's openwhispr_uid is not claimed", (t) => {
+  const basePath = tempBase(t);
+  const dir = path.join(basePath, "Meetings");
+  fs.mkdirSync(dir, { recursive: true });
+  const foreign = path.join(dir, "2026-07-01 Old.md");
+  const foreignBody = "---\nopenwhispr_id: 42\nopenwhispr_uid: other\n---\n\nold export\n";
+  fs.writeFileSync(foreign, foreignBody, "utf8");
+
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
+  markdownMirror.deleteNote(42, "uid-42");
+
+  assert.equal(fs.readFileSync(foreign, "utf8"), foreignBody);
+  assert.deepEqual(ls(dir), ["2026-07-01 Old.md"]);
+});
+
+test("legacy <id>-<slug> files are renamed to the new scheme and gain frontmatter", (t) => {
+  const basePath = tempBase(t);
+  const dir = path.join(basePath, "Meetings");
+  fs.mkdirSync(dir, { recursive: true });
+  const note = meeting({ id: 11, client_note_id: "uid-11", title: "Steve / Pragya" });
+  fs.writeFileSync(
+    path.join(dir, "11-steve---pragya.md"),
+    "---\nid: 11\ntitle: Steve / Pragya\ntype: meeting\nfolder: Meetings\ncreated: 2026-07-21 12:00:00\nupdated: 2026-07-21 13:00:00\n---\n\nold body",
+    "utf8"
+  );
+  fs.writeFileSync(
+    path.join(dir, "11-steve---pragya-transcript.md"),
+    "# Steve / Pragya\n\n**Date:** July 21\n",
+    "utf8"
+  );
+  const unrelated = path.join(dir, "12-something-else.md");
+  fs.writeFileSync(unrelated, "---\nid: 12\ncreated: x\n---\n", "utf8");
 
   markdownMirror.init(basePath);
+  markdownMirror.writeNote(note, { folderName: "Meetings" });
+
+  assert.deepEqual(ls(dir), [
+    "12-something-else.md",
+    "2026-07-21 Steve Pragya (transcript).md",
+    "2026-07-21 Steve Pragya.md",
+  ]);
+  const fields = parseFrontmatter(
+    fs.readFileSync(path.join(dir, "2026-07-21 Steve Pragya.md"), "utf8")
+  );
+  assert.equal(fields.openwhispr_id, "11");
+  assert.equal(fields.title, "Steve / Pragya");
+});
+
+test("legacy files from a different note with the same id are left alone", (t) => {
+  const basePath = tempBase(t);
+  const dir = path.join(basePath, "Meetings");
+  fs.mkdirSync(dir, { recursive: true });
+  const legacy = path.join(dir, "42-weekly-sync.md");
+  fs.writeFileSync(legacy, "---\nid: 42\ncreated: 2025-01-01 00:00:00\n---\n\nold", "utf8");
+  const legacyTranscript = path.join(dir, "42-weekly-sync-transcript.md");
+  fs.writeFileSync(legacyTranscript, "# Weekly sync\n", "utf8");
+
+  markdownMirror.init(basePath);
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
+
+  assert.ok(fs.existsSync(legacy));
+  assert.ok(fs.existsSync(legacyTranscript));
+});
+
+test("moving a note between folders moves its files and an emptied folder is removed", (t) => {
+  const basePath = tempBase(t);
+  markdownMirror.writeNote(meeting(), { folderName: "Research" });
+  markdownMirror.writeNote(meeting(), { folderName: "Archive" });
+  markdownMirror.removeFolderIfEmpty("Research");
+
+  assert.equal(markdownMirror.getFolderPath("Research"), null);
+  assert.equal(ls(path.join(basePath, "Archive")).length, 2);
+});
+
+test("removing a folder keeps it while it holds files the mirror does not own", (t) => {
+  const basePath = tempBase(t);
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
+  const userFile = path.join(basePath, "Meetings", "Mine.md");
+  fs.writeFileSync(userFile, "keep me", "utf8");
+
+  markdownMirror.deleteNote(42, "uid-42");
+  markdownMirror.removeFolderIfEmpty("Meetings");
+
+  assert.deepEqual(ls(path.join(basePath, "Meetings")), ["Mine.md"]);
+});
+
+test("clearing a transcript removes only the owned transcript file", (t) => {
+  const basePath = tempBase(t);
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
+  markdownMirror.writeNote(meeting({ transcript: null }), { folderName: "Meetings" });
+
+  assert.deepEqual(ls(path.join(basePath, "Meetings")), ["2026-07-21 Weekly sync.md"]);
+});
+
+test("a file renamed in the vault is still found by its openwhispr_id", (t) => {
+  const basePath = tempBase(t);
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
+  const dir = path.join(basePath, "Meetings");
+  fs.renameSync(path.join(dir, "2026-07-21 Weekly sync.md"), path.join(dir, "moved.md"));
+
+  markdownMirror.init(basePath);
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
+
+  assert.deepEqual(ls(dir), [
+    "2026-07-21 Weekly sync (transcript).md",
+    "2026-07-21 Weekly sync.md",
+  ]);
+});
+
+test("folder names cannot escape the configured mirror directory", (t) => {
+  const basePath = tempBase(t);
+  markdownMirror.writeNote(
+    { id: 13, title: "Safe note", content: "Body" },
+    {
+      folderName: "../outside",
+    }
+  );
+
+  const notePath = markdownMirror.getNotePath(13);
+  assert.ok(notePath);
+  assert.equal(path.relative(basePath, notePath).startsWith(".."), false);
+  assert.equal(parseFrontmatter(fs.readFileSync(notePath, "utf8")).folder, "../outside");
+});
+
+test("unsafe and Windows-reserved folder names use distinct portable keys", (t) => {
+  tempBase(t);
+  const folderNames = ["team/docs", "team-docs", "CON", "NUL.txt", "folder.", "folder "];
   folderNames.forEach((folderName, index) => {
-    markdownMirror.ensureFolder(folderName);
-    markdownMirror.writeNote(
-      { id: 20 + index, title: `Note ${index}`, content: folderName },
-      folderName
-    );
+    markdownMirror.writeNote({ id: 20 + index, title: `Note ${index}` }, { folderName });
   });
 
-  const diskNames = folderNames.map((folderName) => {
-    const folderPath = markdownMirror.getFolderPath(folderName);
-    assert.ok(folderPath);
-    return path.basename(folderPath);
-  });
+  const diskNames = folderNames.map((folderName) =>
+    path.basename(markdownMirror.getFolderPath(folderName))
+  );
   assert.equal(new Set(diskNames).size, folderNames.length);
   for (const diskName of diskNames) {
     assert.doesNotMatch(diskName, /^(con|prn|aux|nul|com[1-9]|lpt[1-9])(?:\..*)?$/i);
@@ -156,124 +236,41 @@ test("Windows-reserved and trailing-character folder names use distinct portable
   }
 });
 
-test("portable folders still support the normal ensure, rename, and delete journey", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
+test("writes reject a symlinked folder that resolves outside the mirror", (t) => {
+  const basePath = tempBase(t);
+  const outsidePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-outside-"));
+  t.after(() => fs.rmSync(outsidePath, { recursive: true, force: true }));
+  fs.symlinkSync(outsidePath, path.join(basePath, "linked"), "dir");
 
-  markdownMirror.init(basePath);
-  markdownMirror.ensureFolder("Research");
-  markdownMirror.writeNote({ id: 30, title: "Sources", content: "Body" }, "Research");
-  markdownMirror.renameFolder("Research", "Archive");
+  markdownMirror.writeNote({ id: 16, title: "Escaped", content: "Body" }, { folderName: "linked" });
 
-  assert.equal(markdownMirror.getFolderPath("Research"), null);
-  assert.equal(markdownMirror.getFolderPath("Archive"), path.join(basePath, "Archive"));
-  assert.equal(fs.existsSync(path.join(basePath, "Archive", "30-sources.md")), true);
-
-  markdownMirror.deleteFolder("Archive");
-  assert.equal(markdownMirror.getFolderPath("Archive"), null);
+  assert.deepEqual(fs.readdirSync(outsidePath), []);
+  assert.equal(markdownMirror.getFolderPath("linked"), null);
 });
 
-test("renaming a mirrored note cleans up both stale files and reveals the note", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
+test("a symlink at the target name is never written through", (t) => {
+  const basePath = tempBase(t);
+  const outsidePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-outside-"));
+  t.after(() => fs.rmSync(outsidePath, { recursive: true, force: true }));
+  const outsideFile = path.join(outsidePath, "outside.md");
+  fs.writeFileSync(outsideFile, "unchanged", "utf8");
+  markdownMirror.ensureFolder("Personal");
+  fs.symlinkSync(outsideFile, path.join(basePath, "Personal", "2026-07-21 Linked.md"), "file");
 
-  const note = {
-    id: 42,
-    title: "Weekly sync",
-    content: "Initial notes",
-    created_at: "2026-07-21T12:00:00Z",
-    transcript: JSON.stringify([
-      { speaker: "speaker_0", timestamp: 0, text: "Hello from the meeting." },
-    ]),
-  };
+  markdownMirror.writeNote(
+    { id: 17, title: "Linked", content: "Replacement", created_at: "2026-07-21 12:00:00" },
+    { folderName: "Personal" }
+  );
 
-  markdownMirror.init(basePath);
-  markdownMirror.writeNote(note, "Personal");
-  markdownMirror.writeTranscript(note, "Personal", {});
-
-  const renamed = { ...note, title: "Renamed sync", content: "Updated notes" };
-  markdownMirror.writeNote(renamed, "Personal");
-  markdownMirror.writeTranscript(renamed, "Personal", {});
-
-  const folderPath = path.join(basePath, "Personal");
-  const notePath = path.join(folderPath, "42-renamed-sync.md");
-
-  assert.deepEqual(fs.readdirSync(folderPath).sort(), [
-    "42-renamed-sync-transcript.md",
-    "42-renamed-sync.md",
-  ]);
-  assert.equal(markdownMirror.getNotePath(note.id), notePath);
-  assert.match(fs.readFileSync(notePath, "utf-8"), /Updated notes$/);
+  assert.equal(fs.readFileSync(outsideFile, "utf8"), "unchanged");
+  assert.equal(path.basename(markdownMirror.getNotePath(17)), "2026-07-21 Linked (ow17).md");
 });
 
-function readFrontmatter(fileContent) {
-  const match = fileContent.match(/^---\n([\s\S]*?)\n---\n/);
-  assert.ok(match, "file should start with a --- fenced frontmatter block");
-  const map = {};
-  for (const line of match[1].split("\n")) {
-    const kv = line.match(/^([A-Za-z_]+): (.*)$/);
-    assert.ok(kv, `frontmatter line is a "key: value" mapping entry: ${JSON.stringify(line)}`);
-    let value = kv[2];
-    if (value.startsWith('"') && value.endsWith('"')) {
-      value = value
-        .slice(1, -1)
-        .replace(/\\n/g, "\n")
-        .replace(/\\r/g, "\r")
-        .replace(/\\t/g, "\t")
-        .replace(/\\"/g, '"')
-        .replace(/\\\\/g, "\\");
-    }
-    map[kv[1]] = value;
-  }
-  return map;
-}
+test("deleteNote removes the note's other file even when one unlink fails", (t) => {
+  const basePath = tempBase(t);
+  markdownMirror.writeNote(meeting(), { folderName: "Meetings" });
+  const dir = path.join(basePath, "Meetings");
 
-test("a title with control characters keeps the frontmatter a valid single-line mapping", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
-
-  const note = {
-    id: 5,
-    title: "Q3 Review\nconfidential\ttag",
-    content: "Body text",
-    created_at: "2026-07-21T12:00:00Z",
-  };
-
-  markdownMirror.init(basePath);
-  markdownMirror.writeNote(note, "Personal");
-
-  const notePath = markdownMirror.getNotePath(note.id);
-  assert.ok(notePath, "the note file is discoverable, so its frontmatter parsed as a note");
-  const frontmatter = readFrontmatter(fs.readFileSync(notePath, "utf-8"));
-
-  // Every key survives and the title round-trips, control characters intact.
-  assert.equal(frontmatter.id, "5");
-  assert.equal(frontmatter.type, "personal");
-  assert.equal(frontmatter.folder, "Personal");
-  assert.equal(frontmatter.title, note.title);
-});
-
-test("deleteNote removes the note's other files even when one unlink fails", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
-
-  const note = {
-    id: 9,
-    title: "Team sync",
-    content: "Body",
-    created_at: "2026-07-21T12:00:00Z",
-    transcript: JSON.stringify([{ speaker: "speaker_0", timestamp: 0, text: "Hello." }]),
-  };
-
-  markdownMirror.init(basePath);
-  markdownMirror.writeNote(note, "Personal");
-  markdownMirror.writeTranscript(note, "Personal", {});
-
-  const folderPath = path.join(basePath, "Personal");
-  assert.equal(fs.readdirSync(folderPath).length, 2);
-
-  // Make the first unlink throw (e.g. the file is open in an external editor on
-  // Windows); the remaining file must still be deleted rather than orphaned.
   const realUnlink = fs.unlinkSync;
   let failedPath = null;
   fs.unlinkSync = (target) => {
@@ -287,32 +284,36 @@ test("deleteNote removes the note's other files even when one unlink fails", (t)
     fs.unlinkSync = realUnlink;
   });
 
-  markdownMirror.deleteNote(note.id);
+  markdownMirror.deleteNote(42, "uid-42");
   fs.unlinkSync = realUnlink;
 
-  // Only the file that genuinely could not be unlinked remains.
-  assert.deepEqual(fs.readdirSync(folderPath), [path.basename(failedPath)]);
+  assert.deepEqual(fs.readdirSync(dir), [path.basename(failedPath)]);
 });
 
-test("a note file re-saved with a BOM or CRLF is still recognised as its note", (t) => {
-  const basePath = fs.mkdtempSync(path.join(os.tmpdir(), "openwhispr-markdown-mirror-"));
-  t.after(() => fs.rmSync(basePath, { recursive: true, force: true }));
-
-  const note = {
-    id: 11,
-    title: "Quarterly plan",
-    content: "Body",
-    created_at: "2026-07-21T12:00:00Z",
-  };
-
-  markdownMirror.init(basePath);
-  markdownMirror.writeNote(note, "Personal");
-
-  const notePath = path.join(basePath, "Personal", "11-quarterly-plan.md");
-  const original = fs.readFileSync(notePath, "utf-8");
+test("a file re-saved with a BOM or CRLF is still recognised as the note's", (t) => {
+  const basePath = tempBase(t);
+  markdownMirror.writeNote(meeting({ transcript: null }), { folderName: "Meetings" });
+  const notePath = path.join(basePath, "Meetings", "2026-07-21 Weekly sync.md");
+  const original = fs.readFileSync(notePath, "utf8");
 
   for (const rewritten of [original.replace(/\n/g, "\r\n"), `\uFEFF${original}`]) {
-    fs.writeFileSync(notePath, rewritten, "utf-8");
-    assert.equal(markdownMirror.getNotePath(note.id), notePath);
+    fs.writeFileSync(notePath, rewritten, "utf8");
+    markdownMirror.init(basePath);
+    assert.equal(markdownMirror.getNotePath(42, "uid-42"), notePath);
   }
+});
+
+test("dictations append to an owned daily file and never to a user's file", (t) => {
+  const basePath = tempBase(t);
+  const dir = path.join(basePath, "Dictations");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "2026-07-21.md"), "user daily note", "utf8");
+
+  markdownMirror.appendDictation("First thought", new Date("2026-07-21T09:05:00Z"));
+  markdownMirror.appendDictation("Second\nline", new Date("2026-07-21T10:30:00Z"));
+
+  assert.equal(fs.readFileSync(path.join(dir, "2026-07-21.md"), "utf8"), "user daily note");
+  const owned = fs.readFileSync(path.join(dir, "2026-07-21 (openwhispr).md"), "utf8");
+  assert.equal(parseFrontmatter(owned).openwhispr_dictations, "2026-07-21");
+  assert.match(owned, /- \*\*09:05\*\* First thought\n- \*\*10:30\*\* Second\n {2}line\n$/);
 });

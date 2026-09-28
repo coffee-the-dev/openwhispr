@@ -14,15 +14,26 @@
       "chineseScriptTraditional": "Tradicional (繁體)"
     },
     "noteFiles": {
-      "title": "Guardar notas como archivos",
-      "description": "Guardar notas y transcripciones automáticamente como archivos en disco, organizados por carpeta",
+      "title": "Exportar a Markdown / bóveda de Obsidian",
+      "description": "Guarda cada nota y transcripción de reunión como un archivo Markdown con metadatos, organizado por carpeta. Elige una carpeta dentro de tu bóveda de Obsidian.",
       "path": "Ubicación de guardado",
       "changePath": "Cambiar ubicación",
       "rebuild": "Reconstruir todos los archivos",
-      "rebuildDescription": "Resincronizar todas las notas y transcripciones al disco",
+      "rebuildDescription": "Reescribe todos los archivos de notas y transcripciones, y renombra los archivos de exportaciones anteriores al formato actual",
       "rebuildError": {
         "title": "Error al reconstruir",
         "description": "No se pudieron reconstruir los archivos de notas. Asegúrate de que la función esté habilitada y la carpeta tenga permisos de escritura."
+      },
+      "enable": "Exportar notas como archivos Markdown",
+      "oneWayNotice": "Exportación unidireccional: OpenWhispr sobrescribe los archivos de una nota la próxima vez que esa nota cambie, así que las ediciones hechas en la bóveda no se conservan. Los demás archivos de la carpeta nunca se modifican.",
+      "meetingsPath": "Las reuniones se guardan en:",
+      "baseTag": "Etiqueta base",
+      "baseTagDescription": "Se añade a las etiquetas de cada archivo exportado, junto al tipo de nota (por ejemplo openwhispr, meeting)",
+      "exportDictations": "Exportar también los dictados",
+      "exportDictationsDescription": "Añade cada dictado completado a un archivo diario en Dictations/YYYY-MM-DD.md",
+      "export": {
+        "notesHeading": "Notas",
+        "transcriptLink": "Transcripción"
       }
     },
     "granolaImport": {
@@ -1866,7 +1877,8 @@
       "searchFolders": "Buscar carpetas...",
       "noResults": "No se encontraron carpetas",
       "newFolder": "Nueva carpeta",
-      "showInFileManager": "Mostrar en {{manager}}"
+      "showInFileManager": "Mostrar en {{manager}}",
+      "openInObsidian": "Abrir en Obsidian"
     },
     "actions": {
       "manage": "Gestionar acciones...",

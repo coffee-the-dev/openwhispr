@@ -170,10 +170,13 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
   }, [loadTranscriptions]);
 
   useEffect(() => {
-    const { noteFilesEnabled, noteFilesPath } = useSettingsStore.getState();
+    const { noteFilesEnabled, noteFilesPath, noteFilesBaseTag, noteFilesExportDictations } =
+      useSettingsStore.getState();
     if (!noteFilesEnabled) return;
     window.electronAPI?.noteFilesSetEnabled?.(true, noteFilesPath || undefined, {
       skipRebuild: true,
+      baseTag: noteFilesBaseTag,
+      exportDictations: noteFilesExportDictations,
     });
   }, []);
 

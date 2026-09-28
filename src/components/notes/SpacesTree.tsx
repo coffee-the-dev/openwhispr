@@ -551,6 +551,7 @@ function NoteLeaf({
   const [moveSearch, setMoveSearch] = useState("");
   const [newFolderName, setNewFolderName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const [hasMirroredFile, setHasMirroredFile] = useState(false);
 
   const moveOptions = useMemo<MoveOption[]>(
     () =>
@@ -635,6 +636,12 @@ function NoteLeaf({
       </span>
       <DropdownMenu
         onOpenChange={(open) => {
+          if (open && noteFilesEnabled) {
+            window.electronAPI
+              ?.noteFilesHasNoteFile?.(note.id)
+              .then((exists) => setHasMirroredFile(!!exists))
+              .catch(() => setHasMirroredFile(false));
+          }
           if (!open) {
             setMoveSearch("");
             setIsCreating(false);
@@ -666,6 +673,18 @@ function NoteLeaf({
                 <ExternalLink size={11} className="text-muted-foreground/70" />
                 {t("notes.context.showInFileManager", { manager: fileManagerName })}
               </DropdownMenuItem>
+              {hasMirroredFile && (
+                <DropdownMenuItem
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    window.electronAPI?.noteFilesOpenInObsidian?.(note.id);
+                  }}
+                  className={MENU_ITEM_CLASS}
+                >
+                  <ExternalLink size={11} className="text-muted-foreground/70" />
+                  {t("notes.context.openInObsidian")}
+                </DropdownMenuItem>
+              )}
               <DropdownMenuSeparator />
             </>
           )}

@@ -14,15 +14,26 @@
       "chineseScriptTraditional": "繁体字 (繁體)"
     },
     "noteFiles": {
-      "title": "ノートをファイルとして保存",
-      "description": "ノートと文字起こしをファイルとしてディスクに自動保存し、フォルダごとに整理",
+      "title": "Markdown / Obsidian ボールトへのエクスポート",
+      "description": "すべてのメモと会議の文字起こしを、フロントマター付きの Markdown ファイルとしてフォルダごとに書き出します。Obsidian ボールト内のフォルダを指定してください。",
       "path": "保存先",
       "changePath": "保存先を変更",
       "rebuild": "すべてのファイルを再構築",
-      "rebuildDescription": "すべてのノートと文字起こしをディスクに再同期",
+      "rebuildDescription": "すべてのメモと文字起こしのファイルを書き直し、以前のエクスポートのファイルを現在の命名に変更します",
       "rebuildError": {
         "title": "再構築に失敗しました",
         "description": "ノートファイルを再構築できませんでした。機能が有効になっており、フォルダーに書き込み可能であることを確認してください。"
+      },
+      "enable": "メモを Markdown ファイルとしてエクスポート",
+      "oneWayNotice": "一方向のエクスポートです：メモが次に変更されたとき、OpenWhispr はそのメモのファイルを上書きするため、ボールトで行った編集は保持されません。フォルダ内のその他のファイルには一切触れません。",
+      "meetingsPath": "会議の保存先:",
+      "baseTag": "ベースタグ",
+      "baseTagDescription": "エクスポートされる各ファイルのタグに、メモの種類と並べて追加されます（例: openwhispr, meeting）",
+      "exportDictations": "音声入力もエクスポート",
+      "exportDictationsDescription": "完了した音声入力を Dictations/YYYY-MM-DD.md の日別ファイルに追記します",
+      "export": {
+        "notesHeading": "メモ",
+        "transcriptLink": "文字起こし"
       }
     },
     "granolaImport": {
@@ -1737,7 +1748,8 @@
       "searchFolders": "フォルダを検索...",
       "noResults": "フォルダが見つかりません",
       "newFolder": "新しいフォルダ",
-      "showInFileManager": "{{manager}}で表示"
+      "showInFileManager": "{{manager}}で表示",
+      "openInObsidian": "Obsidian で開く"
     },
     "actions": {
       "manage": "アクションを管理...",

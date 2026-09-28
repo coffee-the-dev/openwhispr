@@ -1069,7 +1069,8 @@
       "searchFolders": "البحث في المجلدات...",
       "noResults": "لم يتم العثور على مجلدات",
       "newFolder": "مجلد جديد",
-      "showInFileManager": "إظهار في {{manager}}"
+      "showInFileManager": "إظهار في {{manager}}",
+      "openInObsidian": "فتح في Obsidian"
     },
     "actions": {
       "done": "تم",
@@ -2001,15 +2002,26 @@
       "chineseScriptTraditional": "تقليدية (繁體)"
     },
     "noteFiles": {
-      "title": "حفظ الملاحظات كملفات",
-      "description": "حفظ الملاحظات والنصوص المفرَّغة تلقائيًا كملفات على القرص، منظمة في مجلدات",
+      "title": "التصدير إلى Markdown / خزنة Obsidian",
+      "description": "اكتب كل ملاحظة ونص اجتماع كملف Markdown مع بيانات وصفية، منظمة حسب المجلد. اختر مجلدًا داخل خزنة Obsidian.",
       "path": "موقع الحفظ",
       "changePath": "تغيير الموقع",
       "rebuild": "إعادة بناء جميع الملفات",
-      "rebuildDescription": "إعادة مزامنة جميع الملاحظات والنصوص المفرَّغة على القرص",
+      "rebuildDescription": "إعادة كتابة كل ملف ملاحظة ونص، وإعادة تسمية ملفات التصديرات القديمة وفق التسمية الحالية",
       "rebuildError": {
         "title": "فشل إعادة البناء",
         "description": "تعذر إعادة بناء ملفات الملاحظات. تأكد من تفعيل الميزة وأن المجلد قابل للكتابة."
+      },
+      "enable": "تصدير الملاحظات كملفات Markdown",
+      "oneWayNotice": "تصدير في اتجاه واحد: يستبدل OpenWhispr ملفات الملاحظة في المرة التالية التي تتغير فيها، لذلك لا يتم الاحتفاظ بالتعديلات التي تُجرى في الخزنة. لا يتم المساس بأي ملفات أخرى في المجلد.",
+      "meetingsPath": "تُحفظ الاجتماعات في:",
+      "baseTag": "الوسم الأساسي",
+      "baseTagDescription": "يُضاف إلى وسوم كل ملف مُصدَّر، بجانب نوع الملاحظة (مثل openwhispr, meeting)",
+      "exportDictations": "تصدير الإملاءات أيضًا",
+      "exportDictationsDescription": "إلحاق كل إملاء مكتمل بملف يومي في Dictations/YYYY-MM-DD.md",
+      "export": {
+        "notesHeading": "ملاحظات",
+        "transcriptLink": "النص"
       }
     },
     "meeting": {

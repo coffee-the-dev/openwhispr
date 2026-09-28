@@ -860,12 +860,23 @@ declare global {
       noteFilesSetEnabled?: (
         enabled: boolean,
         customPath?: string,
-        options?: { skipRebuild?: boolean }
+        options?: { skipRebuild?: boolean; baseTag?: string; exportDictations?: boolean }
       ) => Promise<{ success: boolean; error?: string }>;
       noteFilesSetPath?: (path: string) => Promise<{ success: boolean; error?: string }>;
       noteFilesRebuild?: () => Promise<{ success: boolean; error?: string }>;
       noteFilesGetDefaultPath?: () => Promise<string>;
       noteFilesPickFolder?: () => Promise<{ canceled: boolean; path?: string }>;
+      noteFilesSetOptions?: (options: {
+        baseTag?: string;
+        exportDictations?: boolean;
+      }) => Promise<{ success: boolean; error?: string }>;
+      noteFilesGetResolvedPaths?: () => Promise<{
+        basePath: string;
+        meetingsPath: string | null;
+        dictationsPath: string | null;
+      } | null>;
+      noteFilesHasNoteFile?: (noteId: number) => Promise<boolean>;
+      noteFilesOpenInObsidian?: (noteId: number) => Promise<{ success: boolean }>;
       granolaImportPickAndPreview?: () => Promise<{
         canceled: boolean;
         success?: boolean;
