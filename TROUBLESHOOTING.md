@@ -100,7 +100,7 @@
    - macOS: `brew install whisper-cpp`
    - Linux: Build from source at https://github.com/ggml-org/whisper.cpp
 4. Clear model cache: `rm -rf ~/.cache/openwhispr/whisper-models`
-5. Try cloud transcription as fallback
+5. Try a Parakeet model, or a self-hosted speech-to-text server, as a fallback
 
 **GPU acceleration (CUDA / Vulkan):** If the GPU-accelerated whisper-server crashes at startup (unsupported GPU, out of VRAM), OpenWhispr automatically restarts it on CPU, retries the same request, and shows a "using CPU instead" notice — the dictation still completes. GPU acceleration can be toggled off from the GPU card in the transcription model picker.
 
@@ -150,7 +150,7 @@ On GNOME and KDE, the first automatic paste can show a remote-interaction permis
 
 1. Grant Screen Recording permission: System Settings → Privacy & Security → Screen Recording → enable OpenWhispr
 2. Restart the app after granting permission
-3. Ensure Google Calendar is connected in Integrations
+3. For calendar-linked notes, connect Apple Calendar in Integrations
 
 **Windows:**
 
@@ -162,7 +162,7 @@ On GNOME and KDE, the first automatic paste can show a remote-interaction permis
 **All Platforms:**
 
 1. Check that meeting detection is enabled in settings
-2. Verify your OpenAI API key is valid (required for Realtime API transcription)
+2. If meetings use a self-hosted server, test the endpoint in Settings → Transcription; the debug log shows dropped batches when the server cannot keep up
 3. Ensure your meeting app (Zoom, Teams, FaceTime) is running — process detection looks for known meeting applications
 4. If auto-detection fails, you can manually start recording from the in-app meeting prompt (an always-on-top overlay card — it works even with Focus/Do Not Disturb on and never appears in screen shares)
 
@@ -173,7 +173,7 @@ On GNOME and KDE, the first automatic paste can show a remote-interaction permis
 **Fix:**
 
 1. Check your chat model under Settings → AI Models → Chat (the panel runs on the chat scope); the Voice Assistant toggle only gates in-place selection edits
-2. Check that you have a valid API key for your selected provider
+2. For a self-hosted model, use **Test connection** on that scope and make sure tool calling is on if you expect notes or web search
 3. Verify the Voice Assistant hotkey doesn't conflict with other global shortcuts
 4. Remember there is no separate assistant window. Press the Voice Assistant hotkey (or use the pill) and speak: highlighted text is edited in place; with auto-paste enabled, an answer pastes at a focused writable cursor. Without a writable cursor—or if the target changes while the answer is generated—OpenWhispr leaves the field untouched, opens the floating panel attached to the dictation pill, and copies the completed answer to the clipboard for manual paste
 5. For local models: ensure the model is downloaded and llama-server is running
@@ -195,9 +195,9 @@ whisper.cpp and FFmpeg may be quarantined silently. Add OpenWhispr to exclusions
 
 Right-click OpenWhispr → Run as administrator (or set permanently in Properties → Compatibility).
 
-**Firewall blocking cloud mode:**
+**Firewall blocking a self-hosted endpoint:**
 
-Allow OpenWhispr through Windows Firewall when using cloud transcription providers.
+Allow OpenWhispr through Windows Firewall to reach your LAN servers. See [docs/network-allowlist.md](docs/network-allowlist.md) for every host the app can contact.
 
 **Firewall prompt for sherpa-onnx (local Parakeet transcription):**
 

@@ -8,7 +8,7 @@ Keep responses focused, brief, and concise. Keep disclaimers and caveats short, 
 
 ## Project Overview
 
-OpenWhispr is an Electron-based desktop dictation application that uses whisper.cpp for speech-to-text transcription. It supports both local (privacy-focused) and cloud (OpenAI API) processing modes.
+OpenWhispr is an Electron-based desktop dictation, meeting-notes and voice-assistant application. This is a **local-only fork**: speech-to-text and AI processing run either on-device (whisper.cpp, NVIDIA Parakeet via sherpa-onnx, llama.cpp) or against servers the user runs on their own LAN (any OpenAI-compatible endpoint, plus SearXNG for web search). There is no OpenWhispr account, cloud API, third-party provider (BYOK), telemetry upload, auto-updater, or Google/Microsoft calendar integration; nothing contacts a host the user did not configure except model/binary downloads they start (see `docs/network-allowlist.md`).
 
 ## Architecture Overview
 
@@ -18,7 +18,8 @@ OpenWhispr is an Electron-based desktop dictation application that uses whisper.
 - **Desktop Framework**: Electron 41 with context isolation
 - **Database**: better-sqlite3 for local transcription history
 - **UI Components**: shadcn/ui with Radix primitives
-- **Speech Processing**: whisper.cpp + NVIDIA Parakeet (via sherpa-onnx) + OpenAI API
+- **Speech Processing**: whisper.cpp + NVIDIA Parakeet (via sherpa-onnx) on-device, or a self-hosted OpenAI-compatible `/audio/transcriptions` server
+- **AI Processing**: llama.cpp (`llama-server`) on-device, or a self-hosted OpenAI-compatible `/chat/completions` server, via the Vercel AI SDK (`ai` + `@ai-sdk/openai`)
 - **Audio Processing**: FFmpeg (bundled via ffmpeg-static)
 - **Node.js**: 24 (pinned in `.nvmrc` — CI uses Node 24, do NOT regenerate `package-lock.json` with a different major version)
 
@@ -71,7 +72,7 @@ OpenWhispr is an Electron-based desktop dictation application that uses whisper.
   - Never derive that state from the window's `show`/`hide` events: on macOS those are occlusion events, so they also fire when the panel is merely covered by another window, minimized, or on another Space, and the icon flickers as the user switches windows
   - Decision logic lives in `dockPolicy.js` (pure, unit-tested in `test/helpers/dockPolicy.test.js`)
 - **dragManager.js**: Window dragging functionality
-- **environment.js**: Environment variable and OpenAI API management
+- **environment.js**: Environment variables, `.env` persistence, and the encrypted self-hosted API-key store (see Settings Storage)
 - **hotkeyManager.js**: Global hotkey registration and management
   - Named hotkey slots: `dictation`, `voiceAgent` (voice assistant — dictation routed to the assistant panel), `translation`, `meeting`
   - Handles platform-specific defaults (GLOBE on macOS, Control+Super on Windows/Linux)
@@ -109,7 +110,7 @@ OpenWhispr is an Electron-based desktop dictation application that uses whisper.
   - `HIDDEN_LAUNCH_FLAG` (`--hidden`) is how a login launch tells the app to start in the tray. Windows has no native equivalent (`openAsHidden` is macOS-only and a no-op on macOS 13+), so the flag rides on the login item's `args`; Linux puts it on the autostart entry's `Exec`; macOS uses `wasOpenedAtLogin` instead
   - On Windows, read the state from `executableWillLaunchAtLogin`, never from `openAtLogin`: `openAtLogin` only compares the `Run` value against the current executable and args and ignores the `StartupApproved` key that Task Manager and Settings write when a user disables a startup app
   - Reads and writes must pass identical `args`, or `openAtLogin` always reports false
-  - `getRelaunchOptions()` and `getRelaunchWaiter()` shape the `relaunch-app` IPC that follows `cleanup-app` (Reset app data; Delete account with device erase): the relaunch drops `--hidden` and any cold-start deep link, and an AppImage is started again from its on-disk file (`$APPIMAGE`) by a detached waiter, since it runs from a FUSE mount that disappears when the app exits. The handler in `ipcHandlers.js` only quits under `npm run dev` and, on macOS with an update Squirrel already holds, hands the restart to the updater
+  - `getRelaunchOptions()` and `getRelaunchWaiter()` shape the `relaunch-app` IPC that follows `cleanup-app` (Reset app data): the relaunch drops `--hidden` and any cold-start deep link, and an AppImage is started again from its on-disk file (`$APPIMAGE`) by a detached waiter, since it runs from a FUSE mount that disappears when the app exits. The handler in `ipcHandlers.js` only quits under `npm run dev`
 - **linuxAutostart.js**: Launch-at-login on Linux via an XDG autostart entry
   - `app.setLoginItemSettings()` is a no-op on Linux, so the entry is written directly to `$XDG_CONFIG_HOME/autostart/open-whispr.desktop`, matching the executable name electron-builder packages under
   - `Exec` resolves from `$APPIMAGE` first: `process.execPath` is the ephemeral AppImage FUSE mount
@@ -139,21 +140,10 @@ OpenWhispr is an Electron-based desktop dictation application that uses whisper.
   - Windows/Linux: Graceful fallback to polling if the native approach fails; macOS has no safe polling signal and respawns the listener with backoff instead
 - **processListCache.js**: Shared singleton process list cache (5s TTL, `ps-list` npm)
 - **meetingEchoLeakDetector.js**: Audio-layer echo analysis for meeting recordings — correlates each mic chunk against the recent system-audio tap (lag search 0–500 ms in 5 ms steps) and classifies it `clean_local` / `suspected_render_bleed` / `double_talk`; drives chunk muting and per-segment suppression flags. PCM-driven tests in `test/helpers/meetingEchoLeakDetector.test.js`
-- **meetingMicGate.js**: Pure RMS/peak chunk stats + the meeting mic gate verdict (`send` / `zero` for streaming, `send` / `skip` for local) with the exported silence and bleed thresholds; `ipcHandlers.js` (`dispatchMeetingAudioBuffer`, `transcribeLocalMeetingChunk`) only applies the verdict. Unit-tested in `test/helpers/meetingMicGate.test.js`
+- **meetingMicGate.js**: Pure RMS/peak chunk stats + the meeting mic gate verdict (`send` / `zero` / `skip`) with the exported silence and bleed thresholds; `ipcHandlers.js` (`dispatchMeetingAudioBuffer`, `transcribeLocalMeetingChunk`) only applies the verdict. Unit-tested in `test/helpers/meetingMicGate.test.js`
 - **meetingMicHoldback.js**: Pure holdback/retract policy for risky mic finals — pending-final partition, retract window, risky-profile classifier, text-layer duplicate check, racing-retract candidate selection, pending-overlap partition. `ipcHandlers.js` keeps thin adapters over its closure state (`meetingDiarizationSegments`, `meetingPendingMicFinals`, `hasNearbyTranscriptMatch`). Unit-tested in `test/helpers/meetingMicHoldback.test.js`
-- **googleCalendarManager.js**: Google Calendar sync (REST, OAuth via `googleCalendarOAuth.js`)
-  - 10s socket timeout on API requests
-  - Incremental sync via `syncToken`; full re-sync on 410 prunes stale events (note-linked rows retained)
-  - Sync tokens pin the `timeMin`/`timeMax` window of the full sync that created them (incremental syncs never roll it forward), so tokens are discarded after 1 day to keep the 33-day lookahead covering the availability tool's 31-day horizon
-- **microsoftCalendarManager.js**: Microsoft Calendar sync via Graph API (OAuth via `microsoftCalendarOAuth.js`)
-  - `calendarView/delta` incremental sync over a 38-day window; delta token discarded after 7 days (Graph delta links never roll their window forward)
-  - Delta can return recurring-series occurrences as bare stubs (no subject/attendees/meeting link); they're backfilled from their series master, one `GET /me/calendars/{calendarId}/events/{id}` per series (calendar-scoped: `/me/events/{id}` 404s for shared calendars). A failed backfill shortens the delta token TTL to 10 min so an early full sync retries instead of leaving untitled blocks
-  - Full re-sync (410 or expired token) prunes stale events like Google
-- **appleCalendarManager.js**: Apple Calendar (EventKit) via the `macos-calendar-listener` Swift helper — macOS only, snapshot-push over stdout, no tokens ("connected" = `apple_calendars` has rows)
-- **calendarReminderScheduler.js**: Provider-agnostic meeting reminder scheduling over the shared `calendar_events` table (provider-scoped reset keys, so one provider's disconnect doesn't re-fire another's reminders)
-- **calendarSyncInterval.js**: Shared interval runner for the REST providers — exponential backoff (2min → 4min → 8min → cap 30min on consecutive failures, reset on success) and 30s focus-sync throttle
-- **oauthLoopbackFlow.js**: Shared PKCE auth-code flow over an ephemeral 127.0.0.1 server, used by both calendar OAuth helpers
-- Events from all providers land in the shared `calendar_events` table with a `provider` column; queries suppress the Apple copy of a meeting when a REST row occupies the same time slot + title (Calendar.app mirrors the same accounts)
+- **appleCalendarManager.js**: Apple Calendar (EventKit) via the `macos-calendar-listener` Swift helper — macOS only, snapshot-push over stdout, no tokens ("connected" = `apple_calendars` has rows). The only calendar source: Calendar.app already aggregates iCloud, Google, Exchange and Outlook accounts, so no calendar OAuth or network sync exists
+- **calendarReminderScheduler.js**: Meeting reminder scheduling over the `calendar_events` table
 - **menuManager.js**: Application menu management
 - **tray.js**: System tray icon and menu
 - **whisper.js**: Local whisper.cpp integration and model management
@@ -165,14 +155,21 @@ OpenWhispr is an Electron-based desktop dictation application that uses whisper.
 - **vectorIndex.js**: Qdrant collection management — upsert, delete, search
 - **windowConfig.js**: Centralized window configuration
 - **windowManager.js**: Window creation and lifecycle management
-- **cliBridge.js**: Loopback HTTP server on ports 8200–8219, bearer-token auth (token at `~/.openwhispr/cli-bridge.json`), 127.0.0.1-only. Used by the unified CLI to talk to a running desktop app. `POST /v1/transcribe` takes a file **path** (never audio) and runs the user's downloaded local model through `IPCHandlers.transcribeLocalFile`, approving the path with `approveAudioPath` first; `GET /v1/transcribe/models` lists local models with download state and the app's default (`localTranscriptionModels.js`, read from the `.env` pre-warm values).
+- **selfHostedTranscription.js**: Resolves whether dictation runs on the user's OpenAI-compatible speech-to-text server (`transcriptionMode` + `remoteTranscriptionUrl`) and which model to name; `transcriptionRoute.ts` is the routing source of truth for dictation, retry and upload
+- **selfHostedFileTranscription.js**: Upload transcription against the same kind of server. Asks for `verbose_json` segments first (so local diarization can place speakers), falls back to plain `json` for servers that reject it and remembers that per session; files over the upload cap are split with FFmpeg and stitched by offset
+- **selfHostedMeetingTranscriber.js**: Meeting transcription over a self-hosted server — the chunk queue described in section 18
+- **providerConnectionTest.js**: Settings/onboarding "Test connection" for self-hosted endpoints (`/models` probe with candidate base URLs); returns an `errorCode` translated via `onboarding.rehaul.provider.errors.*`. Mirrors the renderer's URL rules, including "plain HTTP only on private hosts"
+- **toolCallingPolicy.js**: Whether chat / voice-assistant requests carry tool schemas (`auto` | `on` | `off` per scope; `on` by default for self-hosted, `auto` on-device, sized by the model id)
+- **searxngSearch.js**: The assistant's `web_search` tool, backed by the user's SearXNG instance (section 20)
+- **markdownMirror.js / noteFilesSync.js / noteExportFormat.js**: One-way Obsidian-friendly Markdown export of notes, transcripts and dictations (section 19)
+- **cliBridge.js**: Loopback HTTP server on ports 8200–8219, bearer-token auth (token at `~/.openwhispr/cli-bridge.json`), 127.0.0.1-only. Used by the CLI to talk to a running desktop app. `POST /v1/transcribe` takes a file **path** (never audio) and runs the user's downloaded local model through `IPCHandlers.transcribeLocalFile`, approving the path with `approveAudioPath` first; `GET /v1/transcribe/models` lists local models with download state and the app's default (`localTranscriptionModels.js`, read from the `.env` pre-warm values).
 - **postMigrationDetector.js**: Detects users returning from the pre-Gizmo bundle ID via a `.bundle-migrated` sentinel in userData; consumed by `ipcHandlers.js` to drive the `PostMigrationOnboarding` modal
 
 ### React Components (src/components/)
 
 - **App.jsx**: Main dictation interface with recording states
 - **ControlPanel.tsx**: Settings, history, model management UI
-- **OnboardingFlow.tsx**: First-time setup wizard over a versioned, route-based step machine (`src/components/onboarding/flow.ts`; session persisted in `onboardingSessionV2`). Routes vary by auth path (account vs guest), policy (agent allowed), and setup mode (cloud / BYOK / local / enterprise); step components live in `src/components/onboarding/`
+- **OnboardingFlow.tsx**: First-time setup wizard over a versioned, route-based step machine (`src/components/onboarding/flow.ts`; session persisted in `onboardingSessionV2`, `ONBOARDING_FLOW_VERSION` bumped whenever the route changes shape). No sign-in: permissions → languages → use cases → dictation hotkey → setup choice, then either the **local** pair (download on-device dictation and assistant models) or the **self-hosted** pair (endpoint URL, optional key, connection test, model pick), then the practice steps (dictation demo, notes, assistant hotkey, assistant demo). Step components live in `src/components/onboarding/`
 - **PostMigrationOnboarding.tsx**: One-time modal for users returning from the pre-Gizmo bundle ID; reuses `PermissionsSection` to walk through re-granting Microphone, Accessibility, and System Audio. Triggered by `postMigrationDetector.js` (see Helper Modules)
 - **SettingsPage.tsx**: Comprehensive settings interface
 - **WhisperModelPicker.tsx**: Model selection and download UI
@@ -205,9 +202,9 @@ OpenWhispr is an Electron-based desktop dictation application that uses whisper.
 
 - **ReasoningService.ts**: AI processing for agent-addressed commands
   - Detects when user addresses their named agent and removes the agent name from final output
-  - Provider implementations live in a registry at `src/services/ai/inferenceProviders/index.ts` covering 8 providers (`anthropic`, `enterprise`, `gemini`, `groq`, `lan`, `local`, `openai`, `openwhispr`), each implementing the `InferenceProvider` interface from `types.ts`
-  - Per-scope LLM config: 4 scopes (`dictationCleanup`, `dictationAgent`, `noteFormatting`, `chatIntelligence`) defined in `src/config/inferenceScopes.ts`
-  - `selectResolvedLLMConfig(state, scope)` in `settingsStore.ts` resolves provider/model per scope with fallback chains
+  - Provider implementations live in a registry at `src/services/ai/inferenceProviders/index.ts` with exactly two providers, each implementing the `InferenceProvider` interface from `types.ts`: `local` (llama.cpp via `localReasoningBridge.js`) and `lan` (the user's OpenAI-compatible server, `/chat/completions` with SSE streaming)
+  - Per-scope LLM config: 5 scopes (`dictationCleanup`, `dictationAgent`, `noteFormatting`, `chatIntelligence`, `dictationTranslation`) defined in `src/config/inferenceScopes.ts`. Each scope has a mode (`local` | `self-hosted`), model, `*RemoteUrl`, optional key, thinking toggle, and — for the chat/assistant scopes — tool-calling and "accepts images" settings
+  - `selectResolvedLLMConfig(state, scope)` in `settingsStore.ts` resolves provider/model per scope with fallback chains (`noteFormatting` falls back to `dictationCleanup`)
 
 ### whisper.cpp Integration
 
@@ -262,7 +259,7 @@ Offline semantic search that finds notes by meaning, not just keywords. Used by 
 3. Agent searches → `db-semantic-search-notes` IPC → parallel FTS5 + vector search → RRF merge → ranked results
 4. 5 minutes without a search or write → Qdrant is stopped and the embedding session released; FTS5 keeps serving
 
-**Search fallback chain** (in `searchNotesTool.ts`): cloud search → local semantic → FTS5 keyword
+**Search fallback chain** (in `searchNotesTool.ts`): local semantic → FTS5 keyword
 
 **Storage**:
 
@@ -319,7 +316,7 @@ FFmpeg is bundled with the app and doesn't require system installation:
 7. whisper.cpp processes file → Result sent back
 8. Temporary file deleted
 
-For offline local engines (whisper.cpp, Parakeet/Orukeet, Cohere) the renderer also keeps a 16 kHz mono PCM copy of the same stream from the moment the mic opens (`pcmTap.js`, pre-roll included, capped at 4 minutes) and sends that WAV instead of the WebM, so no FFmpeg decode runs after stop; the WebM still goes to history and remains the fallback for cloud providers and long recordings.
+For offline local engines (whisper.cpp, Parakeet/Orukeet, Cohere) the renderer also keeps a 16 kHz mono PCM copy of the same stream from the moment the mic opens (`pcmTap.js`, pre-roll included, capped at 4 minutes) and sends that WAV instead of the WebM, so no FFmpeg decode runs after stop; the WebM still goes to history and remains the upload for self-hosted servers and long recordings.
 
 ### 3. Local Whisper Models (GGML format)
 
@@ -349,19 +346,19 @@ CREATE TABLE transcriptions (
 
 ### 5. Settings Storage
 
-Settings stored in localStorage with these keys:
+Settings live in a zustand store (`src/stores/settingsStore.ts`) persisted to localStorage. Notable keys:
 
-- `whisperModel`: Selected Whisper model
-- `useLocalWhisper`: Boolean for local vs cloud
-- `language`: Selected language code
-- `agentName`: User's custom agent name
-- `reasoningModel`: Selected AI model for processing
-- `reasoningProvider`: AI provider (openai/anthropic/gemini/local)
-- `hotkey`: Custom hotkey configuration
-- `hasCompletedOnboarding`: Onboarding completion flag
+- `transcriptionMode` / `meetingTranscriptionMode` / `uploadTranscriptionMode`: `local` | `self-hosted` for dictation, meetings and uploads
+- `remoteTranscriptionUrl`, `meetingRemoteTranscriptionUrl`, `uploadRemoteTranscriptionUrl` (+ matching `*Model`): self-hosted speech-to-text endpoints
+- `whisperModel`, `useLocalWhisper`: on-device Whisper selection
+- `cleanupMode` / `cleanupRemoteUrl` / `cleanupModel`, and the same trio for `dictationAgent*`, `noteFormatting*`, `chatAgent*`, `translation*`: per-scope inference (see `inferenceScopes.ts`)
+- `dictationAgentToolCalling` / `chatAgentToolCalling`, `dictationAgentAcceptsImages` / `chatAgentAcceptsImages`: self-hosted capabilities the server cannot advertise
+- `webSearchEnabled`, `webSearchUrl`: SearXNG web search
+- `noteFilesEnabled`, `noteFilesPath`, `noteFilesBaseTag`, `noteFilesExportDictations`: Obsidian export
 - `customDictionary`: JSON array of words/phrases for improved transcription accuracy
+- `voiceAgentScreenContext`, `voiceAgentKey`: voice assistant options
 
-Secret env vars (12 total: 7 BYOK API keys + 5 enterprise cloud creds — see `SECRET_KEYS` in `environment.js`) are encrypted at rest via Electron `safeStorage` and stored as per-key files under `userData/secure-keys/`. They are loaded into `process.env` at startup by `EnvironmentManager.init()`. Renderer reads them via IPC (`get-*-key`) and writes via debounced IPC (`save-*-key`). On Linux without a keyring, secrets fall back to plaintext.
+Secrets are only the optional bearer keys for self-hosted servers — 6 in total: `CUSTOM_TRANSCRIPTION_API_KEY`, `CUSTOM_CLEANUP_API_KEY`, and the per-scope keys in `src/config/secretKeys.js` (`SCOPE_API_KEYS`; `preload.js` mirrors them in `SCOPE_KEY_BRIDGES`). They are AES-256-GCM encrypted per key under `userData/secure-keys/` with a master key held in the OS keychain via `@napi-rs/keyring` (`secretCrypto.js`; Electron `safeStorage` is the fallback), loaded into `process.env` at startup by `EnvironmentManager.init()`. Renderer reads them via IPC (`get-*-key`) and writes via debounced IPC (`save-*-key`). Keys for providers this fork removed (`RETIRED_SECRET_KEYS`) are deleted at startup.
 
 Non-secret env vars persisted to `.env` (via `saveAllKeysToEnvFile()`):
 
@@ -374,7 +371,8 @@ Non-secret env vars persisted to `.env` (via `saveAllKeysToEnvFile()`):
 `src/utils/languageSupport.ts`:
 
 - Each entry has a two-letter code, label, flag, and per-engine support flags
-  (`whisper`, `parakeet`, `assemblyai`) — 59 Whisper, 26 Parakeet, 7 AssemblyAI
+  (`whisper`, `parakeet`) — 59 Whisper, 26 Parakeet. The registry still carries an
+  unused `assemblyai` flag from upstream
 - "auto" is a 61st entry for automatic detection
 - Passed to whisper.cpp via -l parameter
 
@@ -384,60 +382,29 @@ Non-secret env vars persisted to `.env` (via `saveAllKeysToEnvFile()`):
 - Name stored in localStorage and database
 - ReasoningService detects "Hey [AgentName]" patterns
 - Standalone wake-word commands stream into the assistant panel (the address is stripped first, `stripAgentAddress`); a highlighted selection is edited in place by the dictation agent
-- Supports multiple AI providers (all models defined in `src/models/modelRegistryData.json`):
-  - **OpenAI** (Responses API):
-    - GPT-6 Astra (`gpt-6-astra`) - Most capable OpenAI model for coding, computer use, and research, 1M context
-    - GPT-5.6 Series (`gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna`) - Flagship, balanced, and fastest tiers
-    - GPT-5.5 (`gpt-5.5`) - Frontier model for complex reasoning, 1M context
-    - GPT-5.2 (`gpt-5.2`) - Strong reasoning model
-    - GPT-5 Mini (`gpt-5-mini`) - Fast and cost-efficient
-    - GPT-5 Nano (`gpt-5-nano`) - Ultra-fast, low latency
-    - GPT-4.1 Series (`gpt-4.1`, `gpt-4.1-mini`, `gpt-4.1-nano`) - Strong baseline with 1M context
-    - GPT-5 and newer reject `temperature`, so their registry entries carry `supportsTemperature: false`
-  - **Anthropic** (Via IPC bridge to avoid CORS):
-    - Claude Fable 5.1 (`claude-fable-5-1`) - Most capable Claude model, Mythos-class, 1M context
-    - Claude Fable 5 (`claude-fable-5`) - Previous Mythos-class flagship, 1M context
-    - Claude Sonnet 5 (`claude-sonnet-5`) - Fast, capable agentic model at lower cost
-    - Claude Sonnet 4.6 (`claude-sonnet-4-6`) - Balanced performance
-    - Claude Haiku 4.5 (`claude-haiku-4-5`) - Fast with near-frontier intelligence
-    - Claude Opus 5 (`claude-opus-5`) - Most capable Opus model, 1M context
-    - Claude Opus 4.8 (`claude-opus-4-8`) - Powerful Opus model tuned for honesty and reliability, 1M context
-    - Claude Opus 4.7 (`claude-opus-4-7`) - Powerful Opus model, 1M context
-    - Claude Opus 4.6 (`claude-opus-4-6`) - Previous Opus generation, 1M context
-    - Claude Sonnet 4.5 (`claude-sonnet-4-5`) - Previous Sonnet generation
-    - Claude Opus 4.5 (`claude-opus-4-5`) - Earlier Opus model
-    - Models from Opus 4.7 onward reject `temperature` (`supportsTemperature: false`); the Anthropic IPC bridge sends no thinking parameters, so no Anthropic entry carries `supportsThinking`
-  - **Google Gemini** (Direct API integration):
-    - Gemini 3.5 Flash (`gemini-3.5-flash`) - Latest fast, high-capability Gemini model
-    - Gemini 3.5 Flash Lite (`gemini-3.5-flash-lite`) - Fastest, most cost-effective 3.5 model
-    - Gemini 3.1 Pro (`gemini-3.1-pro-preview`) - Most capable Gemini model
-    - Gemini 3.1 Flash Lite (`gemini-3.1-flash-lite`) - Frontier-class performance at low cost (no thinking support, so no `supportsThinking` flag)
-    - Gemini 3 Flash (`gemini-3-flash-preview`) - Ultra-fast, high-capability next-gen model
-    - Gemini 2.5 Flash Lite (`gemini-2.5-flash-lite`) - Lowest latency and cost (retired for new API keys; kept for existing ones)
-    - Gemma 4 (`gemma-4-31b-it`, `gemma-4-26b-a4b-it`) - Google's open Gemma 4 models served through the Gemini API
-  - **Local**: GGUF models via llama.cpp (Qwen, Llama, Mistral, GPT-OSS)
+- Runs on either inference provider:
+  - **Local**: GGUF models via llama.cpp (Qwen, Gemma, Llama, Mistral, GPT-OSS, LiquidAI), defined in `src/models/modelRegistryData.json`
+  - **Self-hosted (`lan`)**: any model the user's OpenAI-compatible server lists at `/models` (vLLM, llama.cpp server, Ollama, LocalAI, …)
 
 ### 8. Model Registry Architecture
 
-All desktop AI model definitions are centralized in `src/models/modelRegistryData.json` as the single source of truth. The mobile app keeps its own hand-updated copies (see below):
+All on-device model definitions are centralized in `src/models/modelRegistryData.json` as the single source of truth. Self-hosted models are not in the registry; they are listed live from the server's `/models`.
 
 ```json
 {
-  "cloudProviders": [...],   // OpenAI, Anthropic, Gemini API models
-  "localProviders": [...]    // GGUF models with download URLs
+  "whisperModels": {...},     // whisper.cpp GGML models
+  "parakeetModels": {...},    // sherpa-onnx models (Parakeet, Nemotron, Cohere, Orukeet)
+  "diarizationModels": {...}, // speaker segmentation + embedding models
+  "localProviders": [...]     // GGUF models with download URLs
 }
 ```
 
 **Key files:**
 
-- `src/models/modelRegistryData.json` - Single source of truth for all desktop models
-- `openwhispr-mobile/src/config/providerCatalog.json` - Mobile's trimmed copy of the OpenAI and Groq entries. It, mobile's endpoint rules and its agent prompt (`openwhispr-mobile/src/config/prompts/defaultPrompts.json`) are copies, not shared code, so update them by hand when desktop's change (the catalog is covered in `openwhispr-mobile/CONTRIBUTING.md`)
-- `src/models/ModelRegistry.ts` - TypeScript wrapper with helper methods; also derives
-  `REASONING_PROVIDERS` (`buildReasoningProviders()`), consumed by the model pickers
-- `src/models/providerDefaultModel.ts` - `pickProviderDefaultModel()`; with no
-  `defaultModel` on the provider, the first model in the array is the default
-- `src/config/retiredCloudModels.ts` - Remaps selections pinned to a retired model
+- `src/models/modelRegistryData.json` - Single source of truth for all on-device models
+- `src/models/ModelRegistry.ts` - TypeScript wrapper with helper methods
 - `src/helpers/modelManagerBridge.js` - Handles local model downloads
+- `src/services/ai/selfHostedDefaultModel.ts` - Picks a default from a self-hosted server's `/models` list when the scope has no model yet
 
 **Local model features:**
 
@@ -445,35 +412,15 @@ All desktop AI model definitions are centralized in `src/models/modelRegistryDat
 - Chat formatting comes from the GGUF's embedded template (llama-server runs with `--jinja`); the registry carries no prompt templates
 - Download URLs constructed as: `{baseUrl}/{hfRepo}/resolve/main/{fileName}`
 
-### 9. API Integrations and Updates
+### 9. Self-Hosted (LAN) Endpoints
 
-**OpenAI Responses API (September 2025)**:
+Every self-hosted setting takes an OpenAI-compatible base URL, e.g. `https://whisper.lan/v1` for speech-to-text or `https://llm.lan/v1` for chat, and an optional bearer key. Typical servers: vLLM (chat or ASR models such as Qwen3-ASR, often exposed under the `whisper-1` alias), faster-whisper-server / whisper.cpp server, llama.cpp server, Ollama, LocalAI.
 
-- Migrated from Chat Completions to new Responses API
-- Endpoint: `https://api.openai.com/v1/responses`
-- Simplified request format with `input` array instead of `messages`
-- New response format with `output` array containing typed items
-- Automatic handling of GPT-5 and o-series model requirements
-- No temperature parameter for newer models (GPT-5, o-series)
-
-**Anthropic Integration**:
-
-- Routes through IPC handler to avoid CORS issues in renderer process
-- Uses main process for API calls with proper error handling
-- Model IDs use alias format (e.g., `claude-sonnet-4-6` not date-suffixed versions)
-
-**Gemini Integration**:
-
-- Direct API calls from renderer process
-- Increased token limits for Gemini 3.1 Pro (2000 minimum)
-- Proper handling of thinking process in responses
-- Error handling for MAX_TOKENS finish reason
-
-**API Key Persistence**:
-
-- All API keys now properly persist to `.env` file
-- Keys stored in environment variables and reloaded on app start
-- Centralized `saveAllKeysToEnvFile()` method ensures consistency
+- **Transcription**: `POST {base}/audio/transcriptions` (multipart, `model`, optional `language`/`prompt`). Dictation, meetings and uploads each have their own URL + model so they can point at different servers. Uploaded files over 25 MiB are split before sending
+- **Inference**: `POST {base}/chat/completions` with SSE streaming; `GET {base}/models` populates the model picker. Thinking-suppression flags are sent only when the scope's toggle is on; tool schemas follow `toolCallingPolicy.js`; screenshots are attached only when the scope's "accepts images" toggle is on
+- **URL rules**: a scheme-less URL is read as `https://`; plain `http://` is accepted only for private hosts (loopback, RFC 1918 / CGNAT / link-local IP literals, `*.local`, `*.ts.net`) — `isSecureHttpEndpoint` in `src/utils/urlUtils.ts`, mirrored in `providerConnectionTest.js`. Any other hostname (including a LAN name like `llm.lan`) needs HTTPS with a certificate the OS trusts
+- **Test connection**: every endpoint field has a test button backed by `providerConnectionTest.js`
+- A local mic → self-hosted server path never needs streaming support: dictation records then uploads; meetings use the chunk queue in section 18
 
 ### 10. System Settings Integration
 
@@ -552,7 +499,7 @@ Improve transcription accuracy for specific words, names, or technical terms:
 - User adds words/phrases through Settings → Custom Dictionary
 - Words stored as JSON array in localStorage (`customDictionary` key)
 - On transcription, words are joined and passed as `prompt` parameter to Whisper
-- Works with both local whisper.cpp and cloud OpenAI Whisper API
+- Works with local whisper.cpp and with self-hosted OpenAI-compatible servers (sent as the `prompt` form field)
 
 **Implementation**:
 
@@ -638,7 +585,7 @@ Detects meetings via three independent sources, orchestrated by `MeetingDetectio
 **Architecture**:
 
 - `MeetingDetectionEngine` listens to events from `MeetingProcessDetector` and `AudioActivityDetector`
-- `CalendarReminderScheduler` provides calendar context (imminent events, active meetings) from the shared `calendar_events` table, fed by the Google/Microsoft/Apple calendar managers
+- `CalendarReminderScheduler` provides calendar context (imminent events, active meetings) from the `calendar_events` table, fed by the Apple Calendar manager (macOS)
 - All three sources feed into a unified notification pipeline
 
 **Process Detection** (known meeting apps — Zoom, Teams, Webex, FaceTime):
@@ -676,12 +623,6 @@ Detects meetings via three independent sources, orchestrated by `MeetingDetectio
 - Windows: Prebuilt binary downloaded via `scripts/download-windows-mic-listener.js` during `prebuild:win`
 - CI workflow: `.github/workflows/build-windows-mic-listener.yml` auto-builds on push to main
 
-**Calendar Sync Resilience**:
-
-- 10s socket timeout on all Google Calendar API requests
-- Exponential backoff on consecutive failures: 2min → 4min → 8min → cap 30min
-- Reset to normal 2min interval on any successful sync
-
 ### 17. Voice Assistant Hotkey
 
 A dedicated global hotkey that starts a dictation whose transcript is sent straight to the voice assistant as a command — no wake word ("Hey [AgentName]") needed — and that always bypasses the cleanup model. With auto-paste enabled, a caret verified as writable at capture time (an opaque `caret` session in `selectionManager.js`, revalidated before pasting) receives the completed answer and the pill returns to idle. A dormant macOS accessibility tree reports "unknown": synthetic copy can still recover selected text, but cannot establish a safe caret destination. Unknown targets therefore stay on the panel route, since they can also be integrated terminals, pages without inputs, or fields with selections hidden by clipboard capture. A verified caret whose accessibility becomes unknown before delivery falls back the same way. Terminal and secure-field checks still apply to verified targets. Otherwise the answer streams into a floating assistant panel attached to the dictation pill (there is no separate assistant window) and, with auto-paste enabled, is also copied to the clipboard for manual paste (the Copy button confirms for six seconds). The pill window is content-protected while the panel is open (the panel never appears in screen shares).
@@ -691,7 +632,7 @@ A dedicated global hotkey that starts a dictation whose transcript is sent strai
 1. Hotkey pressed → `voiceAgent` slot callback in `main.js` → `windowManager.sendToggleVoiceAgent()` → `toggle-voice-agent` IPC to the main window → recording capsule appears
 2. `useAudioRecording.js` starts a recording with `audioManager.setVoiceAgentRequested(true)` (any other start resets it to `false`)
 3. On transcription, `resolveReasoningRoute` consults `resolveDictationRouteKind()` (`src/helpers/dictationRouting.js`): a voice assistant recording always takes the agent route and never falls back to cleanup. The dictation agent's reachability only gates selection edits — a selection with the dictation agent unconfigured routes to the panel with the selected text quoted instead of editing in place
-4. Standalone commands (no text selected) run through the chat pipeline (`src/components/dictation/AssistantPanel.tsx`): chat tools (notes search/create/update, calendar, web search, clipboard, `get_snippet` — triggers listed in the tool description, body fetched on demand — and `update_dictionary` / `update_snippets`, which write through the settings store so the change syncs like a UI edit), RAG memory, and the custom dictionary plus snippet triggers injected into the system prompt. Conversations persist in the `agent_conversations` table and are browsable from the ControlPanel chat
+4. Standalone commands (no text selected) run through the chat pipeline (`src/components/dictation/AssistantPanel.tsx`): chat tools (notes search/create/update, calendar, web search via SearXNG when configured, clipboard, `get_snippet` — triggers listed in the tool description, body fetched on demand — and `update_dictionary` / `update_snippets`, which write through the settings store so the change syncs like a UI edit), RAG memory, and the custom dictionary plus snippet triggers injected into the system prompt. Conversations persist in the `agent_conversations` table and are browsable from the ControlPanel chat
 5. Response delivery: a capture with `status: "editable"` (a focused writable non-terminal field with no selection) plus auto-paste banks a `deliverySessionId`; the completed answer is pasted via `paste-at-captured-target`, which revalidates the target and fails closed to the panel + clipboard on any change (`assistantResponseDelivery.ts`, `pasteAtCapturedTarget` in `selectionManager.js`). A follow-up spoken while the panel is already open stays panel-first. Cancelled or empty responses never paste and never touch the clipboard
 6. Selection edits are unchanged: highlighted text goes through the `dictationAgent` scope and is safely replaced in place — it never opens the panel
 
@@ -709,17 +650,17 @@ A dedicated global hotkey that starts a dictation whose transcript is sent strai
 **UI**:
 
 - Settings → Hotkeys → "Voice Assistant Hotkey" (with cross-slot conflict validation)
-- Onboarding: optional pair of steps (hotkey, then demo) after the Notes step, so the demo can suggest meeting times from a calendar connected there. The demo card is a mail thread; the reply is answered headlessly in the dictation window by `useOnboardingAssistantDemo` (the panel's streaming pipeline, tools and screenshot included) and streamed back over `onboarding-demo-event` as `processing` (transcript) → `replying` (partial reply, `tool` while one runs) → `success`
-- Panel conversations and in-place selection edits both run on the Voice Assistant scope (Settings → AI Models → Voice Assistant; `dictationAgent`/`dictationAgentVision`), resolved by `resolveChatStreamingInference`; the panel falls back to the `chatIntelligence` scope while the Voice Assistant scope is unreachable. Typed chat (Control Panel, note and container chat) stays on `chatIntelligence`
+- Onboarding: optional pair of steps (hotkey, then demo) after the Notes step, so the demo can suggest meeting times from Apple Calendar if it was connected there. The demo card is a mail thread; the reply is answered headlessly in the dictation window by `useOnboardingAssistantDemo` (the panel's streaming pipeline, tools and screenshot included) and streamed back over `onboarding-demo-event` as `processing` (transcript) → `replying` (partial reply, `tool` while one runs) → `success`
+- Panel conversations and in-place selection edits both run on the Voice Assistant scope (Settings → AI Models → Voice Assistant; `dictationAgent`), resolved by `resolveChatStreamingInference`; the panel falls back to the `chatIntelligence` scope while the Voice Assistant scope is unreachable. Typed chat (Control Panel, note and container chat) stays on `chatIntelligence`
 
 **Screen Context (opt-in)**:
 
 When "Share screen context" is enabled (Settings → AI Models → Voice Assistant → Screen Context, store key `voiceAgentScreenContext`, default off), each voice-assistant recording start captures the display the cursor is on and attaches it to the request as a base64 JPEG (long edge ≤ 1568 px).
 
 - Capture: `src/helpers/screenContextCapture.js` (main process; `screen.getCursorScreenPoint` + `desktopCapturer`). macOS requires the Screen Recording TCC permission (`useScreenRecordingPermission` hook + `PermissionCard` in `DictationAgentSettings`); Windows/Linux X11 need no permission; Linux Wayland is unsupported (capture silently skipped)
-- Encoding: `encodeWithinBudget()` walks a JPEG quality ladder (82 → 70 → 55), then falls back to a 1024 px resize, keeping the payload under `MAX_ENCODED_BYTES` (1.5 MB ≈ 2.05M base64 chars, inside the API's 2.8M cap). Each rung re-encodes the original bitmap, so quality drops never compound. A screen that still won't fit is dropped
+- Encoding: `encodeWithinBudget()` walks a JPEG quality ladder (82 → 70 → 55), then falls back to a 1024 px resize, keeping the payload under `MAX_ENCODED_BYTES` (1.5 MB ≈ 2.05M base64 chars). Each rung re-encodes the original bitmap, so quality drops never compound. A screen that still won't fit is dropped
 - Trigger: `useAudioRecording.js` calls `audioManager.beginScreenContextCapture()` at recording start (fire-and-forget); `consumeScreenContext()` (3s guard) is awaited when the request is built. The dictation overlay gets `setContentProtection` while the setting is on so the pill never appears in captures
-- Routing: the press-time screenshot is re-decided against the model that will actually answer. On BYOK, it attaches only when the chat model's provider client is image-wired (`supportsImages` on the `InferenceProvider`) and the model has `supportsVision` in `modelRegistryData.json`; on OpenWhispr Cloud, attachment is pending API vision routing for the chat path. Dropping the image never fails the command
+- Routing: the press-time screenshot is re-decided against the model that will actually answer. It attaches only when that scope is self-hosted with "Accepts images" on (`dictationAgentAcceptsImages` / `chatAgentAcceptsImages`, see `scopeAcceptsImages` in `dictationAgentInference.js`) and the provider client is image-wired (`supportsImages` on the `InferenceProvider`). Dropping the image never fails the command
 - Privacy: screenshots live only in renderer memory for one request — never written to disk, stored in history, or logged (loggers emit `hasScreenContext` booleans only)
 - IPC: `capture-screen-context`, `check-screen-recording-access`, `request-screen-recording-access`, `open-screen-recording-settings`, `screen-context-set-enabled`
 
@@ -727,13 +668,35 @@ When "Share screen context" is enabled (Settings → AI Models → Voice Assista
 
 ### 18. Meeting Transcription: Echo, Duplicate, and Segment Pipeline
 
-Live meeting transcription runs two streams (mic + system-audio tap) and must keep the remote party's voice, as heard through the local speakers, out of the mic transcript. The policy lives in pure, unit-tested seams so it can be tuned without touching the IPC plumbing:
+Live meeting transcription runs two sources (mic + system-audio tap) and must keep the remote party's voice, as heard through the local speakers, out of the mic transcript. There is no streaming speech-to-text for meetings: `dispatchMeetingAudioBuffer` accumulates 24 kHz PCM per source and the closure in `ipcHandlers.js` cuts ~5 s batches that go either to the on-device engine (`transcribeLocalMeetingChunk`) or to the self-hosted server (`meetingTranscriptionMode` = `self-hosted`, `meetingRemoteTranscriptionUrl`). The policy lives in pure, unit-tested seams so it can be tuned without touching the IPC plumbing:
 
-- **Audio layer**: `meetingEchoLeakDetector.js` correlates mic chunks against recent system audio; `meetingMicGate.js` turns chunk RMS/peak (+ a "system speaking" lookback) into a `send` / `zero` / `skip` verdict that `ipcHandlers.js` applies in `dispatchMeetingAudioBuffer` (streaming) and `transcribeLocalMeetingChunk` (local)
+- **Self-hosted chunk queue** (`selfHostedMeetingTranscriber.js`): one request at a time — system, then mic — so a server that decodes one sequence at a time (e.g. vLLM with `max-num-seqs 1`) never sees concurrent requests. While a request is in flight new audio keeps accumulating and goes out merged into the next request, capped at `MEETING_REMOTE_MAX_BACKLOG_MS` (30 s; older audio is dropped and reported once). A transient failure (network, timeout, 408/425/429/5xx) is retried once; anything else drops that batch and the recording carries on. Tests: `test/helpers/selfHostedMeetingTranscriber.test.js`
+- **Audio layer**: `meetingEchoLeakDetector.js` correlates mic chunks against recent system audio; `meetingMicGate.js` turns chunk RMS/peak (+ a "system speaking" lookback) into a `send` / `zero` / `skip` verdict that `ipcHandlers.js` applies before a batch is transcribed
 - **Text layer**: `meetingMicHoldback.js` decides whether a mic final is risky (held back), a duplicate of recent system text (dropped), or racing an arriving system final (retracted); the `ipcHandlers.js` adapters (`shouldSkipDuplicateMicSegment`, `hasRiskyMicDuplicateProfile`, `removeRacingMicEntriesFor`, `removePendingMicFinalsFor`) apply the results to closure state and emit `meeting-transcription-segment` events (`partial` / `final` / `retract`)
+- **Speakers**: diarization and speaker identification always run on-device (sherpa-onnx models + the ONNX worker), whichever engine transcribed the text
 - **Renderer**: `src/stores/meetingSegmentReducer.ts` is the pure `(state, event, deps) → reduction` transition for those events (timestamp-sorted insert, retract by exact match, per-source partial slots); `meetingRecordingStore.ts` supplies `mintSegmentId` / `decorateFinal` (speaker identifications, provisional speaker, locks — must not write to the store) and applies the reduction. Tests: `test/stores/meetingSegmentReducer.test.js`, `test/stores/meetingRecordingStoreImports.test.js`
-- **Regression pins**: BYOK `session.update` payload and the disconnect-commit callback (`test/helpers/openaiRealtimeStreaming.test.js`, `tinfoilRealtimeStreaming.test.js`), token-endpoint wire bodies (`test/helpers/realtimeTokenProviders.test.js`). Tests named `characterization: …` pin known oddities on purpose — flip them deliberately when changing policy
+- **Regression pins**: tests named `characterization: …` pin known oddities on purpose — flip them deliberately when changing policy
 - **Fixtures**: `test/helpers/harness/pcmFixtures.js` — deterministic 24 kHz PCM generators (`makeSine`, `makeSeededNoise`, `mix`, `delayBy`, `toInt16Buffer`, `chunkBuffer`, …) used by the gate and echo-detector tests
+
+### 19. Obsidian Export (Note Files)
+
+Settings → "Export to Markdown / Obsidian vault" mirrors notes into a folder as Markdown, one way, so an Obsidian vault can index them. Point `noteFilesPath` at a folder inside the vault (e.g. `~/Obsidian/Vault/OpenWhispr`); the mirror writes `<path>/<folder>/…`, with notes outside any folder under `Personal/`.
+
+- **Layout**: one `<title>.md` per note plus `<title> (transcript).md` for meetings and uploads, linked to each other with wikilinks; optional daily files under `Dictations/` when `noteFilesExportDictations` is on
+- **Frontmatter**: `openwhispr_id` (and `openwhispr_uid`), type, dates, duration, participants, linked calendar event, tags rooted at `noteFilesBaseTag` (default `openwhispr`)
+- **Ownership**: `markdownMirror.js` only renames, overwrites or deletes files it provably owns (frontmatter id, or the exact legacy file shape for a one-time rename of older exports); everything else in the folder is left alone. Bump `FORMAT_VERSION` in `noteFilesSync.js` when the layout changes — the next launch rebuilds the mirror
+- **Sync**: `noteFilesSync.js` listens to database change events, coalesces bursts (live meeting transcripts update every few seconds) and renders each note with its folder, speaker names and calendar event; `noteExportFormat.js` holds the pure naming/frontmatter/body formatting
+- **Open in Obsidian**: `note-files-open-in-obsidian` opens `obsidian://open?path=…` only for a file the mirror wrote
+- Tests: `test/helpers/markdownMirror.test.js`, `noteExportFormat.test.js`, `noteFilesSync.test.js`
+
+### 20. Web Search (SearXNG)
+
+The assistant's `web_search` tool is backed by the user's own SearXNG instance (Settings → AI Models → Chat / Voice Assistant → Web search; `webSearchEnabled`, `webSearchUrl`, e.g. `https://search.lan`). The tool is only registered when web search is enabled with a URL set, and the model needs tool calling on.
+
+- `searxngSearch.js` (main process) issues `GET {base}/search?q=…&format=json` with a 10 s timeout and maps results to `{ title, url, text, publishedDate }` plus direct answers and the first infobox. Only the query and the model's time range are sent — no cookies, keys or conversation text
+- JSON output must be enabled in the instance's `settings.yml` (`search.formats: [html, json]`); a 403 or a non-JSON reply is reported with that hint
+- URL rules match the self-hosted endpoints (HTTPS, or HTTP on a private host)
+- Tests: `test/helpers/searxngSearch.test.js`
 
 ## Development Guidelines
 
@@ -743,7 +706,7 @@ All user-facing strings **must** use the i18n system. Never hardcode UI text in 
 
 **Setup**: react-i18next (v15) with i18next (v25). Translation files in `src/locales/{lang}/translation.json`.
 
-**Supported languages**: en, es, fr, de, pt, it, ru, zh-CN, zh-TW
+**Supported languages**: ar, de, en, es, fr, it, ja, pt, ru, zh-CN, zh-TW
 
 **How to use**:
 
@@ -793,12 +756,12 @@ UI icons come from `src/components/icons/` (vendored Nucleo core outline compone
 2. **New Setting**: Update useSettings.ts and SettingsPage.tsx
 3. **New UI Component**: Follow shadcn/ui patterns in src/components/ui
 4. **New Manager**: Create in src/helpers/, initialize in main.js
-5. **New UI Strings**: Add translation keys to all 10 language files (see i18n section above)
+5. **New UI Strings**: Add translation keys to all 11 language files (see i18n section above)
 6. **New Sidecar Binary**: Add download script in `scripts/`, add to `prebuild*` scripts in package.json, add manager in `src/helpers/`, initialize in `main.js`. Spawn the child with `detached: process.platform !== "win32"` so it has its own process group on Unix. Right after spawn call `sidecarPidFile.write(name, child.pid)` and on `close` call `sidecarPidFile.clear(name)`. Add the binary fragment to `EXPECTED_BINARY_FRAGMENTS` in `sidecarReaper.js`. Register a stop function via `sidecarRegistry.register(name, () => manager.stop())` in `registerSidecars()` — that single registration replaces the old `will-quit` line.
 
 ### Testing Checklist
 
-- [ ] Test both local and cloud processing modes
+- [ ] Test both local and self-hosted (LAN) processing modes, for dictation, meetings and uploads
 - [ ] Verify hotkey works globally
 - [ ] Check clipboard pasting on all platforms
 - [ ] Test with different audio input devices
@@ -816,6 +779,9 @@ UI icons come from `src/components/icons/` (vendored Nucleo core outline compone
 - [ ] Create a note about "quarterly revenue projections", search via agent for "financial forecast" — should match semantically
 - [ ] Verify Qdrant stays down at launch and starts on the first agent search (check debug logs for "qdrant started successfully"), then stops after 5 idle minutes
 - [ ] Kill Qdrant process manually — verify FTS5 keyword search still works as fallback
+- [ ] Point Note files at a scratch Obsidian vault folder, record a meeting — verify the note and `(transcript)` files appear and update, and that unrelated files in the folder are untouched
+- [ ] Configure a SearXNG URL and ask the assistant a current-events question — verify the `web_search` tool runs and nothing else leaves the machine
+- [ ] Block outbound traffic except your LAN — verify dictation, meetings, notes and chat still work
 
 ### Common Issues and Solutions
 
@@ -948,11 +914,12 @@ UI icons come from `src/components/icons/` (vendored Nucleo core outline compone
 - Process timeout protection (5 minutes)
 - Meeting detection uses event-driven OS APIs (near-zero CPU) with polling fallback on Windows/Linux
 - Process list cache shared between detectors to avoid duplicate `tasklist`/`pgrep` calls
-- Calendar sync (Google/Microsoft) uses exponential backoff to avoid hammering APIs on network failures
 
 ## Security Considerations
 
-- API keys and enterprise cloud creds (12 secrets total) encrypted at rest via Electron `safeStorage` → OS keychain (Keychain / DPAPI / libsecret), stored as per-key files in `userData/secure-keys/`. Linux without a keyring falls back to plaintext (Electron default). Closed in #629.
+- No account, cloud API, telemetry upload or auto-updater; the app only contacts hosts the user configured or downloads they started (`docs/network-allowlist.md`)
+- Self-hosted API keys (6 secrets) encrypted at rest with a master key held in the OS keychain (Keychain / Credential Manager / Secret Service via `@napi-rs/keyring`, Electron `safeStorage` as fallback), stored as per-key files in `userData/secure-keys/`
+- Plain HTTP endpoints are refused for public hosts (`isSecureHttpEndpoint`)
 - Context isolation enabled
 - No remote code execution
 - Sanitized file paths
@@ -960,9 +927,8 @@ UI icons come from `src/components/icons/` (vendored Nucleo core outline compone
 
 ## Future Enhancements to Consider
 
-- Streaming transcription support
+- LAN streaming speech-to-text, diarization and embeddings endpoints (these still run on-device)
 - Custom wake word detection
-- ~~Multi-language UI~~ (implemented — 9 languages via react-i18next)
-- Cloud model selection
+- ~~Multi-language UI~~ (implemented — 11 languages via react-i18next)
 - Batch transcription
 - Export formats beyond clipboard

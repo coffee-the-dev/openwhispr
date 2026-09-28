@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Local-only fork] - 2026-09-27
+
+A fork of 1.10.2 that runs entirely on-device or against servers on your own network.
+
+### Removed
+
+- OpenWhispr account, sign-in and deep links; Pro plans, usage limits, referrals and the leaderboard; team spaces, sharing, invitations and cloud sync; enterprise identity, managed policy and Bedrock/Azure/Vertex access.
+- OpenWhispr Cloud transcription and inference, including Orukeet cloud and streaming; every bring-your-own-key provider (OpenAI, Anthropic, Gemini, Groq, Deepgram, AssemblyAI, Corti, Tinfoil, xAI, Mistral, OpenRouter) and their realtime streaming paths.
+- Telemetry upload, the auto-updater, Google and Microsoft calendar sign-in, the MCP card, and the cloud API keys section. Apple Calendar, local Insights, the loopback CLI bridge and Granola import remain.
+
+### Added
+
+- First-class self-hosted (LAN) endpoints for dictation, meeting and upload transcription and for every AI scope: optional bearer keys, connection tests, a model list read from `/models`, `verbose_json` segments for uploads, a one-request-at-a-time meeting chunk queue, and per-scope thinking, tool-calling and image toggles.
+- Obsidian-friendly Markdown export of notes, transcripts and dictations, with frontmatter and wikilinks.
+- Web search for the assistant through a self-hosted SearXNG instance.
+- `docs/network-allowlist.md` lists every host the app can contact.
+
 ## [Unreleased]
 
 ### Fixed

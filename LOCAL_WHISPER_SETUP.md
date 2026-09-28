@@ -87,11 +87,11 @@ npm run download:whisper-cpp:all
 
 1. Use smaller models (tiny or base)
 2. Close resource-intensive apps
-3. Consider using cloud mode for large files
+3. Consider a self-hosted speech-to-text server on a faster machine for large files
 
 ## Privacy Comparison
 
-| Mode  | Audio Leaves Device | Internet Required       | Cost      |
-| ----- | ------------------- | ----------------------- | --------- |
-| Local | No                  | Only for model download | Free      |
-| Cloud | Yes (to OpenAI)     | Yes                     | API usage |
+| Mode        | Audio Leaves Device      | Internet Required       | Cost |
+| ----------- | ------------------------ | ----------------------- | ---- |
+| Local       | No                       | Only for model download | Free |
+| Self-hosted | Yes (to your own server) | No (LAN only)           | Free |
