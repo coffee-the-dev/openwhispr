@@ -8,7 +8,7 @@ test("maps the diarizer invocation onto the note columns", async () => {
   const { buildUploadNoteMetadata } = await load();
 
   const { audioDurationSeconds, noteUpdates } = buildUploadNoteMetadata(
-    { enabled: true, localModelsReady: true, numSpeakers: 2 },
+    { enabled: true, ready: true, numSpeakers: 2 },
     4359.87
   );
 
@@ -20,7 +20,7 @@ test("auto speaker detection stores no explicit count", async () => {
   const { buildUploadNoteMetadata } = await load();
 
   const { noteUpdates } = buildUploadNoteMetadata(
-    { enabled: true, localModelsReady: true, numSpeakers: null },
+    { enabled: true, ready: true, numSpeakers: null },
     60
   );
 
@@ -38,7 +38,7 @@ test("disabled diarization writes no columns at all", async () => {
   // count keeps the numSpeakers value lingering in localStorage while its
   // input is hidden from being stamped onto the note as an explicit choice.
   const { audioDurationSeconds, noteUpdates } = buildUploadNoteMetadata(
-    { enabled: false, localModelsReady: false, numSpeakers: 3 },
+    { enabled: false, ready: false, numSpeakers: 3 },
     120
   );
 
@@ -50,13 +50,13 @@ test("speaker counts reuse the stored-count clamp", async () => {
   const { buildUploadNoteMetadata } = await load();
 
   const above = buildUploadNoteMetadata(
-    { enabled: true, localModelsReady: true, numSpeakers: MAX_SPEAKER_COUNT + 5 },
+    { enabled: true, ready: true, numSpeakers: MAX_SPEAKER_COUNT + 5 },
     null
   );
   assert.equal(above.noteUpdates.expected_speaker_count, MAX_SPEAKER_COUNT);
 
   const unusable = buildUploadNoteMetadata(
-    { enabled: true, localModelsReady: true, numSpeakers: 0 },
+    { enabled: true, ready: true, numSpeakers: 0 },
     null
   );
   assert.equal(unusable.noteUpdates.expected_speaker_count, null);
@@ -64,7 +64,7 @@ test("speaker counts reuse the stored-count clamp", async () => {
 
 test("unusable durations degrade to null", async () => {
   const { buildUploadNoteMetadata } = await load();
-  const diarization = { enabled: true, localModelsReady: true, numSpeakers: 2 };
+  const diarization = { enabled: true, ready: true, numSpeakers: 2 };
 
   for (const value of [null, undefined, 0, -1, NaN, Infinity]) {
     assert.equal(
@@ -157,7 +157,7 @@ test("segments persist the transcript even when diarization is off", async () =>
 
   const anchorMs = 1_700_000_000_000;
   const { noteUpdates } = buildUploadNoteMetadata(
-    { enabled: false, localModelsReady: false, numSpeakers: null },
+    { enabled: false, ready: false, numSpeakers: null },
     60,
     [{ text: "Hello.", start: 0, end: 2 }],
     anchorMs
@@ -175,7 +175,7 @@ test("segments and diarization metadata share one noteUpdates write", async () =
 
   const anchorMs = 1_700_000_000_000;
   const { noteUpdates } = buildUploadNoteMetadata(
-    { enabled: true, localModelsReady: true, numSpeakers: 2 },
+    { enabled: true, ready: true, numSpeakers: 2 },
     60,
     [{ text: "Hi.", start: 1, speaker: "Speaker 1" }],
     anchorMs

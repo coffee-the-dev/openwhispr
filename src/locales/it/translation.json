@@ -64,7 +64,11 @@
     "meeting": {
       "speakerDetection": {
         "title": "Identifica ed etichetta i partecipanti",
-        "description": "Se disattivato, le trascrizioni mostrano \"Tu\" e \"Altri\""
+        "description": "Se disattivato, le trascrizioni mostrano \"Tu\" e \"Altri\"",
+        "serverTitle": "Motore di rilevamento dei partecipanti",
+        "serverDescription": "Individua chi ha parlato e quando nelle riunioni e nei file caricati. Il confronto con le voci salvate avviene sempre su questo dispositivo.",
+        "selfHostedDesc": "Il tuo server di diarizzazione nella tua rete.",
+        "serverUrlHelp": "URL di base di un server che risponde a POST /audio/diarizations, ad esempio NeMo-Speech.cpp. Usa la chiave API della trascrizione."
       }
     }
   },

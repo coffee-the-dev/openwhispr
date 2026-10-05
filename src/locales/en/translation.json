@@ -64,7 +64,11 @@
     "meeting": {
       "speakerDetection": {
         "title": "Identify and label speakers",
-        "description": "When off, transcripts show \"You\" and \"Others\""
+        "description": "When off, transcripts show \"You\" and \"Others\"",
+        "serverTitle": "Speaker detection engine",
+        "serverDescription": "Finds who spoke when in meetings and uploaded files. Matching speakers to saved voices always runs on this device.",
+        "selfHostedDesc": "Your own diarization server on your network.",
+        "serverUrlHelp": "Base URL of a server that answers POST /audio/diarizations, such as NeMo-Speech.cpp. Uses the speech-to-text API key."
       }
     }
   },

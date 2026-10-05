@@ -19,8 +19,9 @@ export interface FileTranscriptionResult {
 
 export interface DiarizationSettings {
   enabled: boolean;
-  // Local sherpa-onnx diarization models are present.
-  localModelsReady: boolean;
+  // The configured diarizer can run: local sherpa-onnx models are present, or
+  // a self-hosted speaker detection server is selected.
+  ready: boolean;
   numSpeakers: number | null;
 }
 
@@ -96,9 +97,9 @@ export async function transcribeFile(
 
 interface DiarizationSettingsRequest {
   enabled: boolean;
-  modelsReady: boolean;
+  ready: boolean;
   numSpeakers: number | null;
-  ensureModels: () => Promise<boolean>;
+  ensureReady: () => Promise<boolean>;
 }
 
 // Speaker detection is opt-in but its local models download lazily, so a run
@@ -106,20 +107,20 @@ interface DiarizationSettingsRequest {
 // diarizer ever being invoked. Fetch them first.
 export async function resolveDiarizationSettings({
   enabled,
-  modelsReady,
+  ready,
   numSpeakers,
-  ensureModels,
+  ensureReady,
 }: DiarizationSettingsRequest): Promise<DiarizationSettings> {
-  const needsLocalModels = enabled && !modelsReady;
   return {
     enabled,
-    localModelsReady: needsLocalModels ? await ensureModels() : modelsReady,
+    ready: enabled && !ready ? await ensureReady() : ready,
     numSpeakers,
   };
 }
 
 // Transcribe and diarize in parallel, then merge speaker labels into the text.
-// Diarization always runs locally, including over self-hosted transcripts.
+// Diarization runs in the main process on the configured diarizer (on-device or
+// the self-hosted speaker detection server), over either kind of transcript.
 // Shared by the single-file flow and the batch queue. `durationSeconds` (when the
 // source knows it, e.g. URL downloads) beats inferring duration from segments.
 export async function transcribeFileWithSpeakers(
@@ -130,7 +131,7 @@ export async function transcribeFileWithSpeakers(
   opts: { requestId?: string } = {}
 ): Promise<FileTranscriptionResult> {
   const diarizePromise =
-    diarization.enabled && diarization.localModelsReady
+    diarization.enabled && diarization.ready
       ? (window.electronAPI
           .diarizeAudioFile?.(filePath, {
             numSpeakers: diarization.numSpeakers ?? undefined,

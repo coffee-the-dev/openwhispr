@@ -966,6 +966,8 @@ export interface SettingsState
   appleCalendarConnected: boolean;
   meetingProcessDetection: boolean;
   speakerDiarizationEnabled: boolean;
+  diarizationMode: TranscriptionMode;
+  diarizationRemoteUrl: string;
   dictationSileroEnabled: boolean;
   noteRecordingSileroEnabled: boolean;
   meetingSileroEnabled: boolean;
@@ -1168,6 +1170,8 @@ export interface SettingsState
   setAppleCalendarConnected: (value: boolean) => void;
   setMeetingProcessDetection: (value: boolean) => void;
   setSpeakerDiarizationEnabled: (value: boolean) => void;
+  setDiarizationMode: (mode: TranscriptionMode) => void;
+  setDiarizationRemoteUrl: (url: string) => void;
   setDictationSileroEnabled: (value: boolean) => void;
   setNoteRecordingSileroEnabled: (value: boolean) => void;
   setMeetingSileroEnabled: (value: boolean) => void;
@@ -1210,6 +1214,17 @@ function createStringSetter(key: string) {
 /** Writes a string setting whose key is computed rather than known up front. */
 export function setStringSetting(key: keyof SettingsState, value: string): void {
   createStringSetter(key)(value);
+}
+
+// Meetings and uploads diarize in the main process, which only learns the
+// speaker detection endpoint from here.
+async function syncDiarizationEndpoint(): Promise<void> {
+  if (!isBrowser) return;
+  const { diarizationMode, diarizationRemoteUrl } = useSettingsStore.getState();
+  await window.electronAPI?.setDiarizationEndpoint?.({
+    mode: diarizationMode,
+    url: diarizationRemoteUrl,
+  });
 }
 
 function createBooleanSetter(key: string) {
@@ -1445,6 +1460,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   appleCalendarConnected: readBoolean("appleCalendarConnected", false),
   meetingProcessDetection: readBoolean("meetingProcessDetection", true),
   speakerDiarizationEnabled: readBoolean("speakerDiarizationEnabled", true),
+  diarizationMode: readTranscriptionMode("diarizationMode"),
+  diarizationRemoteUrl: readString("diarizationRemoteUrl", ""),
   // Off by default: VAD on pause-heavy dictations can strip the speech and make
   // Whisper hallucinate the dictionary prompt as the transcript (#1454).
   dictationSileroEnabled: readBoolean("dictationSileroEnabled", false),
@@ -1906,6 +1923,14 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     if (isBrowser) {
       window.electronAPI?.setSpeakerDiarizationEnabled?.(value);
     }
+  },
+  setDiarizationMode: (mode: TranscriptionMode) => {
+    createStringSetter("diarizationMode")(mode);
+    void syncDiarizationEndpoint();
+  },
+  setDiarizationRemoteUrl: (url: string) => {
+    createStringSetter("diarizationRemoteUrl")(url);
+    void syncDiarizationEndpoint();
   },
   setDictationSileroEnabled: (value: boolean) => {
     if (isBrowser) localStorage.setItem("dictationSileroEnabled", String(value));
@@ -2586,6 +2611,16 @@ export async function initializeSettings(): Promise<void> {
     } catch (err) {
       logger.warn(
         "Failed to sync speaker diarization preference on startup",
+        { error: (err as Error).message },
+        "settings"
+      );
+    }
+
+    try {
+      await syncDiarizationEndpoint();
+    } catch (err) {
+      logger.warn(
+        "Failed to sync speaker detection endpoint on startup",
         { error: (err as Error).message },
         "settings"
       );

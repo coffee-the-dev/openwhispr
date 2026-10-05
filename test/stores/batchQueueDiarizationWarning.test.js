@@ -64,7 +64,7 @@ test("batch uploads retain diarization warnings separately from transcription wa
       },
       folderId: null,
     },
-    { enabled: true, localModelsReady: true, numSpeakers: null }
+    { enabled: true, ready: true, numSpeakers: null }
   );
   await waitForQueueCompletion(useBatchQueueStore);
 

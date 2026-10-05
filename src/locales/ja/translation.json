@@ -64,7 +64,11 @@
     "meeting": {
       "speakerDetection": {
         "title": "話者を識別してラベル付け",
-        "description": "オフにすると、文字起こしには「あなた」と「他の人」と表示されます"
+        "description": "オフにすると、文字起こしには「あなた」と「他の人」と表示されます",
+        "serverTitle": "話者識別エンジン",
+        "serverDescription": "会議やアップロードしたファイルで、誰がいつ話したかを判別します。保存済みの声との照合は常にこのデバイス上で行われます。",
+        "selfHostedDesc": "ネットワーク上の自前の話者分離サーバー。",
+        "serverUrlHelp": "POST /audio/diarizations に応答するサーバーのベース URL（NeMo-Speech.cpp など）。文字起こしの API キーを使用します。"
       }
     }
   },

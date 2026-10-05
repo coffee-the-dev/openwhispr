@@ -64,7 +64,11 @@
     "meeting": {
       "speakerDetection": {
         "title": "Sprecher erkennen und beschriften",
-        "description": "Wenn deaktiviert, zeigen Transkripte „Du“ und „Andere“"
+        "description": "Wenn deaktiviert, zeigen Transkripte „Du“ und „Andere“",
+        "serverTitle": "Engine für die Sprechererkennung",
+        "serverDescription": "Erkennt in Meetings und hochgeladenen Dateien, wer wann gesprochen hat. Der Abgleich mit gespeicherten Stimmen läuft immer auf diesem Gerät.",
+        "selfHostedDesc": "Eigener Diarisierungsserver in Ihrem Netzwerk.",
+        "serverUrlHelp": "Basis-URL eines Servers, der POST /audio/diarizations beantwortet, z. B. NeMo-Speech.cpp. Verwendet den API-Schlüssel der Transkription."
       }
     }
   },

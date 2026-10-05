@@ -98,6 +98,8 @@ function normalizeBaseUrl(value) {
     [/\/audio\/transcriptions$/i, ""],
     [/\/v1\/audio\/translations$/i, "/v1"],
     [/\/audio\/translations$/i, ""],
+    [/\/v1\/audio\/diarizations$/i, "/v1"],
+    [/\/audio\/diarizations$/i, ""],
   ];
 
   for (const [pattern, replacement] of suffixReplacements) {

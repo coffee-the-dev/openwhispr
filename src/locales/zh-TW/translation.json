@@ -64,7 +64,11 @@
     "meeting": {
       "speakerDetection": {
         "title": "辨識並標記發言者",
-        "description": "關閉後，逐字稿會顯示「你」和「其他人」"
+        "description": "關閉後，逐字稿會顯示「你」和「其他人」",
+        "serverTitle": "發言者辨識引擎",
+        "serverDescription": "辨識會議和上傳檔案中誰在何時發言。與已儲存聲音的比對一律在本裝置上進行。",
+        "selfHostedDesc": "你網路上的自有語者分離伺服器。",
+        "serverUrlHelp": "回應 POST /audio/diarizations 的伺服器基礎 URL，例如 NeMo-Speech.cpp。使用轉錄的 API 金鑰。"
       }
     }
   },

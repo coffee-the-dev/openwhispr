@@ -36,7 +36,7 @@ test("keeps the transcript and warns when local speaker identification fails", a
 
   const result = await transcribeFileWithSpeakers("/tmp/audio.wav", localConfig(), {
     enabled: true,
-    localModelsReady: true,
+    ready: true,
     numSpeakers: null,
   });
 
@@ -58,7 +58,7 @@ test("keeps the transcript and warns when speaker labels cannot be merged", asyn
 
   const result = await transcribeFileWithSpeakers("/tmp/audio.wav", localConfig(), {
     enabled: true,
-    localModelsReady: true,
+    ready: true,
     numSpeakers: null,
   });
 
@@ -80,7 +80,7 @@ test("does not warn when speaker labels are merged", async (t) => {
 
   const result = await transcribeFileWithSpeakers("/tmp/audio.wav", localConfig(), {
     enabled: true,
-    localModelsReady: true,
+    ready: true,
     numSpeakers: null,
   });
 
@@ -98,7 +98,7 @@ test("does not warn when speaker detection is off", async (t) => {
 
   const result = await transcribeFileWithSpeakers("/tmp/audio.wav", localConfig(), {
     enabled: false,
-    localModelsReady: true,
+    ready: true,
     numSpeakers: null,
   });
 
@@ -130,7 +130,7 @@ test("self-hosted transcripts get local speaker labels too", async (t) => {
       transcriptionMode: "self-hosted",
       remoteTranscriptionUrl: "http://192.168.1.20:9000/v1",
     },
-    { enabled: true, localModelsReady: true, numSpeakers: null }
+    { enabled: true, ready: true, numSpeakers: null }
   );
 
   assert.equal(diarizeCalls, 1);
@@ -150,7 +150,7 @@ test("keeps the transcript and warns when the merge throws", async (t) => {
 
   const result = await transcribeFileWithSpeakers("/tmp/audio.wav", localConfig(), {
     enabled: true,
-    localModelsReady: true,
+    ready: true,
     numSpeakers: null,
   });
 
@@ -164,16 +164,16 @@ test("fetches the local speaker models before a run that needs them", async (t) 
 
   const settings = await resolveDiarizationSettings({
     enabled: true,
-    modelsReady: false,
+    ready: false,
     numSpeakers: null,
-    ensureModels: async () => {
+    ensureReady: async () => {
       ensureCalls += 1;
       return true;
     },
   });
 
   assert.equal(ensureCalls, 1);
-  assert.deepEqual(settings, { enabled: true, localModelsReady: true, numSpeakers: null });
+  assert.deepEqual(settings, { enabled: true, ready: true, numSpeakers: null });
 });
 
 test("does not fetch local models when speaker detection is off", async (t) => {
@@ -182,9 +182,9 @@ test("does not fetch local models when speaker detection is off", async (t) => {
 
   const settings = await resolveDiarizationSettings({
     enabled: false,
-    modelsReady: false,
+    ready: false,
     numSpeakers: null,
-    ensureModels: async () => {
+    ensureReady: async () => {
       ensureCalls += 1;
       return true;
     },
@@ -199,10 +199,10 @@ test("reports models unavailable when the download fails", async (t) => {
 
   const settings = await resolveDiarizationSettings({
     enabled: true,
-    modelsReady: false,
+    ready: false,
     numSpeakers: null,
-    ensureModels: async () => false,
+    ensureReady: async () => false,
   });
 
-  assert.equal(settings.localModelsReady, false);
+  assert.equal(settings.ready, false);
 });

@@ -14,13 +14,14 @@ listeners bind to `127.0.0.1` (local model servers, Qdrant, the CLI bridge).
 Contacted only when you enter the URL in Settings. The app talks to exactly the
 host you type, over HTTP or HTTPS, and sends a bearer key only when you set one.
 
-| Setting                                        | Example                  | Protocol    | Purpose                                                                                                    |
-| ---------------------------------------------- | ------------------------ | ----------- | ---------------------------------------------------------------------------------------------------------- |
-| Transcription → Self-hosted endpoint           | `https://whisper.lan/v1` | HTTP, HTTPS | OpenAI-compatible `/audio/transcriptions` and `/models` for dictation, meeting chunks, and uploaded files. |
-| AI Models → Self-hosted endpoint (every scope) | `https://llm.lan/v1`     | HTTP, HTTPS | OpenAI-compatible `/chat/completions` (SSE) and `/models` for cleanup, the assistant, notes, and chat.     |
-| AI Models → Web search → SearXNG URL           | `https://search.lan`     | HTTP, HTTPS | `GET /search?format=json` for the assistant's web search tool.                                             |
+| Setting                                                   | Example                  | Protocol    | Purpose                                                                                                    |
+| --------------------------------------------------------- | ------------------------ | ----------- | ---------------------------------------------------------------------------------------------------------- |
+| Transcription → Self-hosted endpoint                      | `https://whisper.lan/v1` | HTTP, HTTPS | OpenAI-compatible `/audio/transcriptions` and `/models` for dictation, meeting chunks, and uploaded files. |
+| Transcription → Speaker detection engine → Self-hosted    | `https://speech.lan/v1`  | HTTP, HTTPS | `POST /audio/diarizations` (NeMo-Speech.cpp) for meeting and upload speaker detection.                     |
+| AI Models → Self-hosted endpoint (every scope)            | `https://llm.lan/v1`     | HTTP, HTTPS | OpenAI-compatible `/chat/completions` (SSE) and `/models` for cleanup, the assistant, notes, and chat.     |
+| AI Models → Web search → SearXNG URL                      | `https://search.lan`     | HTTP, HTTPS | `GET /search?format=json` for the assistant's web search tool.                                             |
 
-`localhost` and `127.0.0.1` also work for all three.
+`localhost` and `127.0.0.1` also work for all of them.
 
 ## Downloads you start
 

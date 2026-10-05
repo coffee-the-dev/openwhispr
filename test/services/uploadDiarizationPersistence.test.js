@@ -21,7 +21,7 @@ const transcription = {
   language: "en",
 };
 
-const diarization = { enabled: true, localModelsReady: true, numSpeakers: 2 };
+const diarization = { enabled: true, ready: true, numSpeakers: 2 };
 
 const gateMocks = {
   "./settingsStore": "export const getSettings = () => ({});",
@@ -154,7 +154,7 @@ test("an upload without diarization leaves the note columns untouched", async (t
   store.addFiles([{ name: "memo.m4a", path: "/tmp/memo.m4a", sizeBytes: 2048 }]);
   store.processBatchQueue(
     { transcription, folderId: null },
-    { enabled: false, localModelsReady: true, numSpeakers: 2 }
+    { enabled: false, ready: true, numSpeakers: 2 }
   );
 
   const queue = await waitForQueueSettled(store.useBatchQueueStore);

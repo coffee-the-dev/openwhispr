@@ -64,7 +64,11 @@
     "meeting": {
       "speakerDetection": {
         "title": "Identifier et étiqueter les intervenants",
-        "description": "Lorsque désactivé, les transcriptions affichent « Vous » et « Autres »"
+        "description": "Lorsque désactivé, les transcriptions affichent « Vous » et « Autres »",
+        "serverTitle": "Moteur de détection des intervenants",
+        "serverDescription": "Détermine qui a parlé et quand dans les réunions et les fichiers importés. La correspondance avec les voix enregistrées se fait toujours sur cet appareil.",
+        "selfHostedDesc": "Votre serveur de diarisation sur votre réseau.",
+        "serverUrlHelp": "URL de base d'un serveur qui répond à POST /audio/diarizations, comme NeMo-Speech.cpp. Utilise la clé API de transcription."
       }
     }
   },

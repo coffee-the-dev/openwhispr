@@ -163,6 +163,10 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
   );
   const [diarizationModelsReady, setDiarizationModelsReady] = useState<boolean | null>(null);
   const [diarizationDownloading, setDiarizationDownloading] = useState(false);
+  // A self-hosted speaker detection server needs no local models; the main
+  // process reports a misconfigured one as a diarization warning.
+  const selfHostedDiarization = useSettingsStore((s) => s.diarizationMode === "self-hosted");
+  const diarizerReady = selfHostedDiarization || !!diarizationModelsReady;
 
   useEffect(() => {
     localStorage.setItem("uploadDiarizationEnabled", String(diarizationEnabled));
@@ -195,12 +199,15 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
     return pending;
   };
 
+  const ensureDiarizer = (): Promise<boolean> =>
+    selfHostedDiarization ? Promise.resolve(true) : ensureDiarizationModels();
+
   const buildDiarizationSettings = (): Promise<DiarizationSettings> =>
     resolveDiarizationSettings({
       enabled: diarizationEnabled,
-      modelsReady: !!diarizationModelsReady,
+      ready: diarizerReady,
       numSpeakers: diarizationNumSpeakers ? Number(diarizationNumSpeakers) : null,
-      ensureModels: ensureDiarizationModels,
+      ensureReady: ensureDiarizer,
     });
 
   useEffect(() => {
@@ -209,7 +216,11 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
       setDiarizationModelsReady(ready);
       // Heal a persisted-on toggle whose models were removed since; roll it back
       // if the download fails so it can't sit ON while doing nothing.
-      if (!ready && localStorage.getItem("uploadDiarizationEnabled") === "true") {
+      if (
+        !ready &&
+        useSettingsStore.getState().diarizationMode !== "self-hosted" &&
+        localStorage.getItem("uploadDiarizationEnabled") === "true"
+      ) {
         ensureDiarizationModels().then((ok) => {
           if (!ok) setDiarizationEnabled(false);
         });
@@ -997,8 +1008,8 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
                   if (diarizationDownloading) return;
                   const next = !diarizationEnabled;
                   setDiarizationEnabled(next);
-                  if (next && !diarizationModelsReady) {
-                    const ready = await ensureDiarizationModels();
+                  if (next && !diarizerReady) {
+                    const ready = await ensureDiarizer();
                     if (!ready) setDiarizationEnabled(false);
                   }
                 }}
@@ -1027,7 +1038,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
               </p>
             )}
 
-            {diarizationEnabled && diarizationModelsReady && (
+            {diarizationEnabled && diarizerReady && (
               <div className="mt-2">
                 <label
                   htmlFor="upload-num-speakers"

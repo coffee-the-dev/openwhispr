@@ -1756,6 +1756,10 @@ declare global {
       setSpeakerDiarizationEnabled?: (
         enabled: boolean
       ) => Promise<{ success: boolean; error?: string }>;
+      setDiarizationEndpoint?: (config: {
+        mode: TranscriptionMode;
+        url: string;
+      }) => Promise<{ success: boolean; transport?: "local" | "http" | "error"; error?: string }>;
       setMeetingSessionSpeakerConfig?: (config: {
         enabled: boolean;
         expectedCount: number;

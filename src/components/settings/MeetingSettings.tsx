@@ -2,7 +2,7 @@ import { useCallback } from "react";
 import { useTranslation } from "react-i18next";
 import { Cpu, Network } from "../icons";
 import { useSettingsStore } from "../../stores/settingsStore";
-import { InferenceModeSelector, SettingsRow } from "../ui/SettingsSection";
+import { InferenceModeSelector, SectionHeader, SettingsRow } from "../ui/SettingsSection";
 import type { InferenceModeOption } from "../ui/SettingsSection";
 import { Toggle } from "../ui/toggle";
 import TranscriptionModelPicker from "../TranscriptionModelPicker";
@@ -21,6 +21,59 @@ export function MeetingSpeakerDetectionRow() {
     >
       <Toggle checked={speakerDiarizationEnabled} onChange={setSpeakerDiarizationEnabled} />
     </SettingsRow>
+  );
+}
+
+// One diarizer for meetings and uploads. Naming speakers from saved voice
+// profiles stays on-device either way.
+export function SpeakerDetectionServerPanel() {
+  const { t } = useTranslation();
+  const {
+    diarizationMode,
+    setDiarizationMode,
+    diarizationRemoteUrl,
+    setDiarizationRemoteUrl,
+    customTranscriptionApiKey,
+    setCustomTranscriptionApiKey,
+  } = useSettingsStore();
+
+  const modes: InferenceModeOption<TranscriptionMode>[] = [
+    {
+      id: "local",
+      label: t("settingsPage.transcription.modes.local"),
+      description: t("settingsPage.transcription.modes.localDesc"),
+      icon: <Cpu className="w-4 h-4" />,
+    },
+    {
+      id: "self-hosted",
+      label: t("settingsPage.transcription.modes.selfHosted"),
+      description: t("settings.meeting.speakerDetection.selfHostedDesc"),
+      icon: <Network className="w-4 h-4" />,
+    },
+  ];
+
+  return (
+    <div className="space-y-3">
+      <SectionHeader
+        title={t("settings.meeting.speakerDetection.serverTitle")}
+        description={t("settings.meeting.speakerDetection.serverDescription")}
+      />
+      <InferenceModeSelector
+        modes={modes}
+        activeMode={diarizationMode}
+        onSelect={setDiarizationMode}
+      />
+      {diarizationMode === "self-hosted" && (
+        <SelfHostedPanel
+          url={diarizationRemoteUrl}
+          onUrlChange={setDiarizationRemoteUrl}
+          apiKey={customTranscriptionApiKey}
+          onApiKeyChange={setCustomTranscriptionApiKey}
+          urlPlaceholder="https://speech.example.lan/v1"
+          urlHelp={t("settings.meeting.speakerDetection.serverUrlHelp")}
+        />
+      )}
+    </div>
   );
 }
 
@@ -125,6 +178,7 @@ export function MeetingTranscriptionPanel() {
         />
       )}
       <MeetingSpeakerDetectionRow />
+      <SpeakerDetectionServerPanel />
     </div>
   );
 }

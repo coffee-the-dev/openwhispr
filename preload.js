@@ -799,6 +799,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("sync-notification-preferences", prefs),
   setSpeakerDiarizationEnabled: (enabled) =>
     ipcRenderer.invoke("meeting-set-speaker-diarization-enabled", { enabled }),
+  setDiarizationEndpoint: (config) => ipcRenderer.invoke("set-diarization-endpoint", config),
   setMeetingSessionSpeakerConfig: (config) =>
     ipcRenderer.invoke("meeting-set-session-speaker-config", config),
   getWhisperVadConfig: () => ipcRenderer.invoke("whisper-vad-get-config"),

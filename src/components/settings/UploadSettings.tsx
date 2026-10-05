@@ -7,6 +7,7 @@ import type { InferenceModeOption } from "../ui/SettingsSection";
 import TranscriptionModelPicker from "../TranscriptionModelPicker";
 import SelfHostedPanel from "../SelfHostedPanel";
 import type { TranscriptionMode } from "../../types/electron";
+import { SpeakerDetectionServerPanel } from "./MeetingSettings";
 
 export function UploadTranscriptionPanel() {
   const { t } = useTranslation();
@@ -105,6 +106,7 @@ export function UploadTranscriptionPanel() {
           onApiKeyChange={setCustomTranscriptionApiKey}
         />
       )}
+      <SpeakerDetectionServerPanel />
     </div>
   );
 }

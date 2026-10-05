@@ -156,8 +156,9 @@ OpenWhispr is an Electron-based desktop dictation, meeting-notes and voice-assis
 - **windowConfig.js**: Centralized window configuration
 - **windowManager.js**: Window creation and lifecycle management
 - **selfHostedTranscription.js**: Resolves whether dictation runs on the user's OpenAI-compatible speech-to-text server (`transcriptionMode` + `remoteTranscriptionUrl`) and which model to name; `transcriptionRoute.ts` is the routing source of truth for dictation, retry and upload
-- **selfHostedFileTranscription.js**: Upload transcription against the same kind of server. Asks for `verbose_json` segments first (so local diarization can place speakers), falls back to plain `json` for servers that reject it and remembers that per session; files over the upload cap are split with FFmpeg and stitched by offset
+- **selfHostedFileTranscription.js**: Upload transcription against the same kind of server. Asks for `verbose_json` segments first (so diarization can place speakers), falls back to plain `json` for servers that reject it and remembers that per session; files over the upload cap are split with FFmpeg and stitched by offset
 - **selfHostedMeetingTranscriber.js**: Meeting transcription over a self-hosted server — the chunk queue described in section 18
+- **diarizationRoute.ts / selfHostedDiarization.js**: Where meetings and uploads diarize — the on-device sherpa-onnx diarizer or the user's server (`POST {base}/audio/diarizations`, NeMo-Speech.cpp contract: WAV + `mode` in, `{segments: [{start, end, speaker}]}` out). Picks `offline` (full attention) up to 6 minutes and `streaming` beyond, and relabels server speakers to `speaker_N` so cluster capping, transcript merging and speaker-profile naming are unchanged. Self-hosted fails closed (no local fallback); a failed request yields no speakers, never a failed transcript. `ipcHandlers.js` holds the route (`set-diarization-endpoint`, synced from the store) and dispatches through `_diarizeWav`
 - **providerConnectionTest.js**: Settings/onboarding "Test connection" for self-hosted endpoints (`/models` probe with candidate base URLs); returns an `errorCode` translated via `onboarding.rehaul.provider.errors.*`. Mirrors the renderer's URL rules, including "plain HTTP only on private hosts"
 - **toolCallingPolicy.js**: Whether chat / voice-assistant requests carry tool schemas (`auto` | `on` | `off` per scope; `on` by default for self-hosted, `auto` on-device, sized by the model id)
 - **searxngSearch.js**: The assistant's `web_search` tool, backed by the user's SearXNG instance (section 20)
@@ -354,6 +355,7 @@ Settings live in a zustand store (`src/stores/settingsStore.ts`) persisted to lo
 - `cleanupMode` / `cleanupRemoteUrl` / `cleanupModel`, and the same trio for `dictationAgent*`, `noteFormatting*`, `chatAgent*`, `translation*`: per-scope inference (see `inferenceScopes.ts`)
 - `dictationAgentToolCalling` / `chatAgentToolCalling`, `dictationAgentAcceptsImages` / `chatAgentAcceptsImages`: self-hosted capabilities the server cannot advertise
 - `webSearchEnabled`, `webSearchUrl`: SearXNG web search
+- `diarizationMode` (`local` | `self-hosted`), `diarizationRemoteUrl`: speaker detection engine for meetings and uploads (one setting, shown under both tabs)
 - `noteFilesEnabled`, `noteFilesPath`, `noteFilesBaseTag`, `noteFilesExportDictations`: Obsidian export
 - `customDictionary`: JSON array of words/phrases for improved transcription accuracy
 - `voiceAgentScreenContext`, `voiceAgentKey`: voice assistant options
@@ -418,6 +420,7 @@ Every self-hosted setting takes an OpenAI-compatible base URL, e.g. `https://whi
 
 - **Transcription**: `POST {base}/audio/transcriptions` (multipart, `model`, optional `language`/`prompt`). Dictation, meetings and uploads each have their own URL + model so they can point at different servers. Uploaded files over 25 MiB are split before sending
 - **Inference**: `POST {base}/chat/completions` with SSE streaming; `GET {base}/models` populates the model picker. Thinking-suppression flags are sent only when the scope's toggle is on; tool schemas follow `toolCallingPolicy.js`; screenshots are attached only when the scope's "accepts images" toggle is on
+- **Diarization**: `POST {base}/audio/diarizations` (multipart WAV, `mode`), one URL for meetings and uploads, sharing the speech-to-text key. Live speaker identification during a meeting, VAD and naming speakers from saved voice profiles stay on-device
 - **URL rules**: a scheme-less URL is read as `https://`; plain `http://` is accepted only for private hosts (loopback, RFC 1918 / CGNAT / link-local IP literals, `*.local`, `*.ts.net`) — `isSecureHttpEndpoint` in `src/utils/urlUtils.ts`, mirrored in `providerConnectionTest.js`. Any other hostname (including a LAN name like `llm.lan`) needs HTTPS with a certificate the OS trusts
 - **Test connection**: every endpoint field has a test button backed by `providerConnectionTest.js`
 - A local mic → self-hosted server path never needs streaming support: dictation records then uploads; meetings use the chunk queue in section 18
@@ -673,7 +676,7 @@ Live meeting transcription runs two sources (mic + system-audio tap) and must ke
 - **Self-hosted chunk queue** (`selfHostedMeetingTranscriber.js`): one request at a time — system, then mic — so a server that decodes one sequence at a time (e.g. vLLM with `max-num-seqs 1`) never sees concurrent requests. While a request is in flight new audio keeps accumulating and goes out merged into the next request, capped at `MEETING_REMOTE_MAX_BACKLOG_MS` (30 s; older audio is dropped and reported once). A transient failure (network, timeout, 408/425/429/5xx) is retried once; anything else drops that batch and the recording carries on. Tests: `test/helpers/selfHostedMeetingTranscriber.test.js`
 - **Audio layer**: `meetingEchoLeakDetector.js` correlates mic chunks against recent system audio; `meetingMicGate.js` turns chunk RMS/peak (+ a "system speaking" lookback) into a `send` / `zero` / `skip` verdict that `ipcHandlers.js` applies before a batch is transcribed
 - **Text layer**: `meetingMicHoldback.js` decides whether a mic final is risky (held back), a duplicate of recent system text (dropped), or racing an arriving system final (retracted); the `ipcHandlers.js` adapters (`shouldSkipDuplicateMicSegment`, `hasRiskyMicDuplicateProfile`, `removeRacingMicEntriesFor`, `removePendingMicFinalsFor`) apply the results to closure state and emit `meeting-transcription-segment` events (`partial` / `final` / `retract`)
-- **Speakers**: diarization and speaker identification always run on-device (sherpa-onnx models + the ONNX worker), whichever engine transcribed the text
+- **Speakers**: diarization runs on the configured engine (on-device sherpa-onnx, or the self-hosted `/audio/diarizations` server — `diarizationRoute.ts`); live speaker identification and naming speakers from saved profiles always run on-device (ONNX worker), whichever engine transcribed the text
 - **Renderer**: `src/stores/meetingSegmentReducer.ts` is the pure `(state, event, deps) → reduction` transition for those events (timestamp-sorted insert, retract by exact match, per-source partial slots); `meetingRecordingStore.ts` supplies `mintSegmentId` / `decorateFinal` (speaker identifications, provisional speaker, locks — must not write to the store) and applies the reduction. Tests: `test/stores/meetingSegmentReducer.test.js`, `test/stores/meetingRecordingStoreImports.test.js`
 - **Regression pins**: tests named `characterization: …` pin known oddities on purpose — flip them deliberately when changing policy
 - **Fixtures**: `test/helpers/harness/pcmFixtures.js` — deterministic 24 kHz PCM generators (`makeSine`, `makeSeededNoise`, `mix`, `delayBy`, `toInt16Buffer`, `chunkBuffer`, …) used by the gate and echo-detector tests
@@ -927,7 +930,7 @@ UI icons come from `src/components/icons/` (vendored Nucleo core outline compone
 
 ## Future Enhancements to Consider
 
-- LAN streaming speech-to-text, diarization and embeddings endpoints (these still run on-device)
+- LAN streaming speech-to-text and embeddings endpoints (these still run on-device)
 - Custom wake word detection
 - ~~Multi-language UI~~ (implemented — 11 languages via react-i18next)
 - Batch transcription

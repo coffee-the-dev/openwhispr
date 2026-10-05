@@ -64,7 +64,11 @@
     "meeting": {
       "speakerDetection": {
         "title": "识别并标记发言者",
-        "description": "关闭后，转写会显示\"你\"和\"其他人\""
+        "description": "关闭后，转写会显示\"你\"和\"其他人\"",
+        "serverTitle": "发言者识别引擎",
+        "serverDescription": "识别会议和上传文件中谁在何时发言。与已保存声音的匹配始终在本设备上进行。",
+        "selfHostedDesc": "你网络上的自有说话人分离服务器。",
+        "serverUrlHelp": "响应 POST /audio/diarizations 的服务器基础 URL，例如 NeMo-Speech.cpp。使用转录的 API 密钥。"
       }
     }
   },

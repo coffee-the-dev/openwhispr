@@ -96,6 +96,7 @@ const {
   capMeetingBacklog,
   createSelfHostedChunkTranscriber,
 } = require("./selfHostedMeetingTranscriber");
+const { diarizeViaServer } = require("./selfHostedDiarization");
 const { createUploadCancelRegistry } = require("./uploadCancelRegistry");
 const {
   consolidateSpeakerRuns,
@@ -255,6 +256,8 @@ class IPCHandlers {
     this._granolaImportPending = null;
     this._analyticsHistoryBackfillPromise = null;
     this.speakerDiarizationEnabled = true;
+    // Where meetings and uploads diarize; the renderer syncs it via set-diarization-endpoint.
+    this.diarizationRoute = { transport: "local" };
     // Default for the saved process-detection toggle. The engine keeps both detectors
     // off until the renderer syncs (see meetingDetectionPreferencePolicy.js).
     this.meetingProcessDetection = true;
@@ -2595,13 +2598,21 @@ class IPCHandlers {
 
     ipcMain.handle("diarize-audio-file", async (event, filePath, options = {}) => {
       // Registered under the same requestId as the upload's transcription, so
-      // one cancel kills both the decode and the diarization child process.
+      // one cancel stops both the decode and the diarization (child process or
+      // server request).
       const { signal, release } = this._uploadCancelRegistry.register(options.requestId);
       try {
         if (!this.diarizationManager) {
           return { success: false, error: "Diarization not available" };
         }
-        if (!this.diarizationManager.isModelDownloaded()) {
+        const diarizationRoute = this.diarizationRoute;
+        if (diarizationRoute.transport === "error") {
+          return { success: false, error: diarizationRoute.message };
+        }
+        if (
+          diarizationRoute.transport === "local" &&
+          !this.diarizationManager.isModelDownloaded()
+        ) {
           return { success: false, error: "Diarization models not downloaded" };
         }
 
@@ -2633,11 +2644,7 @@ class IPCHandlers {
           const durationSeconds = fs.statSync(wavPath).size / PCM16_MONO_16K_BYTES_PER_SECOND;
           const threshold = resolveClusterThreshold(durationSeconds, options.threshold);
 
-          let segments = await this.diarizationManager.diarize(wavPath, {
-            numSpeakers,
-            threshold,
-            signal,
-          });
+          let segments = await this._diarizeWav(wavPath, { numSpeakers, threshold, signal });
           if (signal?.aborted) {
             return { success: false, error: "Cancelled", code: "UPLOAD_CANCELLED" };
           }
@@ -6513,6 +6520,19 @@ class IPCHandlers {
       }
     });
 
+    ipcMain.handle("set-diarization-endpoint", async (_event, payload) => {
+      try {
+        const { resolveDiarizationRoute } = await import("./diarizationRoute.ts");
+        this.diarizationRoute = resolveDiarizationRoute({
+          mode: payload?.mode,
+          url: typeof payload?.url === "string" ? payload.url : "",
+        });
+        return { success: true, transport: this.diarizationRoute.transport };
+      } catch (error) {
+        return { success: false, error: error.message };
+      }
+    });
+
     ipcMain.handle("whisper-vad-get-config", async () => {
       try {
         return { success: true, config: this._getWhisperVadSettings() };
@@ -7217,6 +7237,64 @@ class IPCHandlers {
     return { numSpeakers: -1, cap: Math.max(1, DEFAULT_EXPECTED_SPEAKER_COUNT - 1) };
   }
 
+  // Synchronous: the meeting stop path decides before any async work starts.
+  _canDiarize() {
+    const route = this.diarizationRoute;
+    if (route.transport === "http") return true;
+    if (route.transport === "local") return !!this.diarizationManager?.isAvailable();
+    return false;
+  }
+
+  // One contract for both diarizers: 16 kHz mono WAV in, "speaker_N" segments
+  // out, [] on any failure — speakers enrich a transcript and never fail it.
+  // The server picks its own speaker count, so numSpeakers and threshold only
+  // steer the local diarizer; callers cap clusters afterwards either way.
+  async _diarizeWav(wavPath, options = {}) {
+    const route = this.diarizationRoute;
+    if (route.transport === "local") {
+      return this.diarizationManager.diarize(wavPath, options);
+    }
+    if (route.transport === "error") {
+      debugLogger.warn("Speaker detection skipped", { error: route.message });
+      return [];
+    }
+
+    const signal = options.signal ?? null;
+    if (signal?.aborted) return [];
+    try {
+      const wavBuffer = await fs.promises.readFile(wavPath);
+      const apiKey = this.environmentManager.getCustomTranscriptionKey();
+      const headers = apiKey ? { Authorization: `Bearer ${apiKey}` } : {};
+      const post = (fields, requestSignal) => {
+        const { body, boundary } = buildMultipartBody(wavBuffer, "audio.wav", "audio/wav", fields);
+        return postMultipart(new URL(route.endpoint), body, boundary, headers, {
+          signal: requestSignal,
+        });
+      };
+      debugLogger.info("Starting self-hosted diarization", { endpoint: route.endpoint });
+      const { segments, mode, durationSeconds } = await diarizeViaServer({
+        wavBuffer,
+        post,
+        signal,
+      });
+      debugLogger.info("Self-hosted diarization complete", {
+        mode,
+        durationSeconds: Math.round(durationSeconds),
+        segmentCount: segments.length,
+        speakerCount: new Set(segments.map((segment) => segment.speaker)).size,
+      });
+      return segments;
+    } catch (error) {
+      if (signal?.aborted) return [];
+      debugLogger.warn("Self-hosted diarization failed", {
+        endpoint: route.endpoint,
+        statusCode: error.statusCode,
+        error: error.message,
+      });
+      return [];
+    }
+  }
+
   _startOrSkipDiarization(
     sessionId,
     rawPcmPath,
@@ -7236,7 +7314,7 @@ class IPCHandlers {
 
     const diarizationEnabled = (sessionConfig?.enabled ?? this.speakerDiarizationEnabled) !== false;
 
-    if (!diarizationEnabled || !this.diarizationManager?.isAvailable() || !rawPcmPath) {
+    if (!diarizationEnabled || !this._canDiarize() || !rawPcmPath) {
       send({
         segments: transcriptSegments.map((segment, index) => ({
           ...segment,
@@ -7273,7 +7351,7 @@ class IPCHandlers {
           observedSpeakerIds,
           diarizedSource,
         });
-        let diarizationSegments = await this.diarizationManager.diarize(
+        let diarizationSegments = await this._diarizeWav(
           tmpWav,
           numSpeakers > 0 ? { numSpeakers } : {}
         );
