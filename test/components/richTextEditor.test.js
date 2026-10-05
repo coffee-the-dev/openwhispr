@@ -965,3 +965,53 @@ for (const menu of ["selection", "empty line", "table"]) {
     assert.deepEqual(notes.errors, []);
   });
 }
+
+// useEditor destroys a new editor 1 ms after creating it unless its own effect
+// has run by then. When a busy main thread runs that timer before React's
+// passive effects, the menus (children, so their effects run first) are handed
+// the destroyed editor, and the next render swaps in a new one.
+test("the menus mount without error against an editor useEditor already destroyed", async (t) => {
+  globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+  const React = require("react");
+  const { createRoot } = require("react-dom/client");
+  const vite = await createRendererServer(t);
+  const { RichTextEditorFormatMenu } = await vite.ssrLoadModule(
+    "/components/ui/RichTextEditorFormatMenu.tsx"
+  );
+  const { RichTextEditorTableMenu } = await vite.ssrLoadModule(
+    "/components/ui/RichTextEditorTableMenu.tsx"
+  );
+  const editor = createEditor(`Intro\n\n${TABLE}`);
+  editor.destroy();
+  const errors = [];
+  class Boundary extends React.Component {
+    state = { failed: false };
+    static getDerivedStateFromError() {
+      return { failed: true };
+    }
+    componentDidCatch(error) {
+      errors.push(error.message);
+    }
+    render() {
+      return this.state.failed ? null : this.props.children;
+    }
+  }
+  const host = happyWindow.document.createElement("div");
+  happyWindow.document.body.appendChild(host);
+  const root = createRoot(host);
+  t.after(async () => {
+    await React.act(async () => root.unmount());
+    host.remove();
+  });
+  await React.act(async () =>
+    root.render(
+      React.createElement(
+        Boundary,
+        null,
+        React.createElement(RichTextEditorFormatMenu, { editor }),
+        React.createElement(RichTextEditorTableMenu, { editor })
+      )
+    )
+  );
+  assert.deepEqual(errors, []);
+});

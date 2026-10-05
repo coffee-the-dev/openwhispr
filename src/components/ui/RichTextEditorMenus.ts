@@ -22,6 +22,10 @@ export const editorHasFocus = (view: EditorView) =>
  */
 export function useHideOnFocusLeave(editor: Editor, pluginKeys: readonly string[]) {
   useEffect(() => {
+    // useEditor can hand the menus an editor it has just destroyed (its 1 ms
+    // teardown timer beat React's passive effects); it then re-renders with a
+    // new one, which re-runs this effect.
+    if (editor.isDestroyed) return;
     const scroller = editor.view.dom.parentElement;
     if (!scroller) return;
     const onFocusOut = (event: FocusEvent) => {
