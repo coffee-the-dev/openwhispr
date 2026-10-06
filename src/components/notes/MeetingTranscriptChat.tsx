@@ -8,7 +8,9 @@ import { Toggle } from "../ui/toggle";
 import { cn } from "../lib/utils";
 import { MAX_SPEAKER_COUNT } from "../../constants/speakerDetection.json";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
+import { useSettingsStore } from "../../stores/settingsStore";
 import {
+  isOwnerSegment,
   isTranscriptSpeakerLocked,
   resolveSegmentSpeakerName,
   type TranscriptSpeakerStatus,
@@ -250,6 +252,17 @@ function SpeakerPicker({ speakerProfiles, participants, onSelectName, t }: Speak
   const trimmed = search.trim();
   const trimmedLower = trimmed.toLowerCase();
 
+  // "Me" maps the speaker to the note owner's name ("You" until one is set),
+  // reusing the voice profile of that name so later recordings recognize them.
+  const userName = useSettingsStore((s) => s.userName).trim();
+  const selfName = userName || t("notes.speaker.you");
+  const selfNameLower = selfName.toLowerCase();
+  const selfProfile = (speakerProfiles || []).find(
+    (p) => p.display_name.trim().toLowerCase() === selfNameLower
+  );
+  const showSelf =
+    !search || t("notes.speaker.me").toLowerCase().includes(lower) || selfNameLower.includes(lower);
+
   const filteredParticipants = (participants || []).filter(
     (p) =>
       !search ||
@@ -258,12 +271,14 @@ function SpeakerPicker({ speakerProfiles, participants, onSelectName, t }: Speak
   );
   const filteredProfiles = (speakerProfiles || []).filter(
     (p) =>
-      !search ||
-      p.display_name.toLowerCase().includes(lower) ||
-      (p.email && p.email.toLowerCase().includes(lower))
+      p !== selfProfile &&
+      (!search ||
+        p.display_name.toLowerCase().includes(lower) ||
+        (p.email && p.email.toLowerCase().includes(lower)))
   );
 
   const hasExactMatch =
+    selfNameLower === trimmedLower ||
     filteredParticipants.some(
       (p) =>
         (p.displayName || "").toLowerCase() === trimmedLower ||
@@ -295,7 +310,8 @@ function SpeakerPicker({ speakerProfiles, participants, onSelectName, t }: Speak
     }
   };
 
-  const isEmpty = !filteredParticipants.length && !filteredProfiles.length && !canCreate;
+  const isEmpty =
+    !showSelf && !filteredParticipants.length && !filteredProfiles.length && !canCreate;
 
   return (
     <>
@@ -311,6 +327,21 @@ function SpeakerPicker({ speakerProfiles, participants, onSelectName, t }: Speak
         />
       </div>
       <div className="max-h-52 overflow-y-auto">
+        {showSelf && (
+          <div className="p-1 border-b border-border/70">
+            <button
+              onClick={() => onSelectName(selfName, selfProfile?.email ?? null, selfProfile?.id)}
+              className="flex items-center gap-2 w-full px-2 py-1.5 rounded-md text-xs text-foreground/70 hover:bg-foreground/5 transition-colors cursor-pointer"
+            >
+              <span className="truncate flex-1 text-start">{t("notes.speaker.me")}</span>
+              {userName && (
+                <span dir="auto" className="text-foreground/45 truncate text-[11px]">
+                  {userName}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
         {filteredParticipants.length > 0 && (
           <div className="p-1 border-b border-border/70">
             <div className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
@@ -772,6 +803,7 @@ export function MeetingTranscriptChat({
   contentClassName,
 }: MeetingTranscriptChatProps) {
   const { t } = useTranslation();
+  const userName = useSettingsStore((s) => s.userName);
   const hasContent = segments.length > 0 || Boolean(micPartial) || Boolean(systemPartial);
   // The scroller mounts only once content exists, and a recording opens with
   // partials before its first final segment — the follow effect must re-run on
@@ -867,13 +899,9 @@ export function MeetingTranscriptChat({
     );
   }
 
-  const isSelfSide = (segment: TranscriptSegment): boolean => {
-    const mapped = segment.speaker ? speakerMappings?.[segment.speaker] : undefined;
-    if (mapped) return mapped.trim().toLowerCase() === t("notes.speaker.you").toLowerCase();
-    if (segment.speaker === "you") return true;
-    if (segment.speakerName) return false;
-    return segment.source === "mic";
-  };
+  const ownerNames = [t("notes.speaker.you"), userName];
+  const isSelfSide = (segment: TranscriptSegment): boolean =>
+    isOwnerSegment(segment, speakerMappings, ownerNames);
 
   const showAssumedHint =
     !isDiarizing &&

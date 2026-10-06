@@ -1869,6 +1869,7 @@
     },
     "speaker": {
       "you": "Vous",
+      "me": "Moi",
       "them": "Eux",
       "unknown": "Intervenant inconnu",
       "label": "Intervenant {{n}}",

@@ -1869,6 +1869,7 @@
     },
     "speaker": {
       "you": "You",
+      "me": "Me",
       "them": "Them",
       "unknown": "Unknown Speaker",
       "label": "Speaker {{n}}",

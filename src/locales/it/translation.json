@@ -1797,6 +1797,7 @@
     },
     "speaker": {
       "you": "Tu",
+      "me": "Io",
       "them": "Loro",
       "unknown": "Partecipante sconosciuto",
       "label": "Partecipante {{n}}",
