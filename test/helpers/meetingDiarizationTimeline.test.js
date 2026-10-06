@@ -1,5 +1,8 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
+const fs = require("node:fs");
+const os = require("node:os");
+const path = require("node:path");
 const Module = require("node:module");
 
 const handlersModulePath = require.resolve("../../src/helpers/ipcHandlers");
@@ -52,7 +55,14 @@ const { IPCHandlers, DiarizationManager } = loadModules();
 
 // Runs the post-meeting diarization against a fixed cluster timeline and
 // resolves with the segments it would send to the renderer.
-function diarizeMeeting({ audioStartedAt, segments, clusters, diarizedSource = "mic" }) {
+function diarizeMeeting({
+  audioStartedAt,
+  segments,
+  clusters,
+  diarizedSource = "mic",
+  rawPcmPath = "/tmp/ow-test-missing.pcm",
+  enabled = true,
+}) {
   const diarizationManager = new DiarizationManager();
   diarizationManager.isAvailable = () => true;
   diarizationManager.convertRawPcmToWav = async () => "/tmp/ow-test-missing.wav";
@@ -62,7 +72,7 @@ function diarizeMeeting({ audioStartedAt, segments, clusters, diarizedSource = "
     diarizationRoute: { transport: "local" },
     diarizationManager,
     databaseManager: { getSpeakerProfiles: () => [] },
-    speakerDiarizationEnabled: true,
+    speakerDiarizationEnabled: enabled,
   });
 
   return new Promise((resolve) => {
@@ -73,7 +83,7 @@ function diarizeMeeting({ audioStartedAt, segments, clusters, diarizedSource = "
     IPCHandlers.prototype._startOrSkipDiarization.call(
       fakeThis,
       "session-1",
-      "/tmp/ow-test-missing.pcm",
+      rawPcmPath,
       audioStartedAt,
       segments,
       win,
@@ -129,4 +139,24 @@ test("segments without an audio start keep their timestamp", async () => {
 
   assert.equal(merged[0].timestamp, 2);
   assert.equal(merged[0].speaker, "speaker_0");
+});
+
+test("a skipped diarization run still deletes the raw capture", async () => {
+  const rawPcmPath = path.join(os.tmpdir(), `ow-diarize-raw-mic-test-${process.pid}.pcm`);
+  fs.writeFileSync(rawPcmPath, Buffer.alloc(4800));
+
+  const merged = await diarizeMeeting({
+    audioStartedAt: T0,
+    segments: [{ text: "hello", source: "mic", timestamp: T0 + 2000 }],
+    clusters: [],
+    rawPcmPath,
+    enabled: false,
+  });
+
+  assert.equal(merged.length, 1);
+  await new Promise((resolve) => setImmediate(resolve));
+  for (let i = 0; i < 20 && fs.existsSync(rawPcmPath); i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+  assert.equal(fs.existsSync(rawPcmPath), false);
 });

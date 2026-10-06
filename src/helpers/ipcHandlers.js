@@ -7329,6 +7329,8 @@ class IPCHandlers {
     const diarizationEnabled = (sessionConfig?.enabled ?? this.speakerDiarizationEnabled) !== false;
 
     if (!diarizationEnabled || !this._canDiarize() || !rawPcmPath) {
+      // The capture is written for every session, so a skipped run still owns it.
+      if (rawPcmPath) fs.unlink(rawPcmPath, () => {});
       send({
         segments: transcriptSegments.map((segment, index) => ({
           ...segment,
@@ -7337,8 +7339,6 @@ class IPCHandlers {
       });
       return;
     }
-
-    const fs = require("fs");
 
     (async () => {
       let tmpWav = null;
