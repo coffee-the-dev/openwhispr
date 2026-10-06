@@ -17,8 +17,10 @@ const isSelfParticipant = (participant: CalendarAttendee, identity: MeetingIdent
 /**
  * Speaker label for the LLM payload. Mirrors the precedence the exporter
  * applies in transcriptFormatter.js: explicit name → cluster mapping →
- * "Speaker N" → source fallback. The mic track is the note owner, so it
- * carries their real name instead of an anonymous "You" whenever it is known.
+ * "Speaker N" → source fallback. The owner carries their real name instead of
+ * an anonymous "You" whenever it is known. An undiarized mic track is the
+ * owner, but a diarized one (an in-person or speakerphone recording) holds
+ * everyone in the room, so its clusters resolve like any other speaker.
  */
 export function resolveLlmSpeakerLabel(
   segment: TranscriptSegment,
@@ -26,13 +28,14 @@ export function resolveLlmSpeakerLabel(
   selfLabel: string,
   t: Translate
 ): string {
-  if (segment.source === "mic" || segment.speaker === "you") return selfLabel;
+  if (segment.speaker === "you") return selfLabel;
   const resolved = resolveSegmentSpeakerName(segment, speakerMappings);
   if (resolved) return resolved;
   if (segment.speaker) {
     const num = Number.parseInt(segment.speaker.replace("speaker_", ""), 10);
     if (!Number.isNaN(num)) return t("notes.speaker.label", { n: num + 1 });
   }
+  if (segment.source === "mic") return selfLabel;
   return t("notes.speaker.them");
 }
 

@@ -26,6 +26,16 @@ test("mic segments carry the note owner's label", async () => {
   );
 });
 
+test("a diarized mic track resolves its speakers instead of the owner", async () => {
+  const { resolveLlmSpeakerLabel } = await load();
+  const mic = (speaker, extra = {}) => ({ source: "mic", speaker, text: "hi", ...extra });
+  assert.equal(resolveLlmSpeakerLabel(mic("speaker_1"), {}, "Steve", t), "Speaker 2");
+  assert.equal(resolveLlmSpeakerLabel(mic("speaker_1"), { speaker_1: "Dan" }, "Steve", t), "Dan");
+  const lockedDan = mic("speaker_0", { speakerName: "Dan", speakerLocked: true });
+  assert.equal(resolveLlmSpeakerLabel(lockedDan, {}, "Steve", t), "Dan");
+  assert.equal(resolveLlmSpeakerLabel(mic("you"), {}, "Steve", t), "Steve");
+});
+
 test("system segments resolve name → mapping → Speaker N → Them", async () => {
   const { resolveLlmSpeakerLabel } = await load();
   const locked = {
