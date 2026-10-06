@@ -28,8 +28,8 @@ import {
 } from "../constants/speakerDetection.json";
 import logger from "../utils/logger";
 import {
-  lockTranscriptSpeaker,
   mergeTranscriptSegments,
+  nameTranscriptSpeaker,
   normalizeTranscriptSegment,
   serializeTranscriptSegments,
   type TranscriptSpeakerLockSource,
@@ -746,7 +746,9 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
     for (const s of seed) {
       const idx = getSpeakerNumericIndex(s.speaker);
       if (idx != null && idx > maxSpeakerIndex) maxSpeakerIndex = idx;
-      if (s.speakerLocked && s.speaker && s.speakerName) {
+      // Named speakers carry their name as confirmed (older notes: locked).
+      const named = s.speakerLocked || s.speakerStatus === "confirmed";
+      if (named && s.speaker && s.speakerName && !s.speakerIsPlaceholder) {
         locks.set(s.speaker, s.speakerName);
       }
     }
@@ -1020,7 +1022,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
                   ? speakerLocks.get(provisional.speaker)
                   : undefined;
                 return lockedName
-                  ? lockTranscriptSpeaker(provisional, {
+                  ? nameTranscriptSpeaker(provisional, {
                       speakerName: lockedName,
                       speakerIsPlaceholder: false,
                       suggestedName: undefined,
@@ -1618,7 +1620,7 @@ export function lockSpeaker(speakerId: string, displayName: string): void {
   speakerLocks.set(speakerId, displayName);
   const next = useMeetingRecordingStore.getState().segments.map((s) =>
     s.speaker === speakerId
-      ? lockTranscriptSpeaker(s, {
+      ? nameTranscriptSpeaker(s, {
           speakerName: displayName,
           speakerIsPlaceholder: false,
           suggestedName: undefined,

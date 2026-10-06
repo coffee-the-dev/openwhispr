@@ -49,6 +49,7 @@ import { parseTranscriptSegments } from "../../utils/parseTranscriptSegments";
 import {
   applyTranscriptSpeakerPatch,
   lockTranscriptSpeaker,
+  nameTranscriptSpeaker,
   serializeTranscriptSegments,
 } from "../../utils/transcriptSpeakerState";
 import NoteParticipants from "./NoteParticipants";
@@ -463,7 +464,7 @@ export default function NoteEditor({
 
       const currentSegments = displaySegments.map((s) =>
         s.speaker === speakerId
-          ? lockTranscriptSpeaker(s, {
+          ? nameTranscriptSpeaker(s, {
               speakerName: displayName,
               speaker: speakerId,
               speakerIsPlaceholder: false,

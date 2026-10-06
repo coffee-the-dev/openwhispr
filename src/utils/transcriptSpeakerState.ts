@@ -99,12 +99,32 @@ export const lockTranscriptSpeaker = (
     speakerLockSource: "user",
   });
 
+// Naming a whole speaker labels its cluster (persisted as a speaker mapping), not each
+// segment. Unlike a lock it yields to a later diarization pass that moves the segment
+// to another cluster — otherwise names given against noisy live clusters outlive the
+// final diarization and contradict it. It also clears an older lock on the segment.
+export const nameTranscriptSpeaker = (
+  segment: TranscriptSegment,
+  patch: Partial<Pick<TranscriptSegment, SpeakerStateField>> = {}
+) =>
+  normalizeTranscriptSegment({
+    ...segment,
+    ...patch,
+    speakerLocked: false,
+    speakerStatus: "confirmed",
+    speakerLockSource: undefined,
+  });
+
 const mergeSpeakerFields = (existing: TranscriptSegment, incoming: TranscriptSegment) => {
   const merged = { ...incoming } as TranscriptSegment;
   const existingFields = existing as Record<SpeakerStateField, unknown>;
   const mergedFields = merged as Record<SpeakerStateField, unknown>;
+  // A name describes the cluster it was given for; it must not follow the segment
+  // into the cluster diarization moved it to.
+  const movedCluster = incoming.speaker !== undefined && incoming.speaker !== existing.speaker;
 
   for (const field of SPEAKER_STATE_FIELDS) {
+    if (movedCluster) break;
     if (mergedFields[field] === undefined && existingFields[field] !== undefined) {
       mergedFields[field] = existingFields[field];
     }
