@@ -69,6 +69,10 @@
         "serverDescription": "Detecta quién habló y cuándo en reuniones y archivos subidos. La comparación con voces guardadas siempre se hace en este dispositivo.",
         "selfHostedDesc": "Tu servidor de diarización en tu red.",
         "serverUrlHelp": "URL base de un servidor que responde a POST /audio/diarizations, como NeMo-Speech.cpp. Usa la clave API de transcripción."
+      },
+      "keepAudio": {
+        "title": "Conservar el audio de la reunión",
+        "description": "Guarda como MP3 el audio que usó la detección de hablantes (el otro lado de una llamada, o toda la sala en persona) para poder volver a detectar hablantes más tarde. Se elimina junto con su nota."
       }
     }
   },

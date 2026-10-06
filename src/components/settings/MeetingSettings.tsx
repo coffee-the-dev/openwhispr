@@ -24,6 +24,21 @@ export function MeetingSpeakerDetectionRow() {
   );
 }
 
+export function MeetingKeepAudioRow() {
+  const { t } = useTranslation();
+  const keepMeetingAudio = useSettingsStore((s) => s.keepMeetingAudio);
+  const setKeepMeetingAudio = useSettingsStore((s) => s.setKeepMeetingAudio);
+
+  return (
+    <SettingsRow
+      label={t("settings.meeting.keepAudio.title")}
+      description={t("settings.meeting.keepAudio.description")}
+    >
+      <Toggle checked={keepMeetingAudio} onChange={setKeepMeetingAudio} />
+    </SettingsRow>
+  );
+}
+
 // One diarizer for meetings and uploads. Naming speakers from saved voice
 // profiles stays on-device either way.
 export function SpeakerDetectionServerPanel() {
@@ -178,6 +193,7 @@ export function MeetingTranscriptionPanel() {
         />
       )}
       <MeetingSpeakerDetectionRow />
+      <MeetingKeepAudioRow />
       <SpeakerDetectionServerPanel />
     </div>
   );

@@ -62,6 +62,9 @@ function diarizeMeeting({
   diarizedSource = "mic",
   rawPcmPath = "/tmp/ow-test-missing.pcm",
   enabled = true,
+  keepMeetingAudio = false,
+  archived = [],
+  noteId = null,
 }) {
   const diarizationManager = new DiarizationManager();
   diarizationManager.isAvailable = () => true;
@@ -73,6 +76,10 @@ function diarizeMeeting({
     diarizationManager,
     databaseManager: { getSpeakerProfiles: () => [] },
     speakerDiarizationEnabled: enabled,
+    keepMeetingAudio,
+    _archiveMeetingAudio: async (wavPath, archivedNoteId, startedAt) => {
+      archived.push({ wavPath, noteId: archivedNoteId, startedAt });
+    },
   });
 
   return new Promise((resolve) => {
@@ -89,7 +96,7 @@ function diarizeMeeting({
       win,
       null,
       null,
-      null,
+      noteId,
       diarizedSource
     );
   });
@@ -158,5 +165,61 @@ test("a skipped diarization run still deletes the raw capture", async () => {
   for (let i = 0; i < 20 && fs.existsSync(rawPcmPath); i += 1) {
     await new Promise((resolve) => setTimeout(resolve, 10));
   }
+  assert.equal(fs.existsSync(rawPcmPath), false);
+});
+
+const waitFor = async (condition) => {
+  for (let i = 0; i < 50 && !condition(); i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 10));
+  }
+};
+
+test("kept meeting audio is archived from the diarizer's WAV", async () => {
+  const archived = [];
+  await diarizeMeeting({
+    audioStartedAt: T0,
+    segments: [{ text: "hello", source: "mic", timestamp: T0 + 2000 }],
+    clusters: [{ start: 0, end: 5, speaker: "A" }],
+    keepMeetingAudio: true,
+    archived,
+    noteId: 25,
+  });
+
+  await waitFor(() => archived.length > 0);
+  assert.deepEqual(archived, [{ wavPath: "/tmp/ow-test-missing.wav", noteId: 25, startedAt: T0 }]);
+});
+
+test("meeting audio is not archived unless the setting is on", async () => {
+  const archived = [];
+  await diarizeMeeting({
+    audioStartedAt: T0,
+    segments: [{ text: "hello", source: "mic", timestamp: T0 + 2000 }],
+    clusters: [{ start: 0, end: 5, speaker: "A" }],
+    archived,
+    noteId: 25,
+  });
+
+  await new Promise((resolve) => setTimeout(resolve, 50));
+  assert.deepEqual(archived, []);
+});
+
+test("a skipped diarization run still archives kept audio before deleting the capture", async () => {
+  const rawPcmPath = path.join(os.tmpdir(), `ow-diarize-raw-mic-keep-${process.pid}.pcm`);
+  fs.writeFileSync(rawPcmPath, Buffer.alloc(4800));
+  const archived = [];
+
+  await diarizeMeeting({
+    audioStartedAt: T0,
+    segments: [{ text: "hello", source: "mic", timestamp: T0 + 2000 }],
+    clusters: [],
+    rawPcmPath,
+    enabled: false,
+    keepMeetingAudio: true,
+    archived,
+    noteId: 7,
+  });
+
+  await waitFor(() => archived.length > 0 && !fs.existsSync(rawPcmPath));
+  assert.deepEqual(archived, [{ wavPath: "/tmp/ow-test-missing.wav", noteId: 7, startedAt: T0 }]);
   assert.equal(fs.existsSync(rawPcmPath), false);
 });

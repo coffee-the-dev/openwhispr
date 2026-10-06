@@ -69,6 +69,10 @@
         "serverDescription": "Individua chi ha parlato e quando nelle riunioni e nei file caricati. Il confronto con le voci salvate avviene sempre su questo dispositivo.",
         "selfHostedDesc": "Il tuo server di diarizzazione nella tua rete.",
         "serverUrlHelp": "URL di base di un server che risponde a POST /audio/diarizations, ad esempio NeMo-Speech.cpp. Usa la chiave API della trascrizione."
+      },
+      "keepAudio": {
+        "title": "Conserva l’audio delle riunioni",
+        "description": "Salva come MP3 l’audio usato dal rilevamento dei parlanti (l’altro lato di una chiamata, o l’intera stanza di persona), così da poter rilevare di nuovo i parlanti in seguito. Viene eliminato con la sua nota."
       }
     }
   },

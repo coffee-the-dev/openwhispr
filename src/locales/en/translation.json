@@ -69,6 +69,10 @@
         "serverDescription": "Finds who spoke when in meetings and uploaded files. Matching speakers to saved voices always runs on this device.",
         "selfHostedDesc": "Your own diarization server on your network.",
         "serverUrlHelp": "Base URL of a server that answers POST /audio/diarizations, such as NeMo-Speech.cpp. Uses the speech-to-text API key."
+      },
+      "keepAudio": {
+        "title": "Keep meeting audio",
+        "description": "Saves the audio speaker detection used (the other side of a call, or the whole room in person) as an MP3, so speakers can be detected again later. Deleted with its note."
       }
     }
   },

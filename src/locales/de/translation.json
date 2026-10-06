@@ -69,6 +69,10 @@
         "serverDescription": "Erkennt in Meetings und hochgeladenen Dateien, wer wann gesprochen hat. Der Abgleich mit gespeicherten Stimmen läuft immer auf diesem Gerät.",
         "selfHostedDesc": "Eigener Diarisierungsserver in Ihrem Netzwerk.",
         "serverUrlHelp": "Basis-URL eines Servers, der POST /audio/diarizations beantwortet, z. B. NeMo-Speech.cpp. Verwendet den API-Schlüssel der Transkription."
+      },
+      "keepAudio": {
+        "title": "Besprechungsaudio behalten",
+        "description": "Speichert das Audio, das die Sprechererkennung verwendet hat (die Gegenseite eines Anrufs oder den ganzen Raum vor Ort), als MP3, damit Sprecher später erneut erkannt werden können. Wird mit der Notiz gelöscht."
       }
     }
   },

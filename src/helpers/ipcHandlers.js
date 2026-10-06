@@ -21,6 +21,7 @@ const { i18nMain, changeLanguage } = require("./i18nMain");
 const { ONBOARDING_DEMO_KINDS, ONBOARDING_DEMO_STATUSES } = require("./onboardingInputPolicy");
 const { focusWindowsHotkeyCaptureWindow } = require("./hotkeyCaptureFocus");
 const AudioStorageManager = require("./audioStorage");
+const { archiveMeetingAudio, deleteMeetingAudioForNote } = require("./meetingAudioArchive");
 const { NoteFilesSync } = require("./noteFilesSync");
 const LocalModelDownloadStatus = require("./localModelDownloadStatus");
 const createMeetingTranscriptionLifecycle = require("./meetingTranscriptionLifecycle");
@@ -256,6 +257,11 @@ class IPCHandlers {
     this._granolaImportPending = null;
     this._analyticsHistoryBackfillPromise = null;
     this.speakerDiarizationEnabled = true;
+    // Opt-in: keep the audio each meeting's speaker detection ran on. Synced from the renderer.
+    this.keepMeetingAudio = false;
+    this.databaseManager?.addNoteChangeListener?.((change) => {
+      if (change?.type === "delete") void deleteMeetingAudioForNote(change.noteId);
+    });
     // Where meetings and uploads diarize; the renderer syncs it via set-diarization-endpoint.
     this.diarizationRoute = { transport: "local" };
     // Default for the saved process-detection toggle. The engine keeps both detectors
@@ -6534,6 +6540,11 @@ class IPCHandlers {
       }
     });
 
+    ipcMain.handle("meeting-set-keep-audio", async (_event, payload) => {
+      this.keepMeetingAudio = payload?.enabled === true;
+      return { success: true };
+    });
+
     ipcMain.handle("set-diarization-endpoint", async (_event, payload) => {
       try {
         const { resolveDiarizationRoute } = await import("./diarizationRoute.ts");
@@ -7309,6 +7320,30 @@ class IPCHandlers {
     }
   }
 
+  async _archiveMeetingAudio(wavPath, noteId, startedAt) {
+    try {
+      const filePath = await archiveMeetingAudio(wavPath, { noteId, startedAt });
+      debugLogger.info("Meeting audio kept", { noteId, filePath });
+    } catch (error) {
+      debugLogger.warn("Keeping meeting audio failed", { noteId, error: error.message });
+    }
+  }
+
+  async _releaseSkippedMeetingCapture(rawPcmPath, noteId, startedAt) {
+    let wavPath = null;
+    try {
+      if (this.keepMeetingAudio && this.diarizationManager) {
+        wavPath = await this.diarizationManager.convertRawPcmToWav(rawPcmPath, 24000);
+        await this._archiveMeetingAudio(wavPath, noteId, startedAt);
+      }
+    } catch (error) {
+      debugLogger.warn("Keeping meeting audio failed", { noteId, error: error.message });
+    } finally {
+      fs.unlink(rawPcmPath, () => {});
+      if (wavPath) fs.unlink(wavPath, () => {});
+    }
+  }
+
   _startOrSkipDiarization(
     sessionId,
     rawPcmPath,
@@ -7330,7 +7365,7 @@ class IPCHandlers {
 
     if (!diarizationEnabled || !this._canDiarize() || !rawPcmPath) {
       // The capture is written for every session, so a skipped run still owns it.
-      if (rawPcmPath) fs.unlink(rawPcmPath, () => {});
+      if (rawPcmPath) void this._releaseSkippedMeetingCapture(rawPcmPath, noteId, audioStartedAt);
       send({
         segments: transcriptSegments.map((segment, index) => ({
           ...segment,
@@ -7510,6 +7545,9 @@ class IPCHandlers {
         debugLogger.warn("Background diarization failed", { error: err.message });
         send({ segments: [] });
       } finally {
+        if (tmpWav && this.keepMeetingAudio) {
+          await this._archiveMeetingAudio(tmpWav, noteId, audioStartedAt);
+        }
         try {
           fs.unlinkSync(rawPcmPath);
         } catch (_) {}

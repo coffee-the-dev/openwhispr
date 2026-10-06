@@ -31,7 +31,7 @@ class NoteFilesSync {
     this._pendingDeletes = new Map();
     this._pendingVacatedFolders = new Set();
     this._timer = null;
-    databaseManager?.setNoteChangeListener?.((change) => this.handleChange(change));
+    databaseManager?.addNoteChangeListener?.((change) => this.handleChange(change));
   }
 
   handleChange(change) {

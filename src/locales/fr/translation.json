@@ -69,6 +69,10 @@
         "serverDescription": "Détermine qui a parlé et quand dans les réunions et les fichiers importés. La correspondance avec les voix enregistrées se fait toujours sur cet appareil.",
         "selfHostedDesc": "Votre serveur de diarisation sur votre réseau.",
         "serverUrlHelp": "URL de base d'un serveur qui répond à POST /audio/diarizations, comme NeMo-Speech.cpp. Utilise la clé API de transcription."
+      },
+      "keepAudio": {
+        "title": "Conserver l’audio des réunions",
+        "description": "Enregistre en MP3 l’audio utilisé par la détection des intervenants (l’autre côté d’un appel, ou toute la pièce en présentiel), pour pouvoir relancer la détection plus tard. Supprimé avec sa note."
       }
     }
   },

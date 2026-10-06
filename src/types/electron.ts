@@ -1756,6 +1756,7 @@ declare global {
       setSpeakerDiarizationEnabled?: (
         enabled: boolean
       ) => Promise<{ success: boolean; error?: string }>;
+      setKeepMeetingAudio?: (enabled: boolean) => Promise<{ success: boolean }>;
       setDiarizationEndpoint?: (config: {
         mode: TranscriptionMode;
         url: string;

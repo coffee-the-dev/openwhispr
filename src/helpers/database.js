@@ -39,23 +39,25 @@ const SELECTED_CALENDAR_EVENT_FILTER = `(
 class DatabaseManager {
   constructor() {
     this.db = null;
-    this._noteChangeListener = null;
+    this._noteChangeListeners = new Set();
     this.initDatabase();
   }
 
-  // One observer (the note-files mirror) hears every write that changes what a
-  // note exports as: { type: "upsert", noteId } | { type: "delete", noteId,
-  // clientNoteId } | { type: "folder-vacated", name }.
-  setNoteChangeListener(listener) {
-    this._noteChangeListener = listener;
+  // Observers (the note-files mirror, the meeting audio archive) hear every
+  // write that changes what a note exports as: { type: "upsert", noteId } |
+  // { type: "delete", noteId, clientNoteId } | { type: "folder-vacated", name }.
+  addNoteChangeListener(listener) {
+    this._noteChangeListeners.add(listener);
+    return () => this._noteChangeListeners.delete(listener);
   }
 
   _emitNoteChange(change) {
-    if (!this._noteChangeListener) return;
-    try {
-      this._noteChangeListener(change);
-    } catch (error) {
-      debugLogger.error("Note change listener failed", { error: error.message }, "notes");
+    for (const listener of this._noteChangeListeners) {
+      try {
+        listener(change);
+      } catch (error) {
+        debugLogger.error("Note change listener failed", { error: error.message }, "notes");
+      }
     }
   }
 

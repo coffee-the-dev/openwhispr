@@ -356,6 +356,7 @@ Settings live in a zustand store (`src/stores/settingsStore.ts`) persisted to lo
 - `dictationAgentToolCalling` / `chatAgentToolCalling`, `dictationAgentAcceptsImages` / `chatAgentAcceptsImages`: self-hosted capabilities the server cannot advertise
 - `webSearchEnabled`, `webSearchUrl`: SearXNG web search
 - `diarizationMode` (`local` | `self-hosted`), `diarizationRemoteUrl`: speaker detection engine for meetings and uploads (one setting, shown under both tabs)
+- `keepMeetingAudio` (default off): after each meeting, save the audio speaker detection ran on (system audio for a call, the mic for an in-person recording) as `userData/meeting-audio/note-<id>-<start>.mp3` (`meetingAudioArchive.js`); deleted with its note via the database's note-change listeners. Otherwise the raw capture is a temp file deleted once diarization finishes or is skipped
 - `noteFilesEnabled`, `noteFilesPath`, `noteFilesBaseTag`, `noteFilesExportDictations`: Obsidian export
 - `customDictionary`: JSON array of words/phrases for improved transcription accuracy
 - `userName`: the note owner's name (Settings → General → Profile). Note generation labels the mic track with it instead of "You" and states it in the Meeting Context block, so the model never takes the owner's identity from a name heard in the conversation
