@@ -985,6 +985,8 @@ export interface SettingsState
   noteFilesPath: string;
   noteFilesBaseTag: string;
   noteFilesExportDictations: boolean;
+  /** The note owner's name, given to note generation in place of "You". */
+  userName: string;
 
   transcriptionMode: TranscriptionMode;
   remoteTranscriptionType: SelfHostedType;
@@ -1189,6 +1191,7 @@ export interface SettingsState
   setNoteFilesPath: (value: string) => void;
   setNoteFilesBaseTag: (value: string) => void;
   setNoteFilesExportDictations: (value: boolean) => void;
+  setUserName: (value: string) => void;
 
   setChatAgentModel: (value: string) => void;
   setChatAgentProvider: (value: string) => void;
@@ -1497,6 +1500,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   noteFilesPath: readString("noteFilesPath", ""),
   noteFilesBaseTag: readString("noteFilesBaseTag", "openwhispr"),
   noteFilesExportDictations: readBoolean("noteFilesExportDictations", false),
+  userName: readString("userName", ""),
 
   transcriptionMode: readTranscriptionMode("transcriptionMode"),
   remoteTranscriptionType: (() => {
@@ -2017,6 +2021,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setNoteFilesPath: createStringSetter("noteFilesPath"),
   setNoteFilesBaseTag: createStringSetter("noteFilesBaseTag"),
   setNoteFilesExportDictations: createBooleanSetter("noteFilesExportDictations"),
+  setUserName: createStringSetter("userName"),
 
   setChatAgentModel: createStringSetter("chatAgentModel"),
   setChatAgentProvider: createStringSetter("chatAgentProvider"),

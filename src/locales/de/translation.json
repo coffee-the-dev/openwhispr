@@ -1094,6 +1094,11 @@
       "tipDescription": "Trennen Sie mehrere Wörter mit Kommas. Fügen Sie Kontextphrasen wie \"The word is Synty\" für bessere Erkennung hinzu."
     },
     "general": {
+      "profile": {
+        "title": "Profil",
+        "name": "Dein Name",
+        "nameDescription": "Wird in Besprechungsnotizen statt „Du“ verwendet, damit Zusammenfassungen und Aufgaben dich richtig benennen."
+      },
       "appearance": {
         "auto": "Auto",
         "dark": "Dunkel",

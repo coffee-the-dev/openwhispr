@@ -203,6 +203,7 @@ export default function PersonalNotesView({
     [commitDraft, persistPendingWrites, takePendingSnapshots]
   );
   const { toast } = useToast();
+  const userName = useSettingsStore((s) => s.userName);
   const noteFormatting = useSettingsStore(
     useShallow((settings) => {
       const effectiveSettings = settings;
@@ -576,7 +577,7 @@ export default function PersonalNotesView({
         for (const m of mappingRows) speakerMappings[m.speaker_id] = m.display_name;
 
         const identity: MeetingIdentity = {
-          selfName: null,
+          selfName: userName.trim() || null,
           selfEmail: null,
           participants: parseNoteParticipants(editorNote.participants),
         };

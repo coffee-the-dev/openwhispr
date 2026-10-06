@@ -1077,6 +1077,11 @@
       "tipDescription": "Separa varias palabras con comas. Añade frases de contexto como \"The word is Synty\" para un mejor reconocimiento."
     },
     "general": {
+      "profile": {
+        "title": "Perfil",
+        "name": "Tu nombre",
+        "nameDescription": "Se usa en las notas de reuniones en lugar de «Tú», para que los resúmenes y las tareas te nombren correctamente."
+      },
       "appearance": {
         "auto": "Auto",
         "dark": "Oscuro",

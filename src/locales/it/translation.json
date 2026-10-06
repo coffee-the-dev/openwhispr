@@ -1077,6 +1077,11 @@
       "tipDescription": "Separa più parole con le virgole. Aggiungi frasi di contesto come \"The word is Synty\" per un migliore riconoscimento."
     },
     "general": {
+      "profile": {
+        "title": "Profilo",
+        "name": "Il tuo nome",
+        "nameDescription": "Usato nelle note delle riunioni al posto di \"Tu\", così riepiloghi e attività ti nominano correttamente."
+      },
       "appearance": {
         "auto": "Automatico",
         "dark": "Scuro",

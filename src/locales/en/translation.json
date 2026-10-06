@@ -1094,6 +1094,11 @@
       "tipDescription": "Separate multiple words with commas. Add context phrases like \"The word is Synty\" for better recognition."
     },
     "general": {
+      "profile": {
+        "title": "Profile",
+        "name": "Your name",
+        "nameDescription": "Used in meeting notes in place of \"You\", so summaries and action items name you correctly."
+      },
       "appearance": {
         "auto": "Auto",
         "dark": "Dark",

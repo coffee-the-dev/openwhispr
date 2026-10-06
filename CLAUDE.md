@@ -358,6 +358,7 @@ Settings live in a zustand store (`src/stores/settingsStore.ts`) persisted to lo
 - `diarizationMode` (`local` | `self-hosted`), `diarizationRemoteUrl`: speaker detection engine for meetings and uploads (one setting, shown under both tabs)
 - `noteFilesEnabled`, `noteFilesPath`, `noteFilesBaseTag`, `noteFilesExportDictations`: Obsidian export
 - `customDictionary`: JSON array of words/phrases for improved transcription accuracy
+- `userName`: the note owner's name (Settings → General → Profile). Note generation labels the mic track with it instead of "You" and states it in the Meeting Context block, so the model never takes the owner's identity from a name heard in the conversation
 - `voiceAgentScreenContext`, `voiceAgentKey`: voice assistant options
 
 Secrets are only the optional bearer keys for self-hosted servers — 6 in total: `CUSTOM_TRANSCRIPTION_API_KEY`, `CUSTOM_CLEANUP_API_KEY`, and the per-scope keys in `src/config/secretKeys.js` (`SCOPE_API_KEYS`; `preload.js` mirrors them in `SCOPE_KEY_BRIDGES`). They are AES-256-GCM encrypted per key under `userData/secure-keys/` with a master key held in the OS keychain via `@napi-rs/keyring` (`secretCrypto.js`; Electron `safeStorage` is the fallback), loaded into `process.env` at startup by `EnvironmentManager.init()`. Renderer reads them via IPC (`get-*-key`) and writes via debounced IPC (`save-*-key`). Keys for providers this fork removed (`RETIRED_SECRET_KEYS`) are deleted at startup.

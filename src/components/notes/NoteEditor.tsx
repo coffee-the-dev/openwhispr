@@ -44,6 +44,7 @@ import EmbeddedChat, { type EmbeddedChatMode } from "./EmbeddedChat";
 import { useEmbeddedChat } from "../../hooks/useEmbeddedChat";
 import { formatNoteDate, formatShortDate } from "../../utils/dateFormatting";
 import { collectKnownPeople } from "../../utils/llmTranscript";
+import { useSettingsStore } from "../../stores/settingsStore";
 import { parseTranscriptSegments } from "../../utils/parseTranscriptSegments";
 import {
   applyTranscriptSpeakerPatch,
@@ -218,6 +219,7 @@ export default function NoteEditor({
 }: NoteEditorProps) {
   const { t } = useTranslation();
   const locale = useUiLocale();
+  const userName = useSettingsStore((s) => s.userName);
   const defaultViewMode: MeetingViewMode = enhancement ? "enhanced" : "raw";
   const [selectedViewMode, setSelectedViewMode] = useState<MeetingViewMode>(defaultViewMode);
   // Stored as chosen, clamped on read: AI Summary is the only tab that can stop
@@ -295,14 +297,14 @@ export default function NoteEditor({
     () =>
       collectKnownPeople(
         {
-          selfName: null,
+          selfName: userName.trim() || null,
           selfEmail: null,
           participants: parsedParticipants,
         },
         speakerMappings,
         displaySegments
       ),
-    [parsedParticipants, speakerMappings, displaySegments]
+    [userName, parsedParticipants, speakerMappings, displaySegments]
   );
 
   const refreshSpeakerProfiles = useCallback(() => {

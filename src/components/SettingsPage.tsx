@@ -989,6 +989,9 @@ export default function SettingsPage({
   const setVoiceAgentKey = useSettingsStore((s) => s.setVoiceAgentKey);
   const translationKey = useSettingsStore((s) => s.translationKey);
   const setTranslationKey = useSettingsStore((s) => s.setTranslationKey);
+  const userName = useSettingsStore((s) => s.userName);
+  const setUserName = useSettingsStore((s) => s.setUserName);
+  const [userNameDraft, setUserNameDraft] = useState(userName);
 
   const { t } = useTranslation();
   const { toast } = useToast();
@@ -1571,6 +1574,35 @@ export default function SettingsPage({
       case "general":
         return (
           <div className="space-y-6">
+            {/* Profile */}
+            <div>
+              <SectionHeader title={t("settingsPage.general.profile.title")} />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.general.profile.name")}
+                    description={t("settingsPage.general.profile.nameDescription")}
+                  >
+                    <Input
+                      value={userNameDraft}
+                      onChange={(e) => setUserNameDraft(e.target.value)}
+                      onBlur={() => {
+                        const next = userNameDraft.trim();
+                        setUserNameDraft(next);
+                        if (next !== userName) setUserName(next);
+                      }}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") e.currentTarget.blur();
+                      }}
+                      dir="auto"
+                      aria-label={t("settingsPage.general.profile.name")}
+                      className="h-7 w-44 text-xs"
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
             {/* Appearance */}
             <div>
               <SectionHeader

@@ -1071,6 +1071,11 @@
       "tipDescription": "Separe várias palavras com vírgulas. Adicione frases de contexto como \"The word is Synty\" para melhor reconhecimento."
     },
     "general": {
+      "profile": {
+        "title": "Perfil",
+        "name": "Seu nome",
+        "nameDescription": "Usado nas notas de reunião no lugar de \"Você\", para que resumos e tarefas citem você corretamente."
+      },
       "appearance": {
         "auto": "Auto",
         "dark": "Escuro",

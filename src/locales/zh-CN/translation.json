@@ -1077,6 +1077,11 @@
       "tipDescription": "用逗号分隔多个词语。添加上下文短语如 \"The word is Synty\" 以获得更好的识别效果。"
     },
     "general": {
+      "profile": {
+        "title": "个人资料",
+        "name": "你的名字",
+        "nameDescription": "在会议笔记中代替“你”，让摘要和待办事项正确地称呼你。"
+      },
       "appearance": {
         "auto": "自动",
         "dark": "深色",

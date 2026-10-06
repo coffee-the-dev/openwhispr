@@ -1094,6 +1094,11 @@
       "tipDescription": "Séparez plusieurs mots par des virgules. Ajoutez des phrases de contexte comme « The word is Synty » pour une meilleure reconnaissance."
     },
     "general": {
+      "profile": {
+        "title": "Profil",
+        "name": "Votre nom",
+        "nameDescription": "Utilisé dans les notes de réunion à la place de « Vous », pour que les résumés et les actions vous nomment correctement."
+      },
       "appearance": {
         "auto": "Auto",
         "dark": "Sombre",
