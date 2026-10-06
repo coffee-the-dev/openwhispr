@@ -59,7 +59,7 @@ const EXPECTED_SHARED_FIELD_DIRECTIONS = {
   "src/components/DictionaryView.tsx": ["auto", "auto", "auto"],
   "src/components/OpenAICompatiblePanel.tsx": ["ltr"],
   "src/components/SelfHostedPanel.tsx": ["ltr", "ltr"],
-  "src/components/SettingsPage.tsx": ["ltr", "ltr", "ltr", "ltr", "ltr", "ltr", "auto"],
+  "src/components/SettingsPage.tsx": ["ltr", "ltr", "ltr", "ltr", "ltr", "ltr", "auto", "auto"],
   "src/components/SnippetsView.tsx": ["auto", "auto", "auto", "auto"],
   "src/components/notes/ActionManagerDialog.tsx": ["auto", "auto"],
   "src/components/notes/UploadAudioView.tsx": ["auto"],
