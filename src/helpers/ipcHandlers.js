@@ -4278,11 +4278,18 @@ class IPCHandlers {
         .join(" ")
         .trim();
 
-    const storeMeetingDiarizationSegment = (text, source, timestamp, micSuppression = null) => {
+    const storeMeetingDiarizationSegment = (
+      text,
+      source,
+      timestamp,
+      micSuppression = null,
+      audioStartedAt = null
+    ) => {
       meetingDiarizationSegments.push({
         text,
         source,
         timestamp,
+        audioStartedAt,
         committedAt: Date.now(),
         suppressionReason: source === "mic" ? micSuppression?.reason || null : null,
         hasBleedEvidence: source === "mic" ? !!micSuppression?.hasBleedEvidence : false,
@@ -4295,6 +4302,7 @@ class IPCHandlers {
       source,
       timestamp,
       micSuppression = null,
+      audioStartedAt = null,
       send = null,
       includeInLocalTranscript = false,
     }) => {
@@ -4302,7 +4310,7 @@ class IPCHandlers {
         appendMeetingLocalTranscript(text);
       }
 
-      storeMeetingDiarizationSegment(text, source, timestamp, micSuppression);
+      storeMeetingDiarizationSegment(text, source, timestamp, micSuppression, audioStartedAt);
 
       if (send) {
         send("meeting-transcription-segment", {
@@ -4871,6 +4879,10 @@ class IPCHandlers {
       }
 
       const pcm24k = Buffer.concat(chunks);
+      // The batch is the audio that arrived up to now. Its text comes back a
+      // transcription round trip later, so segment timestamps mark when the
+      // text arrived; diarization needs where the audio sits on the timeline.
+      const audioStartedAt = Date.now() - (pcm24k.length / 2 / 24000) * 1000;
 
       const pcm16k = downsample24kTo16k(pcm24k);
 
@@ -5022,6 +5034,7 @@ class IPCHandlers {
                   source,
                   timestamp: segTimestamp,
                   micSuppression,
+                  audioStartedAt,
                   send: sendLocalSegment,
                   includeInLocalTranscript: true,
                 }),
@@ -5034,6 +5047,7 @@ class IPCHandlers {
             source,
             timestamp: segTimestamp,
             micSuppression,
+            audioStartedAt,
             send: sendLocalSegment,
             includeInLocalTranscript: true,
           });
@@ -7368,15 +7382,15 @@ class IPCHandlers {
           transcriptSegments[0]?.timestamp ||
           0;
         const isEpochMs = startMs > 1e9;
-        const normalized = transcriptSegments.map((seg) => ({
-          ...seg,
-          timestamp:
-            seg.timestamp != null
-              ? isEpochMs
-                ? (seg.timestamp - startMs) / 1000
-                : seg.timestamp
-              : undefined,
-        }));
+        // A batch's audio start places it on the diarization timeline; its
+        // timestamp is when the text came back, a whole batch or more later.
+        const normalized = transcriptSegments.map(({ audioStartedAt: batchStart, ...seg }) => {
+          const at = batchStart ?? seg.timestamp;
+          return {
+            ...seg,
+            timestamp: at != null ? (isEpochMs ? (at - startMs) / 1000 : at) : undefined,
+          };
+        });
 
         const enrichedSegments = this.diarizationManager.mergeWithTranscript(
           normalized,
