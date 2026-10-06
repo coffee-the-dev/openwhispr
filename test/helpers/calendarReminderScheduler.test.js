@@ -22,9 +22,30 @@ const MEETING_LINK_BY_PROVIDER = {
 };
 
 for (const provider of Object.keys(MEETING_LINK_BY_PROVIDER)) {
-  test(`does not remind for a ${provider} time block without attendees or a meeting link`, () => {
+  test(`reminds for a ${provider} event without invite data`, () => {
+    const event = activeEvent(provider, "no-invitees");
+    event.attendees_count = 0;
+    const databaseManager = {
+      getUpcomingEvents: () => [event],
+      getActiveEvents: () => [event],
+    };
+    const scheduler = new CalendarReminderScheduler(databaseManager);
+    let promptCount = 0;
+    scheduler.meetingDetectionEngine = {
+      handleCalendarReminder: () => {
+        promptCount += 1;
+      },
+    };
+
+    scheduler.scheduleNextMeeting();
+
+    assert.equal(promptCount, 1);
+    scheduler.stop();
+  });
+
+  test(`does not remind for a ${provider} time block with only the user invited and no meeting link`, () => {
     const timeBlock = activeEvent(provider, "time-block");
-    timeBlock.attendees_count = 0;
+    timeBlock.attendees = JSON.stringify([{ email: "me@example.com", self: true }]);
     const databaseManager = {
       getUpcomingEvents: () => [timeBlock],
       getActiveEvents: () => [timeBlock],
@@ -45,7 +66,7 @@ for (const provider of Object.keys(MEETING_LINK_BY_PROVIDER)) {
 
   test(`reminds for a ${provider} time block with a meeting link`, () => {
     const timeBlock = activeEvent(provider, "meet-block");
-    timeBlock.attendees_count = 0;
+    timeBlock.attendees = JSON.stringify([{ email: "me@example.com", self: true }]);
     timeBlock.hangout_link = MEETING_LINK_BY_PROVIDER[provider];
     const databaseManager = {
       getUpcomingEvents: () => [timeBlock],
@@ -69,7 +90,7 @@ for (const provider of Object.keys(MEETING_LINK_BY_PROVIDER)) {
   // bypassing the scheduleNextMeeting filter.
   test(`waking during a ${provider} time block does not remind`, () => {
     const timeBlock = activeEvent(provider, "time-block");
-    timeBlock.attendees_count = 0;
+    timeBlock.attendees = JSON.stringify([{ email: "me@example.com", self: true }]);
     const databaseManager = {
       getUpcomingEvents: () => [timeBlock],
       getActiveEvents: () => [timeBlock],

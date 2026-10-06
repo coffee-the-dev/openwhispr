@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useSettingsStore } from "../stores/settingsStore";
 import type { CalendarEvent } from "../types/calendar";
-import { hasOtherAttendees } from "../utils/calendarAttendees";
+import { isSoloEvent } from "../helpers/calendarSoloEvent";
 
 export interface UseUpcomingEventsReturn {
   events: CalendarEvent[];
@@ -35,7 +35,7 @@ export function useUpcomingEvents(): UseUpcomingEventsReturn {
       const windowMinutes = getLookaheadMinutes();
       const result = await window.electronAPI?.calendarGetUpcomingEvents?.(windowMinutes);
       if (result?.success && Array.isArray(result.events)) {
-        setEvents(result.events.filter(hasOtherAttendees));
+        setEvents(result.events.filter((event) => !isSoloEvent(event)));
       } else {
         setEvents([]);
       }

@@ -1,5 +1,6 @@
 const debugLogger = require("./debugLogger");
 const { getMeetingJoinUrl } = require("./meetingJoinUrl");
+const { isSoloEvent } = require("./calendarSoloEvent");
 
 const MEETING_REMINDER_LEAD_MS = 60 * 1000;
 
@@ -7,10 +8,10 @@ function notificationKey(event) {
   return `${event.provider || "google"}:${event.id}`;
 }
 
-// A solo event with no invitees and no meeting link is a time block (focus
-// time, a personal reminder), not a meeting — every provider syncs those.
+// An event whose invite list names only the user is a time block unless it
+// carries a meeting link; see calendarSoloEvent.js for events without invitees.
 function isReminderEligible(event) {
-  return event.attendees_count > 0 || getMeetingJoinUrl(event);
+  return !isSoloEvent(event) || Boolean(getMeetingJoinUrl(event));
 }
 
 // Provider-agnostic meeting reminder scheduling. Reads only the shared
