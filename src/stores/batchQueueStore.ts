@@ -5,6 +5,7 @@ import type { FileTranscriptionConfig, DiarizationSettings } from "../services/f
 import { DOWNLOAD_ERROR_KEYS, transcriptionErrorKey } from "../components/notes/shared";
 import { saveUploadNote, uploadTitleFallback } from "../services/uploadNotes";
 import { getSettings } from "./settingsStore";
+import { describeProviderError } from "../utils/describeProviderError";
 
 export type QueueItemStatus = "queued" | "downloading" | "transcribing" | "done" | "error";
 
@@ -197,7 +198,12 @@ export function processBatchQueue(
           status: "error",
           error:
             transcriptionErrorKey(transcriptionResult) ||
-            (transcriptionResult.messageKey ? i18n.t(transcriptionResult.messageKey) : undefined) ||
+            (transcriptionResult.messageKey
+              ? describeProviderError(
+                  { ...transcriptionResult, message: transcriptionResult.error },
+                  i18n.t
+                ).description
+              : undefined) ||
             transcriptionResult.error ||
             "batchTranscriptionFailed",
         });

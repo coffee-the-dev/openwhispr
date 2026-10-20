@@ -231,26 +231,6 @@ export const serializeTranscriptSegments = (segments: TranscriptSegment[]) =>
 // user correcting one stretch of it. The correction has to outrank the cluster,
 // or reassigning part of a mis-split block appears to do nothing (#1533). This
 // mirrors the precedence the exporter already applies in transcriptFormatter.js.
-/**
- * Whether a row belongs to the note owner. A cluster mapped (or a segment
- * named) after the owner — their configured name, or the "You" label — is
- * theirs, which is how a diarized mic track marks the owner's voice; an
- * unlabelled mic segment is the owner by default.
- */
-export const isOwnerSegment = (
-  segment: TranscriptSegment,
-  speakerMappings: Record<string, string> | undefined,
-  ownerNames: string[]
-): boolean => {
-  const owners = ownerNames.map((name) => name.trim().toLowerCase()).filter(Boolean);
-  const isOwnerName = (name: string) => owners.includes(name.trim().toLowerCase());
-  const mapped = segment.speaker ? speakerMappings?.[segment.speaker] : undefined;
-  if (mapped) return isOwnerName(mapped);
-  if (segment.speaker === "you") return true;
-  if (segment.speakerName) return isOwnerName(segment.speakerName);
-  return segment.source === "mic";
-};
-
 export const resolveSegmentSpeakerName = (
   segment: TranscriptSegment,
   speakerMappings?: Record<string, string>
@@ -258,4 +238,50 @@ export const resolveSegmentSpeakerName = (
   if (segment.speakerName && isTranscriptSpeakerLocked(segment)) return segment.speakerName;
   const mapped = segment.speaker ? speakerMappings?.[segment.speaker] : undefined;
   return mapped || segment.speakerName;
+};
+
+// Naming a speaker "You" is how the user marks their own voice. The name is
+// stored in the UI language it was saved in, so English "You" counts in every
+// language alongside the current one. The owner's configured name (Settings >
+// General > Your name), when set, marks their voice the same way.
+export const isYouSpeakerName = (name: string, youLabel: string, ownerName = ""): boolean => {
+  const normalized = name.trim().toLowerCase();
+  const owner = ownerName.trim().toLowerCase();
+  return (
+    normalized === "you" ||
+    normalized === youLabel.toLowerCase() ||
+    (!!owner && normalized === owner)
+  );
+};
+
+// Which side of the transcript a bubble sits on follows the name its chip shows,
+// so a stretch the user reassigned moves with its new name. An in-person meeting
+// is diarized on the mic without knowing which voice is the note taker, so its
+// numbered clusters, the user's own included, sit with the other speakers until
+// one is named "You". A remote call stores the mic as "you". An unconfirmed
+// "You?" suggestion on the mic sits where confirming it would put it.
+export const isSelfSideSegment = (
+  segment: TranscriptSegment,
+  speakerMappings: Record<string, string> | undefined,
+  youLabel: string,
+  ownerName = ""
+): boolean => {
+  const name = resolveSegmentSpeakerName(segment, speakerMappings);
+  if (name) {
+    // On a call the user is the mic, so a remote voice that recording matched to
+    // their voice profile is a misidentification; only a name the user set, which
+    // locks its rows, moves it across. Mappings also hold automatic matches.
+    const autoNamedRemote = segment.source === "system" && !isTranscriptSpeakerLocked(segment);
+    return !autoNamedRemote && isYouSpeakerName(name, youLabel, ownerName);
+  }
+  if (
+    segment.source === "mic" &&
+    segment.suggestedName &&
+    isYouSpeakerName(segment.suggestedName, youLabel, ownerName)
+  ) {
+    return true;
+  }
+  if (segment.speaker === "you") return true;
+  if (segment.speaker) return false;
+  return segment.source === "mic";
 };

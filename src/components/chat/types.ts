@@ -1,3 +1,5 @@
+import type { ProviderSettingsTarget } from "../../utils/describeProviderError";
+
 export interface ToolCallInfo {
   id: string;
   name: string;
@@ -8,12 +10,18 @@ export interface ToolCallInfo {
   metadata?: Record<string, unknown> | Array<Record<string, unknown>>;
 }
 
+export interface MessageError {
+  settingsTarget?: ProviderSettingsTarget;
+}
+
 export interface Message {
   id: string;
   role: "user" | "assistant" | "tool";
   content: string;
   isStreaming: boolean;
   toolCalls?: ToolCallInfo[];
+  /** Set on a failed reply; transient (not part of the saved conversation). */
+  error?: MessageError;
 }
 
 export type AgentState =

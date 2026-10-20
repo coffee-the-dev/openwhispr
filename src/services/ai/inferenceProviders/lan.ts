@@ -5,6 +5,16 @@ import logger from "../../../utils/logger";
 import { resolveSelfHostedOpenAIBase } from "../openaiBase";
 import { resolveSelfHostedModel } from "../selfHostedDefaultModel";
 
+async function currentCleanupApiKey(): Promise<string> {
+  try {
+    const key = await window.electronAPI?.getCleanupCustomKey?.();
+    if (key?.trim()) return key.trim();
+  } catch (err) {
+    logger.logReasoning("CUSTOM_KEY_IPC_FALLBACK", { error: (err as Error)?.message });
+  }
+  return getSettings().cleanupCustomApiKey?.trim() || "";
+}
+
 export const lanProvider: InferenceProvider = {
   id: "lan",
   async call({ text, model, agentName, config, ctx }) {
@@ -16,10 +26,11 @@ export const lanProvider: InferenceProvider = {
     try {
       const baseUrl = resolveSelfHostedOpenAIBase(lanUrl);
       const endpoint = buildApiUrl(baseUrl, "/chat/completions");
+      // Ask for the cleanup key at call time: the store copy in the dictation
+      // panel is only hydrated at startup, so a key saved in the control panel
+      // later would not be sent.
       const apiKey =
-        config.customApiKey?.trim() ||
-        (isAgentCall ? "" : settings.cleanupCustomApiKey?.trim()) ||
-        "";
+        config.customApiKey?.trim() || (isAgentCall ? "" : await currentCleanupApiKey());
       const resolvedModel = await resolveSelfHostedModel(baseUrl, apiKey, model || "");
       return await ctx.callChatCompletionsApi(
         endpoint,

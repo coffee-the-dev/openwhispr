@@ -1,7 +1,8 @@
 import type { ReasoningConfig } from "../../BaseReasoningService";
+import type { DictationToneStyle } from "../../../config/toneStyle";
 
 export interface ProviderContext {
-  getSystemPrompt(agentName: string | null): string;
+  getSystemPrompt(agentName: string | null, toneStyle?: DictationToneStyle | null): string;
   callChatCompletionsApi(
     endpoint: string,
     apiKey: string,

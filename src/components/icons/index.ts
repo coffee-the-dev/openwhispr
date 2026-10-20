@@ -6,13 +6,18 @@ export type { IconComponent, IconProps } from "./createIcon";
 export {
   Bold,
   Circle,
+  CopyRounded,
+  FolderRounded,
   Heading,
   Italic,
   List,
   ListChecks,
+  ListEnd,
   ListOrdered,
   Quote,
   Square,
+  SquareSlash,
+  SquareSparkle,
   Strikethrough,
   Table,
 } from "./primitives";
@@ -97,7 +102,6 @@ export const Network = createIcon("network", Nucleo.NetworkNodesOutline24);
 export const NotebookPen = createIcon("notebook-pen", Nucleo.NotebookOutline24);
 export const PanelLeftClose = createIcon("panel-left-close", Nucleo.LayoutLeftOutline24);
 export const PanelRight = createIcon("panel-right", Nucleo.LayoutRightOutline24);
-export const PanelRightClose = createIcon("panel-right-close", Nucleo.SidebarRightOutline24);
 export const Pencil = createIcon("pencil", Nucleo.PencilOutline24);
 export const Play = createIcon("play", Nucleo.MediaPlayOutline24);
 export const Plus = createIcon("plus", Nucleo.PlusOutline24);
@@ -115,7 +119,6 @@ export const Shield = createIcon("shield", Nucleo.ShieldOutline24);
 export const ShieldCheck = createIcon("shield-check", Nucleo.ShieldCheckOutline24);
 export const Sliders = createIcon("sliders", Nucleo.Sliders2VerticalOutline24);
 export const Sparkles = createIcon("sparkles", Nucleo.SparkleOutline24);
-export const SquarePen = createIcon("square-pen", Nucleo.ComposeOutline24);
 export const Sun = createIcon("sun", Nucleo.SunOutline24);
 export const Terminal = createIcon("terminal", Nucleo.ConsoleOutline24);
 export const TestTube = createIcon("test-tube", Nucleo.TestTubeOutline24);

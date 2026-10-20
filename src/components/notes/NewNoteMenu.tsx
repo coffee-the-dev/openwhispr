@@ -35,8 +35,9 @@ export default function NewNoteMenu({ onNewNote, onNewChat }: NewNoteMenuProps) 
   const { t } = useTranslation();
   const itemChosenRef = useRef(false);
 
-  // The chat input takes focus itself, so that close keeps it. A new note focuses nothing (the editor mounts fresh), and dismissing
-  // the menu returns focus to the chevron, as Radix does by default.
+  // The chat input takes focus itself, so selecting chat keeps it. A new note
+  // focuses nothing (the editor mounts fresh), and dismissing the menu returns
+  // focus to the chevron, as Radix does by default.
   const keepFocus = (action: () => void) => () => {
     itemChosenRef.current = true;
     action();

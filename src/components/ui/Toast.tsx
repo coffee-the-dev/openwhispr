@@ -16,6 +16,7 @@ import {
 } from "../../helpers/toastPresentation";
 import { useCopyFeedback } from "../../hooks/useCopyFeedback";
 import { DictationErrorCard } from "../dictation/DictationErrorCard";
+import { TOAST_ACTION_ICONS } from "./toastActionIcons";
 
 /** The inline action beside a toast's text; dismissing is left to the caller. */
 export function ToastActionButton({
@@ -32,6 +33,56 @@ export function ToastActionButton({
       className="rounded-sm border border-white/20 bg-white/10 px-2.5 py-1 text-[10px] font-medium whitespace-nowrap text-white/90 transition-colors hover:border-white/35 hover:bg-white/20 hover:text-white"
     >
       {children}
+    </button>
+  );
+}
+
+/** A structured action under a standard toast's text: a compact button, or its icon alone. */
+function StandardToastAction({
+  action,
+  onAction,
+}: {
+  action: ToastActionConfig;
+  onAction: (action: ToastActionConfig) => ReturnType<ToastActionConfig["onClick"]>;
+}) {
+  const [result, setResult] = React.useState<boolean | undefined>();
+  const resetTimer = React.useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  React.useEffect(() => () => clearTimeout(resetTimer.current), []);
+
+  const handleClick = async () => {
+    let outcome: void | boolean;
+    try {
+      outcome = await onAction(action);
+    } catch {
+      outcome = false;
+    }
+    if (!action.feedback || typeof outcome !== "boolean") return;
+    setResult(outcome);
+    clearTimeout(resetTimer.current);
+    resetTimer.current = setTimeout(() => setResult(undefined), 1800);
+  };
+
+  const label =
+    result === true
+      ? action.feedback?.successLabel
+      : result === false
+        ? action.feedback?.failureLabel
+        : action.label;
+  if (!action.iconOnly) {
+    return <ToastActionButton onClick={handleClick}>{label}</ToastActionButton>;
+  }
+  const Icon = result === true ? Check : action.icon ? TOAST_ACTION_ICONS[action.icon] : Copy;
+  return (
+    <button
+      type="button"
+      onClick={() => void handleClick()}
+      title={label}
+      className="rounded-sm border border-white/20 bg-white/10 p-1 text-white/70 transition-colors hover:border-white/35 hover:bg-white/20 hover:text-white"
+    >
+      <Icon className="size-3" aria-hidden="true" />
+      <span className="sr-only" aria-live={action.feedback ? "polite" : undefined}>
+        {label}
+      </span>
     </button>
   );
 }
@@ -274,6 +325,7 @@ const Toast: React.FC<
   secondaryDescription,
   action,
   actions,
+  actionsAlign = "start",
   presentation = "standard",
   variant = "default",
   duration = 3500,
@@ -345,6 +397,9 @@ const Toast: React.FC<
 
   const message = title || description;
   const detail = title && description ? description : undefined;
+  // Structured actions come with a classified error: its description is a
+  // sentence to read, and Copy details replaces the raw-error copy box.
+  const rowActions = actions?.length ? actions : undefined;
 
   if (presentation === "dictation-error") {
     return (
@@ -396,7 +451,7 @@ const Toast: React.FC<
             <div className="mt-1 text-xs leading-snug text-white/45">{secondaryDescription}</div>
           )}
           {detail &&
-            (isDestructive ? (
+            (isDestructive && !rowActions ? (
               <div
                 className={cn(
                   "text-xs leading-snug mt-1 px-1.5 py-1 rounded-[3px] font-mono",
@@ -423,6 +478,22 @@ const Toast: React.FC<
             ) : (
               <div className="text-xs leading-snug mt-0.5 text-white/45">{detail}</div>
             ))}
+          {rowActions && (
+            <div
+              className={cn(
+                "mt-2 flex items-center gap-1.5",
+                actionsAlign === "end" && "justify-end"
+              )}
+            >
+              {rowActions.map((rowAction, index) => (
+                <StandardToastAction
+                  key={`${rowAction.label}-${index}`}
+                  action={rowAction}
+                  onAction={handleStructuredAction}
+                />
+              ))}
+            </div>
+          )}
         </div>
 
         {action && <div className="shrink-0 self-center">{action}</div>}

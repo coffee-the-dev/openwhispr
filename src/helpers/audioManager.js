@@ -1,4 +1,8 @@
 import ReasoningService from "../services/ReasoningService";
+import {
+  EMPTY_OUTPUT_MESSAGE_KEY,
+  TRUNCATED_OUTPUT_MESSAGE_KEY,
+} from "../services/ai/chatRequestBody";
 import logger from "../utils/logger";
 import { assertValidCleanupOutput } from "../utils/cleanupOutput";
 import { getBaseLanguageCode, getLanguageLabel } from "../utils/languageSupport";
@@ -36,13 +40,20 @@ import { isOnlineParakeetModel, isSherpaLocalProvider } from "../models/ModelReg
 import { resolveTranscriptionRoute } from "./transcriptionRoute.ts";
 import { resolveSelfHostedTranscriptionModel } from "./selfHostedTranscription";
 import { transcriptionFailureOutcome } from "./transcriptionFailureOutcome";
+import { IPC_ERROR_FIELDS } from "./ipcErrorFields";
+import { asProviderError, providerHttpError, redactProviderBody } from "./providerHttpErrors";
 import {
   executeTranslationChain,
   hasTextContent,
   shouldRunTranslateStep,
 } from "./translationChain";
-import { detectAgentName, stripAgentAddress } from "../config/agentDetection";
 import {
+  detectAgentName,
+  stripAgentAddress,
+  stripAgentAddressPreservingFormatting,
+} from "../config/agentDetection";
+import {
+  cleanupUnconfiguredNotice,
   resolveDictationRouteKind,
   resolveAgentImageTarget,
   resolveModeReachability,
@@ -52,12 +63,16 @@ import { resolveDictationAgentInference, scopeAcceptsImages } from "./dictationA
 import { providerSupportsImages } from "../services/ai/inferenceProviders";
 import { resolveDictationTranslationInference } from "./dictationTranslationInference";
 import { resolvePrompt, appendScreenContextSuffix } from "../config/prompts";
+import { resolveDictationToneStyle } from "../config/toneStyle";
+import { selectionEditToneSentence } from "../config/prompts/toneStyle";
 import { evaluateFinishedRecording, withSalvageWarning } from "./recordingValidation";
 import { isEmptyRecording } from "./recordingGuard";
+import { startRecordingSpool, takeInterruptedRecordings } from "./recordingSpool";
 import {
   analyzeDictionaryPromptFragment,
   dictionaryEchoError,
   matchesDictionaryPrompt,
+  stripTrailingDictionaryEcho,
 } from "../utils/dictionaryEchoFilter.js";
 import { WHISPER_PROMPT_CHARS, trimDictionaryPrompt } from "../utils/dictionaryPromptCap.js";
 import { getDictionaryHintWords } from "../utils/snippets";
@@ -67,8 +82,13 @@ import { shouldDisplayDictationPreview } from "../utils/transcriptionPreview";
 import {
   buildSelectionEditSystemPrompt,
   buildSelectionEditUserPrompt,
+  buildLocalSelectionEditSystemPrompt,
+  buildLocalSelectionEditUserPrompt,
+  extractLocalSelectionEditReplacement,
+  SELECTION_EDIT_RESPONSE_FORMAT,
   extractSelectionEditReplacement,
   getSelectionCaptureDisposition,
+  isSelectionQuestionResponse,
 } from "./selectionEditing";
 
 const REASONING_CACHE_TTL = 30000; // 30 seconds
@@ -81,10 +101,30 @@ const neverCancelled = () => false;
 const MIN_SPARSE_RECORDING_DURATION_SECONDS = 3;
 const MIN_UNIQUE_WORD_GAIN = 2;
 
+// A selection edit that fails leaves its transcript behind; it rides out on the
+// error so the failed history entry keeps it. Only those errors carry it: they
+// are created per dictation, while others can be one cached rejection shared by
+// every dictation. Non-enumerable, so a logged error never writes the text out.
+const attachTranscript = (error, transcript, clientTranscriptionId) => {
+  if (!error?.selectionEditFatal || error.transcript !== undefined) return;
+  const text = typeof transcript === "string" ? transcript.trim() : "";
+  if (!text) return;
+  Object.defineProperty(error, "transcript", { value: text, configurable: true });
+  if (clientTranscriptionId) {
+    Object.defineProperty(error, "transcriptClientId", {
+      value: clientTranscriptionId,
+      configurable: true,
+    });
+  }
+};
+
 const cleanupFailureFromError = (error) => ({
   message: error?.message || String(error),
   ...(error?.messageKey ? { messageKey: error.messageKey } : {}),
   ...(error?.messageParams ? { messageParams: error.messageParams } : {}),
+  ...(error?.surface ? { surface: error.surface } : {}),
+  ...(error?.settingsTarget ? { settingsTarget: error.settingsTarget } : {}),
+  ...(error?.technicalDetails ? { technicalDetails: error.technicalDetails } : {}),
 });
 
 const micDeviceKey = (settings) =>
@@ -179,6 +219,7 @@ function resolveReasoningRoute(
   const cleanupConfig = {
     inferenceScope: /** @type {const} */ ("dictationCleanup"),
     disableThinking: settings.cleanupDisableThinking,
+    reasoningEffort: settings.cleanupReasoningEffort,
     temperature: cleanupTemperature,
     requireCompleteOutput: true,
   };
@@ -213,6 +254,7 @@ function resolveReasoningRoute(
 
     return {
       kind: "agent",
+      cleanupReachable,
       model: agent.model,
       config: {
         ...agent.config,
@@ -235,9 +277,9 @@ function resolveReasoningRoute(
     };
   }
   if (kind === "cleanup") {
-    return { kind: "cleanup", config: cleanupConfig };
+    return { kind: "cleanup", cleanupReachable, config: cleanupConfig };
   }
-  return { kind: "skip" };
+  return { kind: "skip", cleanupReachable };
 }
 
 function audioExtensionForMime(mimeType) {
@@ -247,6 +289,16 @@ function audioExtensionForMime(mimeType) {
   if (mimeType.includes("wav")) return "wav";
   return "webm";
 }
+
+// Selection-edit copy for a failed reply, looked up by the cause's messageKey,
+// then by its code.
+const SELECTION_EDIT_FAILURE_COPY = {
+  SELECTION_EDIT_INVALID_RESPONSE: "invalidResponse",
+  OUTPUT_COMPLETION_UNVERIFIED: "invalidResponse",
+  SELECTION_EDIT_EMPTY_RESPONSE: "emptyResponse",
+  [EMPTY_OUTPUT_MESSAGE_KEY]: "emptyResponse",
+  [TRUNCATED_OUTPUT_MESSAGE_KEY]: "truncatedResponse",
+};
 
 class AudioManager {
   constructor() {
@@ -316,16 +368,19 @@ class AudioManager {
     this.rejectedMicDeviceId = null;
     this.workletBlobUrl = null;
     this._activeTranscriptionAbortController = null;
+    this._recordingSpool = null;
     this.voiceAgentRequested = false;
     this.translationRequested = false;
     this.translationApplied = false;
     this.pendingSelectionEdit = null;
     this.pendingAssistantConversation = null;
     this.pendingCleanupFailure = null;
+    this._shownCleanupSetupKey = null;
     this._processingCancellationGeneration = 0;
     this._activeProcessingPipeline = null;
     this.assistantSelectionContext = null;
     this.screenContextPromise = null;
+    this.toneStylePromise = null;
     this.selectionCapturePromise = null;
     this.lastAudioBlob = null;
     this.lastAudioMetadata = null;
@@ -360,6 +415,21 @@ class AudioManager {
       onRecovered: (replacement, previous) => this.replaceActiveMic(replacement, previous),
       onStatusChange: (status) => this.setMicCaptureStatus(status),
     });
+  }
+
+  // A recording's chunks are spooled until its result is saved, so a hung or
+  // crashed app can hand the audio back on the next launch (#2073). Recovered
+  // audio lands in history, so spool none the user wouldn't keep.
+  _startRecordingSpool() {
+    const { dataRetentionEnabled, audioRetentionDays } = getSettings();
+    if (!dataRetentionEnabled || audioRetentionDays <= 0) return null;
+    return startRecordingSpool(this.translationRequested ? "translation" : null);
+  }
+
+  _takeRecordingSpool() {
+    const spool = this._recordingSpool;
+    this._recordingSpool = null;
+    return spool;
   }
 
   getWorkletBlobUrl() {
@@ -446,6 +516,9 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   finalizeChineseScript(text, settings = getSettings()) {
+    // A selection edit has already applied its explicit language instruction.
+    // A dictation-wide script preference must not rewrite that document again.
+    if (this.pendingSelectionEdit) return text;
     return applyChineseScript(
       text,
       resolveChineseScriptTarget(
@@ -464,6 +537,21 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       matchesDictionaryPrompt(text, this.getCustomDictionaryPrompt()) ||
       matchesDictionaryPrompt(text, this.getWhisperPrompt())
     );
+  }
+
+  // Drops a hint list the model recited after the speech (#2581). Pass the
+  // prompt the request actually carried: a capped prompt can only echo itself.
+  // Snippet triggers beside the dictionary never start or count toward a recital.
+  stripTrailingDictionaryEcho(text, sentPrompt) {
+    const stripped = stripTrailingDictionaryEcho(text, sentPrompt, this.getCustomDictionaryArray());
+    if (stripped !== text) {
+      logger.debug(
+        "Stripped trailing dictionary echo",
+        { originalLength: text.length, strippedLength: stripped.length },
+        "transcription"
+      );
+    }
+    return stripped;
   }
 
   setCallbacks({
@@ -545,6 +633,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     // cancelled voice-agent recording, even after the setting was turned
     // off). A live voice-agent start re-captures right after this call.
     this.screenContextPromise = null;
+    this.toneStylePromise = null;
     // Same for a prefetched selection: bounded to one recording, so a read taken
     // in an earlier app can never be edited in place by this command.
     this.selectionCapturePromise = null;
@@ -623,6 +712,34 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     } catch {
       return null;
     }
+  }
+
+  // Kicked off at dictation start while Tone & Style is on, so the target app
+  // is classified while the user speaks. Only a dictation that captured its
+  // app gets a tone: a retried or re-run transcription has no target.
+  beginToneStyleCapture() {
+    this.toneStylePromise =
+      window.electronAPI?.captureDictationAppCategory?.()?.catch(() => null) ?? null;
+  }
+
+  // Consumed by the cleanup route, and by an agent command for an answer
+  // typed at the caret or a rewrite of the selection. Translation keeps its
+  // source's tone.
+  async consumeToneStyle() {
+    const pending = this.toneStylePromise;
+    this.toneStylePromise = null;
+    const settings = getSettings();
+    if (!pending || !settings.toneStyleEnabled) return null;
+    // Classification lands while the user speaks (a Wayland AT-SPI target takes
+    // about a second); the race only guards the paste path if the IPC ever
+    // hangs, and an unknown app reads as other.
+    const appCategory = await Promise.race([
+      pending,
+      new Promise((resolve) => setTimeout(() => resolve(null), 1500)),
+    ]);
+    const toneStyle = resolveDictationToneStyle(settings.toneStyles, appCategory);
+    logger.logReasoning("TONE_STYLE", toneStyle);
+    return toneStyle;
   }
 
   // An agent-route failure pastes the spoken command verbatim into the focused
@@ -761,7 +878,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             pcmTap: null,
             startedAt: Date.now(),
           };
-          if (!this.shouldUseStreaming()) this._startPreRollRecorder(value, pcmTap);
+          this._startPreRollRecorder(value, pcmTap);
           if (!value.pcmTap) pcmTap?.close();
           return value;
         } catch (error) {
@@ -1041,6 +1158,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       // or the one built before the mic opened. A tap started now would miss
       // the opening, so an unusable pre-roll leaves the WebM path in charge.
       this._batchPcmTap = preRoll ? prepared.pcmTap : freshTap;
+      this._recordingSpool = this._startRecordingSpool();
       this.createBatchRecorder(micStream, preRoll);
       freshTap?.attach(micStream);
       preparedAdopted = true;
@@ -1174,11 +1292,16 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     this.mediaRecorder = recorder;
     this.audioChunks = segmentChunks;
     this.recordingMimeType = recorder.mimeType || "audio/webm";
+    // Bound to this recorder: its last chunk lands after a cancel, when the
+    // manager may already belong to the next recording.
+    const spoolChunk = this._recordingSpool?.addSegment(this.recordingMimeType);
+    segmentChunks.forEach((chunk) => spoolChunk?.(chunk));
 
     recorder.ondataavailable = (event) => {
       if (event.data && event.data.size > 0) {
         this._receivedAudioData = true;
         segmentChunks.push(event.data);
+        spoolChunk?.(event.data);
       }
     };
 
@@ -1213,6 +1336,17 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   async finalizeBatchRecording(finalSegment) {
+    // Taken now, so a cancelled pipeline that settles late can't end the next
+    // recording's spool.
+    const spool = this._takeRecordingSpool();
+    try {
+      await this._finalizeBatchRecording(finalSegment);
+    } finally {
+      spool?.finish();
+    }
+  }
+
+  async _finalizeBatchRecording(finalSegment) {
     const processingPipeline = this._startProcessingPipeline();
     const wasCancelled = () => this._shouldAbandonProcessingPipeline(processingPipeline);
     this.micRecovery.stop();
@@ -1308,6 +1442,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       },
       processingPipeline
     );
+    await processingPipeline.resultHandled;
   }
 
   async replaceBatchMic(replacement) {
@@ -1463,6 +1598,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   }
 
   resetDiscardedBatchRecordingState() {
+    this._takeRecordingSpool()?.finish();
     this.teardownSpeechGate();
     this._localSpeechGateState = null;
 
@@ -1671,7 +1807,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           : {}),
         ...this._takePendingResultExtras(),
       };
-      this.onTranscriptionComplete?.(result);
+      if (wasCancelled()) return;
+      // Settles once the result is delivered and saved; the recording's spool
+      // waits for it, so a main process that hangs on the paste or the save
+      // can't take the audio with it.
+      pipeline.resultHandled = this.onTranscriptionComplete?.(result);
 
       const roundTripDurationMs = Math.round(performance.now() - pipelineStart);
 
@@ -1718,7 +1858,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       noAudioDetected = outcome.noAudio;
       if (outcome.report) this.onError?.(outcome.report);
       if (outcome.keepAudio && this.lastAudioBlob) {
-        this.saveFailedTranscription(error.message, error.code || null, metadata);
+        pipeline.resultHandled = this.saveFailedTranscription(
+          error.message,
+          error.code || null,
+          metadata,
+          { transcript: error.transcript, clientTranscriptionId: error.transcriptClientId }
+        );
       }
     } finally {
       const shouldNotifyNoAudio =
@@ -2072,7 +2217,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
   // and previews stay truthful.
   _bankAssistantDirective(transcript, config, options = {}) {
     if (!this.isProcessing) return;
-    const { selectedContext, deliverySessionId, deliveryAcceptsMarkdown } = options || {};
+    const { selectedContext, deliverySessionId, deliveryAcceptsMarkdown, deliveryAppCategory } =
+      options || {};
     this.pendingAssistantConversation = {
       transcript,
       // resolveReasoningRoute mirrors an attached screenContext into
@@ -2082,6 +2228,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       screenContext: config?.rawScreenContext ?? null,
       ...(selectedContext ? { selectedContext } : {}),
       ...(deliverySessionId ? { deliverySessionId, deliveryAcceptsMarkdown } : {}),
+      ...(deliveryAppCategory ? { deliveryAppCategory } : {}),
     };
   }
 
@@ -2107,7 +2254,13 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     text,
     agentName,
     config,
-    { selectedContext, selectedText, deliverySessionId, deliveryAcceptsMarkdown } = {}
+    {
+      selectedContext,
+      selectedText,
+      deliverySessionId,
+      deliveryAcceptsMarkdown,
+      deliveryAppCategory,
+    } = {}
   ) {
     const settings = getSettings();
     const command = this.voiceAgentRequested
@@ -2123,6 +2276,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       selectedContext,
       deliverySessionId,
       deliveryAcceptsMarkdown,
+      deliveryAppCategory,
     });
     return text;
   }
@@ -2161,6 +2315,8 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         ? capture.sessionId
         : undefined;
     const deliveryAcceptsMarkdown = capture?.acceptsMarkdown === true;
+    const toneStyle = await this.consumeToneStyle();
+    const deliveryAppCategory = deliverySessionId ? toneStyle?.appCategory : undefined;
 
     if (!config?.selectionEditReachable) {
       // No in-place editor: the panel never types, so only a readable
@@ -2172,6 +2328,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
             : undefined,
         deliverySessionId,
         deliveryAcceptsMarkdown,
+        deliveryAppCategory,
       });
     }
 
@@ -2192,6 +2349,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       return this._bankPanelAgentCommand(text, agentName, config, {
         deliverySessionId,
         deliveryAcceptsMarkdown,
+        deliveryAppCategory,
       });
     }
 
@@ -2220,20 +2378,49 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       temperature: config?.temperature ?? 0.2,
       requireCompleteOutput: true,
     };
-    const completionMarker = `__OPENWHISPR_SELECTION_COMPLETE_${crypto.randomUUID()}__`;
-    selectionConfig.systemPrompt = buildSelectionEditSystemPrompt(
-      config?.systemPrompt,
-      completionMarker
-    );
-    if (selectionConfig.textOnlySystemPrompt) {
-      // The text-only retry prompt must carry the same selection-edit
-      // instructions and marker, or a rejected screenshot loses the command.
-      selectionConfig.textOnlySystemPrompt = buildSelectionEditSystemPrompt(
-        selectionConfig.textOnlySystemPrompt,
+    const isLocalSelection = config?.provider === "local";
+    const toneSentence = toneStyle ? selectionEditToneSentence(toneStyle) : "";
+    const withToneSentence = (prompt) =>
+      toneSentence ? `${String(prompt ?? "").trim()}\n\n${toneSentence}` : prompt;
+    let userPrompt;
+    let completionMarker;
+    if (isLocalSelection) {
+      const settings = getSettings();
+      selectionConfig.systemPrompt = buildLocalSelectionEditSystemPrompt({
+        customPrompt: (settings.customPrompts.dictationAgent || "").replace(
+          /\{\{agentName\}\}/g,
+          agentName?.trim() || "Assistant"
+        ),
+        dictionary: getDictionaryHintWords(settings),
+        toneSentence,
+      });
+      selectionConfig.responseFormat = SELECTION_EDIT_RESPONSE_FORMAT;
+      selectionConfig.disableThinking = true;
+      const instruction = this.voiceAgentRequested
+        ? text
+        : stripAgentAddressPreservingFormatting(
+            text,
+            agentName,
+            wakeWordLanguage ?? resolveWakeWordLanguage(settings),
+            config?.snippets ?? settings.snippets
+          );
+      userPrompt = buildLocalSelectionEditUserPrompt(instruction, capture.text);
+    } else {
+      completionMarker = `__OPENWHISPR_SELECTION_COMPLETE_${crypto.randomUUID()}__`;
+      selectionConfig.systemPrompt = buildSelectionEditSystemPrompt(
+        withToneSentence(config?.systemPrompt),
         completionMarker
       );
+      if (selectionConfig.textOnlySystemPrompt) {
+        // The text-only retry prompt must carry the same selection-edit
+        // instructions and marker, or a rejected screenshot loses the command.
+        selectionConfig.textOnlySystemPrompt = buildSelectionEditSystemPrompt(
+          withToneSentence(selectionConfig.textOnlySystemPrompt),
+          completionMarker
+        );
+      }
+      userPrompt = buildSelectionEditUserPrompt(text, capture.text);
     }
-    const userPrompt = buildSelectionEditUserPrompt(text, capture.text);
 
     try {
       const result = await this.processWithReasoningModel(
@@ -2243,17 +2430,31 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         selectionConfig
       );
       if (wasCancelled()) return text;
-      const replacement = extractSelectionEditReplacement(result, completionMarker);
-      this.pendingSelectionEdit = { sessionId: capture.sessionId };
-      return replacement;
+      if (!isSelectionQuestionResponse(result, completionMarker)) {
+        const replacement = isLocalSelection
+          ? extractLocalSelectionEditReplacement(result)
+          : extractSelectionEditReplacement(result, completionMarker);
+        this.pendingSelectionEdit = { sessionId: capture.sessionId };
+        return replacement;
+      }
     } catch (cause) {
-      const error = new Error(`Selection edit failed: ${cause.message}`);
-      error.code = "SELECTION_EDIT_REASONING_FAILED";
-      error.messageKey = "hooks.audioRecording.selectionEditing.reasoningFailed";
+      const error = Object.assign(new Error(`Selection edit failed: ${cause.message}`), cause);
+      const failure =
+        SELECTION_EDIT_FAILURE_COPY[cause.messageKey] || SELECTION_EDIT_FAILURE_COPY[cause.code];
+      error.code = cause.code || "SELECTION_EDIT_REASONING_FAILED";
+      error.messageKey = failure
+        ? `hooks.audioRecording.selectionEditing.${failure}`
+        : cause.messageKey || "hooks.audioRecording.selectionEditing.reasoningFailed";
       error.selectionEditFatal = true;
       error.cause = cause;
       throw error;
     }
+
+    // The editor judged the command a question about the selection: answer it
+    // in the panel with the selection quoted, leaving the selection untouched.
+    return this._bankPanelAgentCommand(text, agentName, config, {
+      selectedText: capture.text,
+    });
   }
 
   async isReasoningAvailable() {
@@ -2369,10 +2570,33 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
   }
 
+  // Runs wherever a dictation's route is decided, with the reachability that
+  // decision used. The notice reaches the user through the result extras.
+  _noteCleanupRoute(settings, { kind, cleanupReachable }) {
+    const { forget, notice } = cleanupUnconfiguredNotice(this._shownCleanupSetupKey, {
+      skipped: kind === "skip",
+      cleanupReachable,
+      settings,
+    });
+    if (forget) this._shownCleanupSetupKey = null;
+    if (notice && !this.pendingCleanupFailure) this.pendingCleanupFailure = notice;
+  }
+
+  // The renderer confirms an unconfigured-cleanup notice once it is on screen, so
+  // a dictation cancelled or discarded before then never uses up the warning.
+  markCleanupNoticeShown(failure) {
+    if (failure?.setupKey) this._shownCleanupSetupKey = failure.setupKey;
+  }
+
   async processTranscription(text, source, wasCancelled = neverCancelled) {
-    const result = await this.processTranscriptionCore(text, source, wasCancelled);
-    if (wasCancelled()) return result;
-    return this.finalizeChineseScript(result);
+    try {
+      const result = await this.processTranscriptionCore(text, source, wasCancelled);
+      if (wasCancelled()) return result;
+      return this.finalizeChineseScript(result);
+    } catch (error) {
+      attachTranscript(error, text);
+      throw error;
+    }
   }
 
   async processTranscriptionCore(text, source, wasCancelled = neverCancelled) {
@@ -2412,6 +2636,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       logger.logReasoning("REASONING_SKIPPED", {
         reason: "No cleanup or dictation-agent model available",
       });
+      this._noteCleanupRoute(settings, { kind: "skip", cleanupReachable });
       return normalizedText;
     }
 
@@ -2424,6 +2649,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
       cleanupProvider,
       agentName,
     });
+    // Nothing can run cleanup although the assistant could, so no route is decided.
+    if (!useReasoning) {
+      this._noteCleanupRoute(settings, { kind: "skip", cleanupReachable });
+    }
 
     if (useReasoning) {
       let route;
@@ -2440,6 +2669,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         if (this.translationRequested && route.kind !== "translation") {
           this.notifyTranslationFallback("unreachable");
         }
+        this._noteCleanupRoute(settings, route);
         if (route.kind === "skip") return normalizedText;
 
         if (route.kind === "translation") {
@@ -2465,7 +2695,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         }
 
         const targetModel = route.kind === "agent" ? route.model : cleanupModel;
-        const reasoningConfig = route.config;
+        const reasoningConfig =
+          route.kind === "cleanup"
+            ? { ...route.config, toneStyle: await this.consumeToneStyle() }
+            : route.config;
 
         logger.logReasoning("SENDING_TO_REASONING", {
           preparedTextLength: normalizedText.length,
@@ -2629,30 +2862,39 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         "transcription"
       );
 
+      // Self-hosted errors name "your server" rather than a provider.
+      const providerErrorContext = { selfHosted: true, model, surface: "transcription" };
       const apiCallStart = performance.now();
       requestController = new AbortController();
       this._activeTranscriptionAbortController = requestController;
-      const response = await fetch(endpoint, {
-        method: "POST",
-        headers,
-        body: formData,
-        signal: requestController.signal,
-      });
+      let response;
+      try {
+        response = await fetch(endpoint, {
+          method: "POST",
+          headers,
+          body: formData,
+          signal: requestController.signal,
+        });
+      } catch (err) {
+        throw asProviderError(err, providerErrorContext);
+      }
 
       if (!response.ok) {
         const errorText = await response.text();
         logger.error(
           "Transcription API error response",
-          { status: response.status, errorText },
+          {
+            status: response.status,
+            errorText: redactProviderBody(errorText),
+          },
           "transcription"
         );
-        const err = new Error(`API Error: ${response.status} ${errorText}`);
-        if (response.status === 401) err.code = "INVALID_KEY";
-        else if (response.status === 429) {
-          err.code = "PROVIDER_RATE_LIMITED";
-          err.messageKey = "hooks.audioRecording.errorDescriptions.providerRateLimited";
-        } else if (response.status >= 500) err.code = "SERVER_ERROR";
-        throw err;
+        throw providerHttpError({
+          ...providerErrorContext,
+          status: response.status,
+          body: errorText,
+          headers: response.headers,
+        });
       }
 
       const rawBody = await response.text();
@@ -2689,10 +2931,10 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         throw dictionaryEchoError();
       }
       timings.transcriptionProcessingDurationMs = Math.round(performance.now() - apiCallStart);
-      const rawText = result.text;
+      const rawText = this.stripTrailingDictionaryEcho(result.text, dictionaryPrompt);
 
       const reasoningStart = performance.now();
-      const text = await this.processTranscription(result.text, "self-hosted", wasCancelled);
+      const text = await this.processTranscription(rawText, "self-hosted", wasCancelled);
       timings.reasoningProcessingDurationMs = Math.round(performance.now() - reasoningStart);
 
       const source = (await this.isReasoningAvailable()) ? "self-hosted-reasoned" : "self-hosted";
@@ -2745,8 +2987,11 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           const wrapped = new Error(
             `Self-hosted transcription failed: ${error.message}. Local fallback also failed: ${fallbackError.message}`
           );
-          if (error.code) wrapped.code = error.code;
-          if (error.messageKey) wrapped.messageKey = error.messageKey;
+          // The toast renders the server failure, so its message params and details
+          // must survive the wrap, or the copy shows a bare "{{provider}}".
+          for (const key of IPC_ERROR_FIELDS) {
+            if (error[key] !== undefined) wrapped[key] = error[key];
+          }
           throw wrapped;
         }
       }
@@ -2786,9 +3031,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           clipboardCopied: true,
           transcript: text,
         });
-        return false;
+        return { pasted: false };
       }
-      return result?.pasted === true;
+      return {
+        pasted: result?.pasted === true,
+        ...(result?.reason ? { reason: result.reason } : {}),
+      };
     } catch (error) {
       const message =
         error?.message ??
@@ -2799,7 +3047,7 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
         // Keep the platform's guidance, without Electron's IPC wrapper around it.
         description: message.replace(/^Error invoking remote method '[^']+': (?:\w*Error: )?/, ""),
       });
-      return false;
+      return { pasted: false };
     }
   }
 
@@ -2869,7 +3117,12 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
   }
 
-  async saveFailedTranscription(errorMessage, errorCode = null, metadata = {}) {
+  async saveFailedTranscription(
+    errorMessage,
+    errorCode = null,
+    metadata = {},
+    { transcript = "", clientTranscriptionId } = {}
+  ) {
     const { dataRetentionEnabled, audioRetentionDays } = getSettings();
     if (!dataRetentionEnabled) {
       logger.debug("Skipping failed transcription save — data retention disabled", {}, "audio");
@@ -2879,15 +3132,24 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
     }
 
     try {
-      const result = await window.electronAPI.saveTranscription("", null, {
-        status: "failed",
-        errorMessage,
-        errorCode,
-        routeKind: this.translationRequested ? "translation" : null,
-        ...(metadata?.analyticsOccurredAt
-          ? { analyticsOccurredAt: metadata.analyticsOccurredAt }
-          : {}),
-      });
+      // Empty when transcription itself failed; otherwise the transcript a later
+      // step could not process, kept as both the entry's text and its raw text.
+      const keptTranscript = typeof transcript === "string" ? transcript : "";
+      const result = await window.electronAPI.saveTranscription(
+        keptTranscript,
+        keptTranscript || null,
+        {
+          status: "failed",
+          errorMessage,
+          errorCode,
+          routeKind: this.translationRequested ? "translation" : null,
+          ...(clientTranscriptionId ? { clientTranscriptionId } : {}),
+          ...(metadata?.analyticsOccurredAt
+            ? { analyticsOccurredAt: metadata.analyticsOccurredAt }
+            : {}),
+        }
+      );
+
       if (result?.id && this.lastAudioBlob) {
         if (audioRetentionDays > 0) {
           try {
@@ -2963,6 +3225,66 @@ registerProcessor("pcm-streaming-processor", PCMStreamingProcessor);
           );
         }
       }
+    }
+  }
+
+  // Recordings a hung or crashed app never saved come back as failed entries
+  // the user can retry. One that fails to save stays spooled for the next
+  // launch. Runs at launch, which also opens the spool before any recording.
+  async recoverInterruptedRecordings(errorMessage) {
+    let recordings;
+    try {
+      recordings = await takeInterruptedRecordings();
+    } catch (error) {
+      logger.warn("Failed to read interrupted recordings", { error: error.message }, "audio");
+      return;
+    }
+    const { dataRetentionEnabled, audioRetentionDays } = getSettings();
+    const keepAudio = dataRetentionEnabled && audioRetentionDays > 0;
+    for (const recording of recordings) {
+      if (!keepAudio || (await this._saveInterruptedRecording(recording, errorMessage))) {
+        recording.discard();
+      }
+    }
+  }
+
+  async _saveInterruptedRecording({ segments, startedAt, durationMs, routeKind }, errorMessage) {
+    let audio;
+    try {
+      audio = await this.mergeRecordedSegments(segments);
+    } catch (error) {
+      logger.warn("Failed to merge interrupted recording", { error: error.message }, "audio");
+      audio = this.getLargestRecordedSegment(segments);
+    }
+    // Header-only chunks: the app hung before any audio was captured.
+    if (!audio) return true;
+
+    let savedId = null;
+    try {
+      const result = await window.electronAPI.saveTranscription("", null, {
+        status: "failed",
+        errorMessage,
+        errorCode: "CRASH_RECOVERY",
+        routeKind,
+        analyticsOccurredAt: new Date(startedAt).toISOString(),
+      });
+      savedId = result?.id ?? null;
+      if (savedId === null) return false;
+      const audioResult = await window.electronAPI.saveTranscriptionAudio(
+        savedId,
+        await audio.arrayBuffer(),
+        { durationMs, provider: null, model: null }
+      );
+      if (!audioResult?.success) throw new Error("Failed to save recovered audio");
+      logger.info("Recovered interrupted recording", { id: savedId, durationMs }, "audio");
+      return true;
+    } catch (error) {
+      logger.error("Failed to save interrupted recording", { error: error.message }, "audio");
+      // Without its audio the row can't be retried; the next launch tries again.
+      if (savedId !== null) {
+        await window.electronAPI.deleteTranscription(savedId).catch(() => {});
+      }
+      return false;
     }
   }
 

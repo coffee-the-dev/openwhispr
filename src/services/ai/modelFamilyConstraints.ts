@@ -9,10 +9,12 @@
  * like thinkingSuppressionDialects.
  */
 export interface ModelFamilyConstraints {
-  family: "gpt-oss" | "qwen";
+  family: "gpt-oss" | "qwen" | "glm-5.3";
   reasoningEffort?: {
     /** Value that best approximates "thinking off" for reasoning_effort. */
     suppressValue: string;
+    /** Levels Settings offers for this family. */
+    options?: string[];
     /**
      * Effort for deterministic transforms (cleanup, selection edits). gpt-oss
      * defaults to medium; low cuts hidden reasoning tokens (latency) and the
@@ -21,6 +23,11 @@ export interface ModelFamilyConstraints {
      * return whitespace content, failing selection edits.
      */
     cleanupValue?: string;
+    /**
+     * Effort sent while thinking is on, for a family whose server default
+     * reasons past the app's output caps. Without it the server's default applies.
+     */
+    defaultValue?: string;
   };
 }
 
@@ -30,14 +37,27 @@ const FAMILIES: Array<ModelFamilyConstraints & { match: RegExp }> = [
     match: /gpt-oss/,
     // gpt-oss accepts low|medium|high only; it has no off switch (#1611):
     // "none" is a 400.
-    reasoningEffort: { suppressValue: "low", cleanupValue: "low" },
+    reasoningEffort: {
+      suppressValue: "low",
+      cleanupValue: "low",
+      options: ["low", "medium", "high"],
+    },
   },
   {
     family: "qwen",
     match: /qwen/,
     // qwen3 accepts none|default only; "none" is also what the generic
     // dialect sends everywhere, so the fact is server-agnostic.
-    reasoningEffort: { suppressValue: "none" },
+    reasoningEffort: { suppressValue: "none", options: ["none"] },
+  },
+  {
+    family: "glm-5.3",
+    match: /glm[-_]?5[-.]?3/,
+    // GLM-5.3/Flash always reason: low|high|max only, no off switch.
+    // "low" is the closest to off. At the server default, max, a long meeting
+    // spent the whole 4,096-token notes budget thinking (#2008); at high it fit,
+    // so max isn't offered either.
+    reasoningEffort: { suppressValue: "low", defaultValue: "high", options: ["low", "high"] },
   },
 ];
 

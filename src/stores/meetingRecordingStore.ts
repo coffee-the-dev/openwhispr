@@ -28,7 +28,6 @@ import {
 } from "../constants/speakerDetection.json";
 import logger from "../utils/logger";
 import {
-  mergeTranscriptSegments,
   nameTranscriptSpeaker,
   normalizeTranscriptSegment,
   serializeTranscriptSegments,
@@ -36,7 +35,11 @@ import {
   type TranscriptSpeakerStatus,
 } from "../utils/transcriptSpeakerState";
 import { parseTranscriptSegments } from "../utils/parseTranscriptSegments";
-import { resolveDiarizationTarget, selectBaseSegments } from "../utils/diarizationCompletion";
+import {
+  mergeSessionDiarization,
+  resolveDiarizationTarget,
+  selectBaseSegments,
+} from "../utils/diarizationCompletion";
 import { createSerialQueue } from "../utils/serialQueue";
 import { reduceMeetingSegmentEvent, type MeetingSegmentEvent } from "./meetingSegmentReducer";
 import {
@@ -133,10 +136,12 @@ const buildTranscriptText = (segments: TranscriptSegment[]) =>
     .join(" ")
     .trim();
 
+// Seeds come from synced transcript JSON, so an index past safe integers is ignored.
 const getSpeakerNumericIndex = (speakerId?: string): number | null => {
   if (!speakerId) return null;
-  const match = speakerId.match(/speaker_(\d+)/);
-  return match ? Number(match[1]) : null;
+  const match = /^speaker_(\d+)$/.exec(speakerId);
+  const index = match ? Number(match[1]) : null;
+  return index != null && Number.isSafeInteger(index) ? index : null;
 };
 
 const isSegmentWithinIdentificationWindow = (
@@ -411,9 +416,22 @@ let activeRecordingSessionId: string | null = null;
 const meetingRecordingStartCoordinator = createMeetingRecordingStartCoordinator();
 const meetingRecordingStopBarrier = createMeetingRecordingStopBarrier();
 let segmentsRefValue: TranscriptSegment[] = [];
+// A resumed note seeds the recording with its earlier transcript, but that
+// session's diarization covers only its own audio, so its result must not be
+// matched against the seeded rows. Keyed by diarization session at stop.
+let sessionSeedLength = 0;
+const seedLengthByDiarizationSession = new Map<
+  string,
+  { noteId: number | null; seedLength: number }
+>();
+// The stopping session's seed, until its stop call returns and keys it above.
+let stoppingSeed: { noteId: number | null; seedLength: number } | null = null;
 let ipcCleanups: Array<() => void> = [];
 let speakerIdentifications: SpeakerIdentification[] = [];
 let nextPlaceholderSpeakerIndex = 0;
+// First speaker index this session owns; a resumed note's earlier sessions keep the
+// ids below it. Main may raise it (see _resolveMeetingSpeakerIndexBase).
+let sessionSpeakerIndexBase = 0;
 let systemPartialSpeakerIdValue: string | null = null;
 let recentSystemSpeaker: RecentSystemSpeaker | null = null;
 let speakerLocks: Map<string, string> = new Map();
@@ -589,12 +607,24 @@ function reserveSpeakerIndex(speakerId?: string) {
   nextPlaceholderSpeakerIndex = Math.max(nextPlaceholderSpeakerIndex, idx + 1);
 }
 
+function isEarlierSessionSpeaker(speakerId?: string): boolean {
+  const idx = getSpeakerNumericIndex(speakerId);
+  return idx != null && idx < sessionSpeakerIndexBase;
+}
+
+function adoptSpeakerIndexBase(base: number | undefined): void {
+  if (base == null || base <= sessionSpeakerIndexBase) return;
+  sessionSpeakerIndexBase = base;
+  nextPlaceholderSpeakerIndex = Math.max(nextPlaceholderSpeakerIndex, base);
+}
+
 // Other-speaker cap is expectedCount - 1 (the mic track is "you"); mirrors the
-// backend cap so live labels can't climb past the count the user expects.
+// backend cap so live labels can't climb past the count the user expects. The
+// cap counts this session's speakers, so it starts at the session's base.
 function mintPlaceholderSpeakerId(): string {
   const expected = useMeetingRecordingStore.getState().sessionExpectedCount;
   const cap = Math.max(1, expected - 1);
-  const index = Math.min(nextPlaceholderSpeakerIndex, cap - 1);
+  const index = Math.min(nextPlaceholderSpeakerIndex, sessionSpeakerIndexBase + cap - 1);
   nextPlaceholderSpeakerIndex = Math.max(nextPlaceholderSpeakerIndex, index + 1);
   return `speaker_${index}`;
 }
@@ -625,15 +655,15 @@ function assignProvisionalSpeaker(segment: TranscriptSegment): TranscriptSegment
     });
   }
 
-  const previousSystemSegment = [...segmentsRefValue]
-    .reverse()
-    .find(
-      (candidate) =>
-        candidate.source === "system" &&
-        candidate.speaker &&
-        candidate.timestamp != null &&
-        nowMs - candidate.timestamp <= SYSTEM_SPEAKER_CARRY_FORWARD_MS
-    );
+  const previousSystemSegment = [...segmentsRefValue].reverse().find(
+    (candidate) =>
+      candidate.source === "system" &&
+      candidate.speaker &&
+      // A seeded row from a session that just ended is not this session's voice.
+      !isEarlierSessionSpeaker(candidate.speaker) &&
+      candidate.timestamp != null &&
+      nowMs - candidate.timestamp <= SYSTEM_SPEAKER_CARRY_FORWARD_MS
+  );
 
   if (previousSystemSegment?.speaker) {
     reserveSpeakerIndex(previousSystemSegment.speaker);
@@ -654,6 +684,22 @@ function assignProvisionalSpeaker(segment: TranscriptSegment): TranscriptSegment
     speakerIsPlaceholder: true,
     speakerStatus: "provisional",
   });
+}
+
+async function releaseSystemAudioCapture(): Promise<void> {
+  await flushAndDisconnectProcessor(systemProcessor);
+  systemProcessor = null;
+
+  systemSource?.disconnect();
+  systemSource = null;
+
+  stopMediaStream(systemStream);
+  systemStream = null;
+
+  try {
+    await systemContext?.close();
+  } catch {}
+  systemContext = null;
 }
 
 async function cleanup(): Promise<void> {
@@ -678,19 +724,7 @@ async function cleanup(): Promise<void> {
   } catch {}
   micContext = null;
 
-  await flushAndDisconnectProcessor(systemProcessor);
-  systemProcessor = null;
-
-  systemSource?.disconnect();
-  systemSource = null;
-
-  stopMediaStream(systemStream);
-  systemStream = null;
-
-  try {
-    await systemContext?.close();
-  } catch {}
-  systemContext = null;
+  await releaseSystemAudioCapture();
 
   ipcCleanups.forEach((fn) => fn());
   ipcCleanups = [];
@@ -754,8 +788,10 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
     }
 
     segmentsRefValue = seed;
+    sessionSeedLength = seed.length;
     speakerIdentifications = [];
-    nextPlaceholderSpeakerIndex = maxSpeakerIndex + 1;
+    sessionSpeakerIndexBase = maxSpeakerIndex + 1;
+    nextPlaceholderSpeakerIndex = sessionSpeakerIndexBase;
     recentSystemSpeaker = null;
     speakerLocks = locks;
     systemPartialSpeakerIdValue = null;
@@ -873,6 +909,8 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
         noteId: args.noteId ?? null,
         sessionId,
         autoEndEligible: args.autoEndEligible,
+        aecEnabled: getSettings().meetingAecEnabled,
+        speakerIndexBase: sessionSpeakerIndexBase,
       });
       const micCapturePromise = getMeetingMicConstraints().then(async (constraints) => {
         if (!isCurrentStart()) return null;
@@ -957,6 +995,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
         releaseSession();
         return;
       }
+      adoptSpeakerIndexBase(startResult.speakerIndexBase);
       const systemAudioMode = startResult.systemAudioMode || initialSystemAudioAccess.mode;
       const systemAudioStrategy = startResult.systemAudioStrategy || initialSystemAudioStrategy;
       systemCaptureResult = await ensureRendererSystemAudioCapture({
@@ -1181,7 +1220,8 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
 
       if (startResult.oneOnOneAttendee) {
         const synthetic: SpeakerIdentification = {
-          speakerId: "speaker_0",
+          // Main's live identifier mints the session's first cluster at the base too.
+          speakerId: `speaker_${sessionSpeakerIndexBase}`,
           displayName: startResult.oneOnOneAttendee.displayName,
           startTime: 0,
           endTime: Number.MAX_SAFE_INTEGER,
@@ -1353,29 +1393,49 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
 
       // Main sends this when a native helper reports it is capturing silence
       // while audio is really playing, which activation success cannot detect.
-      // Take the channel over with Chromium loopback for the rest of the call.
+      // Main keeps the helper until this loopback hears audio the helper misses.
       if (systemAudioHandledInMain) {
         const degradedCleanup = window.electronAPI?.onMeetingSystemAudioDegraded?.(() => {
           if (activeRecordingSessionId !== sessionId || !isRecordingFlag) return;
           if (systemStream) return;
           void (async () => {
+            const reportTakeoverFailure = (error: Error | null) => {
+              logger.warn(
+                "Renderer loopback takeover failed after native system audio went silent",
+                { error: error?.message },
+                "meeting"
+              );
+              publishSystemAudioInterruption({
+                systemAudioStrategy: "loopback",
+                reason: "loopback_takeover_failed",
+                recovering: false,
+              });
+              sessionSystemAudioActive = false;
+              void window.electronAPI
+                ?.meetingTranscriptionSetSystemAudioAvailable?.(sessionId, false)
+                .catch(() => undefined);
+            };
             const takeover = await requestSystemAudioDisplayStream(
               getDisplayCaptureModeForStrategy("loopback")
             );
-            if (!takeover.stream) {
-              logger.warn(
-                "Renderer loopback takeover failed after native system audio went silent",
-                { error: takeover.error?.message },
-                "meeting"
-              );
-              return;
-            }
             if (activeRecordingSessionId !== sessionId || !isRecordingFlag || systemStream) {
               stopMediaStream(takeover.stream);
               return;
             }
-            await attachRendererSystemAudio(takeover.stream);
-            logger.info("Renderer loopback took over system audio capture", {}, "meeting");
+            if (!takeover.stream) {
+              reportTakeoverFailure(takeover.error);
+              return;
+            }
+            try {
+              await attachRendererSystemAudio(takeover.stream);
+              logger.info("Renderer loopback started beside native system audio", {}, "meeting");
+            } catch (error) {
+              // A stop mid-attach also lands here, and its cleanup owns the graph.
+              if (activeRecordingSessionId === sessionId && isRecordingFlag) {
+                reportTakeoverFailure(error as Error);
+                await releaseSystemAudioCapture();
+              }
+            }
           })();
         });
         if (degradedCleanup) ipcCleanups.push(degradedCleanup);
@@ -1566,6 +1626,10 @@ export async function stopRecording(expectedSessionId?: string): Promise<StopRec
       persist: persistTranscript,
       fallbackTranscript: () => useMeetingRecordingStore.getState().transcript,
       stop: async () => {
+        // Set before cleanup's awaits: the final transcript write is already
+        // posted, so an earlier session's result can land from here on.
+        const seed = { noteId: recordingNoteId, seedLength: sessionSeedLength };
+        stoppingSeed = seed;
         await cleanup();
 
         let stoppedDiarizationSessionId: string | null = null;
@@ -1575,6 +1639,7 @@ export async function stopRecording(expectedSessionId?: string): Promise<StopRec
           );
           if (result?.diarizationSessionId) {
             stoppedDiarizationSessionId = result.diarizationSessionId;
+            seedLengthByDiarizationSession.set(stoppedDiarizationSessionId, seed);
             useMeetingRecordingStore.setState({
               diarizationSessionId: stoppedDiarizationSessionId,
             });
@@ -1591,6 +1656,8 @@ export async function stopRecording(expectedSessionId?: string): Promise<StopRec
             { error: (err as Error).message },
             "meeting"
           );
+        } finally {
+          stoppingSeed = null;
         }
         return stoppedDiarizationSessionId;
       },
@@ -1664,7 +1731,10 @@ if (typeof window !== "undefined") {
         currentSessionId: diarizationSessionId,
         activeRecordingNoteId: isRecording ? recordingNoteId : null,
       });
-      if (targetNoteId == null) return;
+      if (targetNoteId == null) {
+        if (data?.sessionId) seedLengthByDiarizationSession.delete(data.sessionId);
+        return;
+      }
 
       // Publishing an empty result clears a waiting editor's spinner without
       // painting an overlay; anything non-empty is already persisted.
@@ -1677,6 +1747,7 @@ if (typeof window !== "undefined") {
       };
 
       if (!data?.segments?.length) {
+        if (data?.sessionId) seedLengthByDiarizationSession.delete(data.sessionId);
         publish([]);
         return;
       }
@@ -1691,7 +1762,13 @@ if (typeof window !== "undefined") {
           "meeting"
         );
       }
-      // No note means no safe base to merge into.
+      // Read after the getNote await: a skipped diarization is sent before the
+      // stop call that records this session's seed length returns.
+      const seedLength = data.sessionId
+        ? (seedLengthByDiarizationSession.get(data.sessionId)?.seedLength ?? 0)
+        : 0;
+      if (data.sessionId) seedLengthByDiarizationSession.delete(data.sessionId);
+      // No note (never saved, or deleted) means no safe base to merge into.
       if (!persisted) {
         publish([]);
         return;
@@ -1705,14 +1782,21 @@ if (typeof window !== "undefined") {
         recordingNoteId,
         targetNoteId,
       });
-      const enriched = mergeTranscriptSegments(
+      const { segments: enriched, removedCount } = mergeSessionDiarization({
         existing,
-        data.segments.map((segment, index) => ({
-          ...segment,
-          id: segment.id || `diarized-${index}`,
-        }))
-      );
+        seedLength,
+        segments: data.segments,
+        removedSegments: data.removedSegments,
+      });
 
+      // A later session resumed from this note seeded the rows about to be
+      // removed, so its seed ends that many rows earlier once this write lands.
+      // Only sessions whose final write is already posted count: one posted
+      // after this write puts the rows back.
+      const laterSeeds = [...seedLengthByDiarizationSession.values(), stoppingSeed].filter(
+        (pending): pending is NonNullable<typeof stoppingSeed> =>
+          pending?.noteId === targetNoteId && pending.seedLength > seedLength
+      );
       try {
         // Awaited so the next queued completion's getNote is guaranteed to
         // read this write — without it the ordering depends on db-update-note
@@ -1724,6 +1808,7 @@ if (typeof window !== "undefined") {
         publish([]);
         throw error;
       }
+      for (const pending of laterSeeds) pending.seedLength -= removedCount;
       publish(enriched);
 
       if (data.speakerEmbeddings) {

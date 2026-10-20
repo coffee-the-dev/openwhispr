@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type React from 'react';
-import { Alert, KeyboardAvoidingView, Platform, TextInput, View } from 'react-native';
-import { router } from 'expo-router';
+import { Alert, TextInput, View } from 'react-native';
+import { router, useLocalSearchParams } from 'expo-router';
 import { useHeaderHeight } from '@react-navigation/elements';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as FileSystem from 'expo-file-system/legacy';
@@ -15,6 +15,7 @@ import { calendarRepository } from '@/data/calendarRepository';
 import type { Note } from '@/data/types';
 import type { GoogleCalendarEvent } from '@/data/calendarTypes';
 import { useAudioRecording } from '@/hooks/useAudioRecording';
+import { useKeyboardHeight } from '@/hooks/useKeyboardHeight';
 import { buildCalendarMeetingContext } from '@/lib/calendar/meetingContext';
 import { getMeetingCalendarEventSuggestions } from '@/lib/calendar/meetingSuggestions';
 import { getPreferredTranscriptionLanguage } from '@/lib/transcriptionLanguage';
@@ -59,6 +60,8 @@ export const MeetingRecordScreen = (): React.JSX.Element => {
   const recordingStartedAtRef = useRef<number | null>(null);
   const headerHeight = useHeaderHeight();
   const insets = useSafeAreaInsets();
+  // Only the recording phase has a notes field to keep above the keyboard.
+  const keyboardHeight = useKeyboardHeight(phase === 'recording');
   const googleCalendarAccounts = useGoogleCalendarStore((s) => s.accounts);
   const loadGoogleCalendars = useGoogleCalendarStore((s) => s.load);
   const createMeetingNote = useNotesStore((s) => s.createMeetingNote);
@@ -71,6 +74,12 @@ export const MeetingRecordScreen = (): React.JSX.Element => {
   const isLocalAsrModelReady = useNotesStore((s) => s.isLocalAsrModelReady);
   const downloadDiarizerModel = useNotesStore((s) => s.downloadDiarizerModel);
   const { register: registerSuperwallGate } = useSuperwallGate();
+  // Where the meeting was started from; createMeetingNote files it there when it still can.
+  const params = useLocalSearchParams<{ folderId?: string; spaceId?: string }>();
+  const startedIn = {
+    folderId: params.folderId ? Number(params.folderId) : undefined,
+    spaceId: params.spaceId ? Number(params.spaceId) : undefined,
+  };
 
   const recording = useAudioRecording({
     allowsBackgroundRecording: true,
@@ -185,6 +194,7 @@ export const MeetingRecordScreen = (): React.JSX.Element => {
     let note: Note;
     try {
       note = createMeetingNote({
+        ...startedIn,
         expectedSpeakerCount: expected,
         calendarEventId: selectedMeetingContext?.calendarEventId ?? null,
         title: selectedMeetingContext?.title ?? null,
@@ -298,6 +308,7 @@ export const MeetingRecordScreen = (): React.JSX.Element => {
     let note: Note;
     try {
       note = createMeetingNote({
+        ...startedIn,
         expectedSpeakerCount: expected,
         calendarEventId: selectedMeetingContext?.calendarEventId ?? null,
         title: selectedMeetingContext?.title ?? null,
@@ -428,14 +439,11 @@ export const MeetingRecordScreen = (): React.JSX.Element => {
   if (phase === 'recording') {
     const countLabel =
       count != null ? `${count} ${count === 1 ? 'person' : 'people'}` : 'Auto-detecting';
-    const footerBottomPadding = Math.max(insets.bottom + 32, 56);
+    // The view fills the screen, so the keyboard covers the home-indicator inset too.
+    const footerBottomPadding =
+      keyboardHeight > 0 ? keyboardHeight + 12 : Math.max(insets.bottom + 32, 56);
     return (
-      <KeyboardAvoidingView
-        className="flex-1 bg-systemBackground px-6"
-        style={{ paddingTop: headerHeight }}
-        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        keyboardVerticalOffset={headerHeight}
-      >
+      <View className="flex-1 bg-systemBackground px-6" style={{ paddingTop: headerHeight }}>
         <View className="items-center pb-2 pt-4">
           <View className="mb-3 flex-row items-center gap-2">
             <View className="h-2 w-2 rounded-full bg-systemRed" />
@@ -493,7 +501,7 @@ export const MeetingRecordScreen = (): React.JSX.Element => {
             Stop
           </Button>
         </View>
-      </KeyboardAvoidingView>
+      </View>
     );
   }
 

@@ -1,9 +1,17 @@
 import { create } from "zustand";
+import type { TechnicalErrorDetailsData } from "../components/ui/useToast";
 
 export interface CleanupFailure {
   message: string;
   messageKey?: string;
   messageParams?: Record<string, string | number>;
+  surface?: "transcription" | "llm";
+  settingsTarget?: string;
+  technicalDetails?: TechnicalErrorDetailsData;
+  /** False when the raw dictation never reached the cursor (held back, clipboard only). */
+  pasted?: boolean;
+  /** Names the broken setup an unconfigured-cleanup notice warns about. */
+  setupKey?: string;
 }
 
 interface CleanupFailureState {

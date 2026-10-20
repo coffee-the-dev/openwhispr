@@ -12,6 +12,7 @@ import type {
   SelfHostedType,
   TranscriptionMode,
 } from "../types/electron";
+import { normalizeToneStyles, type ToneStyles } from "../config/toneStyle";
 import { PROMPT_KIND_LIST, type PromptKind } from "../config/prompts/registry";
 import { sweepRetiredPromptOverrides } from "../config/retiredPrompts";
 import { buildReasoningScopePatches, inheritsFallbackEndpoint } from "../helpers/reasoningRouting";
@@ -132,6 +133,9 @@ function readStringArray(key: string, fallback: string[]): string[] {
 
 type MicrophoneSelectionMode = "system" | "built-in" | "specific";
 
+// `message` is main's translated reason, when it gave one.
+export type HotkeyRegistrationResult = { success: boolean; message?: string };
+
 function migrateMicrophoneSelectionMode() {
   if (!isBrowser) return;
   const current = localStorage.getItem("microphoneSelectionMode");
@@ -218,7 +222,9 @@ const BOOLEAN_SETTINGS = new Set([
   "allowLocalFallback",
   "autoGenerateNoteTitle",
   "useCleanupModel",
+  "toneStyleEnabled",
   "useDictationAgent",
+  "keepLocalModelLoaded",
   "voiceAgentScreenContext",
   "webSearchEnabled",
   "useDictationTranslation",
@@ -234,6 +240,7 @@ const BOOLEAN_SETTINGS = new Set([
   "dictationSileroEnabled",
   "noteRecordingSileroEnabled",
   "meetingSileroEnabled",
+  "meetingAecEnabled",
   "autoPasteEnabled",
   "keepTranscriptionInClipboard",
   "dataRetentionEnabled",
@@ -973,6 +980,7 @@ export interface SettingsState
   dictationSileroEnabled: boolean;
   noteRecordingSileroEnabled: boolean;
   meetingSileroEnabled: boolean;
+  meetingAecEnabled: boolean;
   whisperVadThreshold: number;
   whisperVadMinSpeechDurationMs: number;
   whisperVadMinSilenceDurationMs: number;
@@ -996,6 +1004,7 @@ export interface SettingsState
   remoteTranscriptionModel: string;
   cleanupMode: InferenceMode;
   cleanupRemoteUrl: string;
+  keepLocalModelLoaded: boolean;
 
   meetingTranscriptionMode: TranscriptionMode;
   meetingUseLocalWhisper: boolean;
@@ -1028,6 +1037,7 @@ export interface SettingsState
   translationRemoteUrl: string;
   translationCustomApiKey: string;
   translationDisableThinking: boolean;
+  translationReasoningEffort: string;
   useDictationTranslation: boolean;
   translationSourceLanguage: string;
   translationTargetLanguage: string;
@@ -1041,6 +1051,8 @@ export interface SettingsState
 
   // Voice-agent screen context: opt-in screenshot capture.
   voiceAgentScreenContext: boolean;
+  toneStyleEnabled: boolean;
+  toneStyles: ToneStyles;
 
   // Agent web_search tool, served by the user's SearXNG instance.
   webSearchEnabled: boolean;
@@ -1050,6 +1062,11 @@ export interface SettingsState
   dictationAgentDisableThinking: boolean;
   noteFormattingDisableThinking: boolean;
   chatAgentDisableThinking: boolean;
+  // "" is Auto: the server's default effort.
+  cleanupReasoningEffort: string;
+  dictationAgentReasoningEffort: string;
+  noteFormattingReasoningEffort: string;
+  chatAgentReasoningEffort: string;
 
   // Per-scope capabilities of the model answering chat and voice commands.
   // An empty tool-calling value means the mode's default (see toolCallingPolicy).
@@ -1068,6 +1085,8 @@ export interface SettingsState
   setDictationAgentCustomApiKey: (key: string) => void;
 
   setVoiceAgentScreenContext: (value: boolean) => void;
+  setToneStyleEnabled: (value: boolean) => void;
+  setToneStyles: (styles: ToneStyles) => void;
   setWebSearchEnabled: (value: boolean) => void;
   setWebSearchUrl: (value: string) => void;
 
@@ -1077,6 +1096,7 @@ export interface SettingsState
   setRemoteTranscriptionModel: (model: string) => void;
   setCleanupMode: (mode: InferenceMode) => void;
   setCleanupRemoteUrl: (url: string) => void;
+  setKeepLocalModelLoaded: (value: boolean) => void;
 
   setMeetingTranscriptionMode: (mode: TranscriptionMode) => void;
   setMeetingUseLocalWhisper: (value: boolean) => void;
@@ -1145,9 +1165,9 @@ export interface SettingsState
 
   setDictationKey: (key: string) => void;
   setMeetingKey: (key: string) => void;
-  setVoiceAgentKey: (key: string) => Promise<boolean>;
+  setVoiceAgentKey: (key: string) => Promise<HotkeyRegistrationResult>;
   translationKey: string;
-  setTranslationKey: (key: string) => Promise<boolean>;
+  setTranslationKey: (key: string) => Promise<HotkeyRegistrationResult>;
   setMeetingHotkeyLayoutMode: (mode: "side-panel" | "full-width") => void;
   setOnboardingUseCases: (useCases: string[]) => void;
   setOnboardingUseCaseNote: (note: string) => void;
@@ -1180,6 +1200,7 @@ export interface SettingsState
   setDictationSileroEnabled: (value: boolean) => void;
   setNoteRecordingSileroEnabled: (value: boolean) => void;
   setMeetingSileroEnabled: (value: boolean) => void;
+  setMeetingAecEnabled: (value: boolean) => void;
   setWhisperVadThreshold: (value: number) => void;
   setWhisperVadMinSpeechDurationMs: (value: number) => void;
   setWhisperVadMinSilenceDurationMs: (value: number) => void;
@@ -1253,14 +1274,13 @@ function createNumberSetter(key: string) {
 function createRegisteredHotkeySetter(
   key: "voiceAgentKey" | "translationKey",
   label: string,
-  getRegisterFn: () =>
-    ((hotkey: string) => Promise<{ success: boolean; message: string }>) | undefined,
+  getRegisterFn: () => ((hotkey: string) => Promise<HotkeyRegistrationResult>) | undefined,
   fallbackSave?: (hotkey: string) => void
 ) {
-  return async (hotkey: string): Promise<boolean> => {
+  return async (hotkey: string): Promise<HotkeyRegistrationResult> => {
     if (!isBrowser) {
       useSettingsStore.setState({ [key]: hotkey });
-      return true;
+      return { success: true };
     }
 
     const registerFn = getRegisterFn();
@@ -1268,7 +1288,7 @@ function createRegisteredHotkeySetter(
       localStorage.setItem(key, hotkey);
       useSettingsStore.setState({ [key]: hotkey });
       fallbackSave?.(hotkey);
-      return true;
+      return { success: true };
     }
 
     const previousKey = useSettingsStore.getState()[key];
@@ -1279,19 +1299,19 @@ function createRegisteredHotkeySetter(
         localStorage.setItem(key, previousKey);
         useSettingsStore.setState({ [key]: previousKey });
         logger.warn(`Failed to update ${label}`, { hotkey, message: result?.message }, "settings");
-        return false;
+        return { success: false, message: result?.message };
       }
 
       localStorage.setItem(key, hotkey);
       useSettingsStore.setState({ [key]: hotkey });
-      return true;
+      return { success: true };
     } catch (error) {
       logger.warn(
         `Failed to update ${label}`,
         { hotkey, error: error instanceof Error ? error.message : String(error) },
         "settings"
       );
-      return false;
+      return { success: false };
     }
   };
 }
@@ -1325,6 +1345,7 @@ type SecretProvider = keyof typeof SECRET_IPC_SAVERS;
 const secretSaveTimers: Partial<Record<SecretProvider, ReturnType<typeof setTimeout>>> = {};
 function debouncedSaveSecret(provider: SecretProvider, key: string) {
   if (!isBrowser) return;
+  debouncedPersistToEnv();
   const timer = secretSaveTimers[provider];
   if (timer) clearTimeout(timer);
   secretSaveTimers[provider] = setTimeout(() => {
@@ -1372,7 +1393,6 @@ const STALE_SECRET_LOCALSTORAGE_KEYS = [
 
 function notifyApiKeyChanged() {
   if (isBrowser) window.dispatchEvent(new Event("api-key-changed"));
-  debouncedPersistToEnv();
 }
 
 // Uniform secret setter: persist to the secure store (debounced) and tell
@@ -1474,6 +1494,9 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   dictationSileroEnabled: readBoolean("dictationSileroEnabled", false),
   noteRecordingSileroEnabled: readBoolean("noteRecordingSileroEnabled", true),
   meetingSileroEnabled: readBoolean("meetingSileroEnabled", true),
+  // Acoustic echo cancellation for meetings is opt-in: on headsets there's no
+  // echo to cancel and it can suppress the mic entirely. See ipcHandlers AEC gate.
+  meetingAecEnabled: readBoolean("meetingAecEnabled", false),
   whisperVadThreshold: clampVadValue("threshold", readString("whisperVadThreshold", "0.5")),
   whisperVadMinSpeechDurationMs: clampVadValue(
     "minSpeechDurationMs",
@@ -1515,6 +1538,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   remoteTranscriptionModel: readString("remoteTranscriptionModel", ""),
   cleanupMode: readInferenceMode("cleanupMode"),
   cleanupRemoteUrl: readString("cleanupRemoteUrl", ""),
+  keepLocalModelLoaded: readBoolean("keepLocalModelLoaded", false),
 
   meetingTranscriptionMode: readTranscriptionMode("meetingTranscriptionMode"),
   meetingUseLocalWhisper: readBoolean("meetingUseLocalWhisper", true),
@@ -1550,6 +1574,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   translationRemoteUrl: readString("translationRemoteUrl", ""),
   translationCustomApiKey: readString("translationCustomApiKey", ""),
   translationDisableThinking: readBoolean("translationDisableThinking", true),
+  translationReasoningEffort: readString("translationReasoningEffort", ""),
   useDictationTranslation: readBoolean("useDictationTranslation", false),
   translationSourceLanguage: readString("translationSourceLanguage", "auto"),
   translationTargetLanguage: readString("translationTargetLanguage", ""),
@@ -1571,6 +1596,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   setRemoteTranscriptionModel: createStringSetter("remoteTranscriptionModel"),
   setCleanupMode: createStringSetter("cleanupMode") as (mode: InferenceMode) => void,
   setCleanupRemoteUrl: createStringSetter("cleanupRemoteUrl"),
+  setKeepLocalModelLoaded: createBooleanSetter("keepLocalModelLoaded"),
 
   setMeetingTranscriptionMode: createStringSetter("meetingTranscriptionMode") as (
     mode: TranscriptionMode
@@ -1642,6 +1668,8 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   dictationAgentCustomApiKey: readString("dictationAgentCustomApiKey", ""),
 
   voiceAgentScreenContext: readBoolean("voiceAgentScreenContext", false),
+  toneStyleEnabled: readBoolean("toneStyleEnabled", false),
+  toneStyles: normalizeToneStyles(readString("toneStyles", "")),
   webSearchEnabled: readBoolean("webSearchEnabled", false),
   webSearchUrl: readString("webSearchUrl", ""),
 
@@ -1649,6 +1677,10 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   dictationAgentDisableThinking: readBoolean("dictationAgentDisableThinking", true),
   noteFormattingDisableThinking: readBoolean("noteFormattingDisableThinking", true),
   chatAgentDisableThinking: readBoolean("chatAgentDisableThinking", true),
+  cleanupReasoningEffort: readString("cleanupReasoningEffort", ""),
+  dictationAgentReasoningEffort: readString("dictationAgentReasoningEffort", ""),
+  noteFormattingReasoningEffort: readString("noteFormattingReasoningEffort", ""),
+  chatAgentReasoningEffort: readString("chatAgentReasoningEffort", ""),
   dictationAgentToolCalling: readToolCallingSetting("dictationAgentToolCalling"),
   chatAgentToolCalling: readToolCallingSetting("chatAgentToolCalling"),
   dictationAgentAcceptsImages: readBoolean("dictationAgentAcceptsImages", false),
@@ -1675,6 +1707,11 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   ),
 
   setVoiceAgentScreenContext: createBooleanSetter("voiceAgentScreenContext"),
+  setToneStyleEnabled: createBooleanSetter("toneStyleEnabled"),
+  setToneStyles: (styles) => {
+    if (isBrowser) localStorage.setItem("toneStyles", JSON.stringify(styles));
+    useSettingsStore.setState({ toneStyles: styles });
+  },
   setWebSearchEnabled: createBooleanSetter("webSearchEnabled"),
   setWebSearchUrl: createStringSetter("webSearchUrl"),
 
@@ -1968,6 +2005,7 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
       window.electronAPI?.setWhisperVadConfig?.({ meetingSileroEnabled: value });
     }
   },
+  setMeetingAecEnabled: createBooleanSetter("meetingAecEnabled"),
   setWhisperVadThreshold: (value: number) => {
     const next = clampVadValue("threshold", value);
     if (isBrowser) localStorage.setItem("whisperVadThreshold", String(next));
@@ -2214,6 +2252,7 @@ export interface ResolvedLLMConfig {
   remoteUrl?: string;
   customApiKey?: string;
   disableThinking: boolean;
+  reasoningEffort?: string;
   /** Only on scopes that stream chat (see INFERENCE_SCOPES storeKeys). */
   toolCalling?: ToolCallingSetting;
   acceptsImages?: boolean;
@@ -2251,6 +2290,7 @@ export const selectResolvedLLMConfig = (
     // belongs on the request path — see selectResolvedNoteFormatting.
     customApiKey: read("customApiKey"),
     disableThinking,
+    reasoningEffort: read("reasoningEffort"),
     ...(toolCallingKey ? { toolCalling: state[toolCallingKey] as ToolCallingSetting } : {}),
     ...(acceptsImagesKey ? { acceptsImages: state[acceptsImagesKey] === true } : {}),
   };
@@ -2391,6 +2431,35 @@ export async function initializeSettings(): Promise<void> {
   if (!isBrowser) return;
 
   const state = useSettingsStore.getState();
+  let hydratingSecrets = true;
+  const pendingSecretUpdates = new Set<string>();
+
+  // A key saved in another window. Queue updates until hydration can no
+  // longer overwrite them.
+  const refreshApiKey = async (storeKey: string) => {
+    if (!STALE_SECRET_LOCALSTORAGE_KEYS.some((key) => key === storeKey)) return;
+    if (hydratingSecrets) {
+      pendingSecretUpdates.add(storeKey);
+      return;
+    }
+    const saver =
+      SECRET_IPC_SAVERS[storeKey as SecretProvider] ||
+      SECRET_IPC_SAVERS[storeKey.replace(/ApiKey$/, "") as SecretProvider];
+    if (!saver) return;
+    const getter = window.electronAPI?.[
+      saver.replace(/^save/, "get") as keyof typeof window.electronAPI
+    ] as (() => Promise<string | null>) | undefined;
+    if (!getter) return;
+    try {
+      const key = await getter();
+      if (key !== null && typeof key !== "string") return;
+      useSettingsStore.setState({ [storeKey]: key || "" });
+      notifyApiKeyChanged();
+    } catch {
+      logger.warn("Failed to refresh API key", { storeKey }, "settings");
+    }
+  };
+  window.electronAPI?.onApiKeyUpdated?.(refreshApiKey);
 
   if (window.electronAPI) {
     // Preferences are already in localStorage; do not wait for secret or provider hydration.
@@ -2455,6 +2524,10 @@ export async function initializeSettings(): Promise<void> {
         { error: (err as Error).message },
         "settings"
       );
+    } finally {
+      hydratingSecrets = false;
+      await Promise.all([...pendingSecretUpdates].map(refreshApiKey));
+      pendingSecretUpdates.clear();
     }
 
     // Sync dictation key from main process.
@@ -2724,6 +2797,8 @@ export async function initializeSettings(): Promise<void> {
       } else {
         value = parsed;
       }
+    } else if (key === "toneStyles") {
+      value = normalizeToneStyles(newValue);
     } else {
       value = newValue;
     }

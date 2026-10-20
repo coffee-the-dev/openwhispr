@@ -215,6 +215,16 @@ export async function loadFolders(): Promise<FolderItem[]> {
   return items;
 }
 
+// A folder created from the meeting notification lives in another window; a
+// mounted panel reloads its folders so the new one appears.
+export function subscribeMeetingNotificationFolders(): (() => void) | undefined {
+  return window.electronAPI.onMeetingNotificationFolderCreated?.(() =>
+    loadFolders().catch(() => {
+      /* Startup loading recovers a lost hint. */
+    })
+  );
+}
+
 const containerLoadGenerations = new Map<string, number>();
 const containerLoadsInFlight = new Map<string, Promise<NoteItem[]>>();
 

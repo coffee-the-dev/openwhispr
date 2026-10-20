@@ -57,27 +57,26 @@ function inventoryByFile(inventory) {
 // consumer require an explicit policy decision in this test.
 const EXPECTED_SHARED_FIELD_DIRECTIONS = {
   "src/components/DictionaryView.tsx": ["auto", "auto", "auto"],
-  "src/components/OpenAICompatiblePanel.tsx": ["ltr"],
-  "src/components/SelfHostedPanel.tsx": ["ltr", "ltr"],
   "src/components/SettingsPage.tsx": ["ltr", "ltr", "ltr", "ltr", "ltr", "ltr", "auto", "auto"],
   "src/components/SnippetsView.tsx": ["auto", "auto", "auto", "auto"],
-  "src/components/notes/ActionManagerDialog.tsx": ["auto", "auto"],
+  "src/components/notes/ActionManagerDialog.tsx": ["auto", "auto", "auto"],
   "src/components/notes/UploadAudioView.tsx": ["auto"],
-  "src/components/onboarding/ProviderSetupStep.tsx": ["ltr", "ltr", "ltr"],
   "src/components/settings/DictationAgentSettings.tsx": ["auto"],
   "src/components/settings/WebSearchSettings.tsx": ["ltr"],
   "src/components/ui/ApiKeyInput.tsx": ["ltr"],
   "src/components/ui/PromptStudio.tsx": ["auto", "auto"],
+  "src/components/ui/ProviderCheckField.tsx": ["ltr"],
   "src/components/ui/SearchableModelList.tsx": ["ltr"],
 };
 
 const EXPECTED_NATIVE_FIELD_DIRECTIONS = {
   "src/components/CommandSearch.tsx": ["auto"],
+  // Folder names and search accept user text in any script.
+  "src/components/MeetingNotificationFolderPicker.tsx": ["auto", "auto"],
   "src/components/chat/ChatInput.tsx": ["auto"],
-  "src/components/notes/ActionManagerDialog.tsx": ["auto"],
+  "src/components/notes/ActionManagerDialog.tsx": ["auto", "auto"],
   "src/components/notes/AddNotesToFolderDialog.tsx": ["auto"],
   "src/components/notes/MeetingTranscriptChat.tsx": ["ltr", "auto"],
-  "src/components/notes/NoteBottomBar.tsx": ["auto"],
   "src/components/notes/NoteEditor.tsx": ["auto", "auto"],
   "src/components/notes/NoteParticipants.tsx": ["auto"],
   "src/components/notes/NotesOnboarding.tsx": ["auto", "auto", "auto"],
@@ -137,8 +136,8 @@ test("native text fields use the same reviewed direction policy", () => {
 
 test("representative prose, identity, secret, and rich-editor surfaces keep their policy", () => {
   assert.match(
-    source("src/components/onboarding/ProviderSetupStep.tsx"),
-    /<Input\s+dir="ltr"\s+type="password"/
+    source("src/components/ui/ProviderCheckField.tsx"),
+    /<Input\s+dir="ltr"\s+\{\.\.\.inputProps\}/
   );
   assert.match(
     source("src/components/DictionaryView.tsx"),

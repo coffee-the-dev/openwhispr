@@ -18,6 +18,15 @@ test("ReasoningService entry points guard their endpoints", async (t) => {
   const { default: i18n } = await vite.ssrLoadModule("/i18n.ts");
   await i18n.changeLanguage("en");
 
+  // A self-hosted 400 body ("expected test stop") classifies as a bad-request
+  // error; its original text survives on technicalDetails.underlyingError.
+  const rejectsExpectedTestStop = (promise) =>
+    assert.rejects(promise, (err) => {
+      assert.equal(err.code, "PROVIDER_BAD_REQUEST");
+      assert.match(err.technicalDetails?.underlyingError ?? "", /expected test stop/);
+      return true;
+    });
+
   await t.test("a local selection without a model fails before dispatch", async () => {
     await assert.rejects(reasoningService.processText("hi", "", null, { provider: "local" }), {
       message: "No reasoning model selected",
@@ -42,12 +51,11 @@ test("ReasoningService entry points guard their endpoints", async (t) => {
     };
 
     try {
-      await assert.rejects(
+      await rejectsExpectedTestStop(
         reasoningService.processText("hi", "other-model", null, {
           lanUrl: "https://other-scope.example.com/v1",
           inferenceScope: "chatIntelligence",
-        }),
-        { message: "expected test stop" }
+        })
       );
       assert.ok(requests.length > 0);
       for (const request of requests) {
@@ -61,9 +69,7 @@ test("ReasoningService entry points guard their endpoints", async (t) => {
 
       // Implicit cleanup runs on its own endpoint with the shared key.
       requests.length = 0;
-      await assert.rejects(reasoningService.processText("hi", "cleanup-model"), {
-        message: "expected test stop",
-      });
+      await rejectsExpectedTestStop(reasoningService.processText("hi", "cleanup-model"));
       assert.ok(requests.length > 0);
       assert.ok(
         requests.every((request) => request.url.startsWith("https://cleanup.example.com/v1/"))

@@ -99,6 +99,83 @@ const MATRIX = [
     AGENT,
     { max_tokens: MAX_TOKENS, temperature: 0.3 },
   ],
+
+  // --- GLM-5.3 (always reasons; no off switch) ---
+  [
+    "lan glm-5.3 pins high: its max default thinks past the output cap (#2008)",
+    "lan",
+    "glm-5.3-flash",
+    CLEANUP,
+    { max_tokens: MAX_TOKENS, temperature: 0, reasoning_effort: "high" },
+  ],
+  [
+    "lan glm-5.3 suppression floors at low, never the unsupported none",
+    "lan",
+    "glm-5.3-flash",
+    CLEANUP_NO_THINK,
+    {
+      max_tokens: MAX_TOKENS,
+      temperature: 0,
+      reasoning: { effort: "low" },
+      chat_template_kwargs: { enable_thinking: false },
+    },
+  ],
+
+  // --- Chosen reasoning effort (the per-scope picker) ---
+  [
+    "lan sends a chosen effort as reasoning_effort",
+    "lan",
+    "llama-4-scout",
+    { ...AGENT, disableThinking: false, reasoningEffort: "low" },
+    { max_tokens: MAX_TOKENS, temperature: 0.3, reasoning_effort: "low" },
+  ],
+  [
+    "lan gpt-oss: a chosen effort replaces the cleanup pin",
+    "lan",
+    "gpt-oss-120b",
+    { disableThinking: false, reasoningEffort: "high" },
+    { max_tokens: MAX_TOKENS, temperature: 0, reasoning_effort: "high" },
+  ],
+  [
+    "lan gpt-oss: a level its family rejects is never sent (#1611)",
+    "lan",
+    "gpt-oss-120b",
+    { ...AGENT, disableThinking: false, reasoningEffort: "none" },
+    { max_tokens: MAX_TOKENS, temperature: 0.3 },
+  ],
+  [
+    "lan glm-5.3: a chosen effort sends no family default beside it",
+    "lan",
+    "glm-5.3-flash",
+    { ...AGENT, disableThinking: false, reasoningEffort: "low" },
+    { max_tokens: MAX_TOKENS, temperature: 0.3, reasoning_effort: "low" },
+  ],
+  [
+    "lan: suppression beats a chosen effort",
+    "lan",
+    "llama-4-scout",
+    { disableThinking: true, reasoningEffort: "high" },
+    {
+      max_tokens: MAX_TOKENS,
+      temperature: 0,
+      reasoning: { effort: "none" },
+      chat_template_kwargs: { enable_thinking: false },
+    },
+  ],
+  [
+    "local gpt-oss offers its family's levels",
+    "local",
+    "gpt-oss-20b-mxfp4",
+    { ...AGENT, disableThinking: false, reasoningEffort: "medium" },
+    { max_tokens: MAX_TOKENS, temperature: 0.3, reasoning_effort: "medium" },
+  ],
+  [
+    "local: a model outside the family table offers no levels",
+    "local",
+    "gemma-3-4b",
+    { ...AGENT, disableThinking: false, reasoningEffort: "high" },
+    { max_tokens: MAX_TOKENS, temperature: 0.3 },
+  ],
 ];
 
 for (const [name, dialect, model, config, expectedParams] of MATRIX) {
@@ -123,4 +200,26 @@ test("matrix: explicit temperature and maxTokens overrides always win", async ()
   });
   assert.equal(body.temperature, 0.7);
   assert.equal(body.max_tokens, 42);
+});
+
+test("Settings offers a picker only with thinking on and at least two levels", async () => {
+  const { selectableReasoningEffort } = await load();
+  const on = { disableThinking: false };
+  assert.deepEqual(selectableReasoningEffort("lan", "gpt-oss-120b", on)?.options, [
+    "low",
+    "medium",
+    "high",
+  ]);
+  assert.deepEqual(selectableReasoningEffort("lan", "llama-4-scout", on)?.options, [
+    "none",
+    "minimal",
+    "low",
+    "medium",
+    "high",
+    "xhigh",
+  ]);
+  assert.equal(selectableReasoningEffort("lan", "gpt-oss-120b", { disableThinking: true }), null);
+  assert.equal(selectableReasoningEffort("lan", "qwen3.5:9b", on), null, "a single level");
+  assert.equal(selectableReasoningEffort("local", "gemma-3-4b", on), null);
+  assert.equal(selectableReasoningEffort("lan", "", on), null);
 });

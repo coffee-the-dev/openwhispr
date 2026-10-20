@@ -1,7 +1,9 @@
 const Database = require("better-sqlite3");
+const { NOTE_TEXT_FIELDS, SUMMARY_CLEARED_METADATA } = require("./noteFieldSync");
 const path = require("path");
 const fs = require("fs");
 const { randomUUID } = require("crypto");
+const noteUndo = require("./noteUndo");
 const debugLogger = require("./debugLogger");
 const { buildNoteSearchQuery } = require("./noteSearch");
 const { normalizeStoredSpeakerCount } = require("./speakerCount");
@@ -10,7 +12,8 @@ const { parseEventTime } = require("./calendarAvailability");
 // naive timestamp may predate that and must never outrank created_at when
 // dating a historical row.
 const { hasExplicitTimeZone, parseDbTimestamp, toDbTimestamp } = require("./dbTimestamp");
-const { BUILTIN_ACTIONS, GENERATE_NOTES_KEY } = require("./builtinActions");
+const { BUILTIN_ACTIONS, GENERATE_NOTES_KEY, NOTE_ACTION_LIMITS } = require("./builtinActions");
+const { normalizeSections } = require("./templatePrompts");
 const {
   ANALYTICS_COUNTER_VERSION,
   ANALYTICS_HISTORY_BACKFILL_VERSION,
@@ -30,11 +33,68 @@ function calendarEventsQuery(where) {
 }
 
 const AVAILABILITY_PROVIDERS = new Set(["apple"]);
+
+// Validates and normalizes the editable fields of a note template or action.
+function resolveActionFields(kind, fields) {
+  const name = (fields.name || "").trim();
+  const description = (fields.description || "").trim();
+  const prompt = (fields.prompt || "").trim();
+  const sections = kind === "template" ? normalizeSections(fields.sections) : [];
+  const output = kind === "action" ? fields.output || "chat" : null;
+  if (!name) return { error: "Name is required" };
+  if (kind === "action" && !prompt) return { error: "Action prompt is required" };
+  if (kind === "template" && !prompt && sections.length === 0) {
+    return { error: "A template needs instructions or a section" };
+  }
+  if (output !== null && output !== "summary" && output !== "chat") {
+    return { error: "Unknown action output" };
+  }
+  const limits = NOTE_ACTION_LIMITS;
+  if (
+    name.length > limits.name ||
+    description.length > limits.description ||
+    prompt.length > limits.prompt ||
+    sections.length > limits.sections ||
+    sections.some(
+      (section) =>
+        section.heading.length > limits.heading || section.instruction.length > limits.instruction
+    )
+  ) {
+    return { error: "Too long" };
+  }
+  return {
+    name,
+    description,
+    prompt,
+    sections: sections.length > 0 ? JSON.stringify(sections) : null,
+    output,
+  };
+}
+
+function toActionItem(row) {
+  if (!row) return null;
+  let sections = null;
+  try {
+    sections = row.sections ? JSON.parse(row.sections) : null;
+  } catch {
+    sections = null;
+  }
+  // Destinations are fixed by built-in identity, never by editable copy or stored output.
+  const builtin = BUILTIN_ACTIONS.find((action) => action.translationKey === row.translation_key);
+  const output =
+    row.kind === "template" ? null : builtin?.output === "summary" ? "summary" : "chat";
+  return { ...row, sections, output };
+}
 const SELECTED_CALENDAR_EVENT_FILTER = `(
   provider = 'apple' AND EXISTS (
     SELECT 1 FROM apple_calendars WHERE apple_calendars.id = calendar_events.calendar_id
   )
 )`;
+
+// A contacts row's source: "apple" or "manual" (added by hand to a note).
+function contactSource(provider, accountEmail = null) {
+  return accountEmail ? `${provider}:${accountEmail}` : provider;
+}
 
 class DatabaseManager {
   constructor() {
@@ -288,6 +348,11 @@ class DatabaseManager {
         if (!err.message.includes("duplicate column")) throw err;
       }
       try {
+        this.db.exec("ALTER TABLE notes ADD COLUMN enhancement_template_id TEXT");
+      } catch (err) {
+        if (!err.message.includes("duplicate column")) throw err;
+      }
+      try {
         this.db.exec("ALTER TABLE notes ADD COLUMN cloud_id TEXT");
       } catch (err) {
         if (!err.message.includes("duplicate column")) throw err;
@@ -415,6 +480,20 @@ class DatabaseManager {
       } catch (err) {
         if (!err.message.includes("duplicate column")) throw err;
       }
+      // Every row before these columns rewrote the AI summary from the note's
+      // material, which is what a template does, so 'template' is the default.
+      for (const column of [
+        "client_id TEXT",
+        "kind TEXT NOT NULL DEFAULT 'template'",
+        "sections TEXT",
+        "output TEXT",
+      ]) {
+        try {
+          this.db.exec(`ALTER TABLE actions ADD COLUMN ${column}`);
+        } catch (err) {
+          if (!err.message.includes("duplicate column")) throw err;
+        }
+      }
 
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS agent_conversations (
@@ -476,27 +555,41 @@ class DatabaseManager {
         "CREATE INDEX IF NOT EXISTS idx_agent_conversations_container ON agent_conversations(space_id, folder_id)"
       );
 
+      const builtinKeys = BUILTIN_ACTIONS.map((action) => action.translationKey);
+      // A built-in's client id is its key. An older build renames built-in keys it
+      // doesn't know (below), so after a downgrade and upgrade the key comes back
+      // from the client id instead of the row being seeded a second time.
+      this.db
+        .prepare(
+          `UPDATE actions SET translation_key = client_id WHERE is_builtin = 1 AND client_id IN (${builtinKeys.map(() => "?").join(", ")}) AND translation_key IS NOT client_id`
+        )
+        .run(...builtinKeys);
+
       // Pre-2026 installs carry one built-in row under an older key: rename it to
       // Generate Notes so the loop below recognizes and upgrades it.
-      const builtinKeys = BUILTIN_ACTIONS.map((action) => action.translationKey);
       this.db
         .prepare(
           `UPDATE actions SET translation_key = ? WHERE is_builtin = 1 AND (translation_key IS NULL OR translation_key NOT IN (${builtinKeys.map(() => "?").join(", ")}))`
         )
         .run(GENERATE_NOTES_KEY, ...builtinKeys);
 
-      // Built-in actions: insert any that are missing, and roll a new default prompt
-      // out to rows whose prompt is still a previous default (never a user edit).
+      // Built-ins: insert any that are missing, and roll a new default out to rows
+      // that are still a previous flat default (never a user edit). A built-in's
+      // kind and destination are fixed, regardless of prompt edits.
       const selectBuiltin = this.db.prepare(
-        "SELECT id, prompt FROM actions WHERE is_builtin = 1 AND translation_key = ?"
+        "SELECT id, name, description, prompt, sections FROM actions WHERE is_builtin = 1 AND translation_key = ?"
       );
       const insertBuiltin = this.db.prepare(
-        "INSERT INTO actions (name, description, prompt, icon, is_builtin, sort_order, translation_key) VALUES (?, ?, ?, ?, 1, ?, ?)"
+        "INSERT INTO actions (name, description, prompt, icon, is_builtin, sort_order, translation_key, client_id, kind, sections, output) VALUES (?, ?, ?, ?, 1, ?, ?, ?, ?, ?, ?)"
       );
       const upgradeBuiltin = this.db.prepare(
-        "UPDATE actions SET name = ?, description = ?, prompt = ? WHERE id = ?"
+        "UPDATE actions SET prompt = ?, sections = ? WHERE id = ?"
+      );
+      const settleBuiltin = this.db.prepare(
+        "UPDATE actions SET client_id = ?, kind = ?, sort_order = ?, output = ?, name = ?, description = ?, icon = ? WHERE id = ?"
       );
       for (const action of BUILTIN_ACTIONS) {
+        const sections = action.sections ? JSON.stringify(action.sections) : null;
         const existing = selectBuiltin.get(action.translationKey);
         if (!existing) {
           insertBuiltin.run(
@@ -505,12 +598,45 @@ class DatabaseManager {
             action.prompt,
             action.icon,
             action.sortOrder,
-            action.translationKey
+            action.translationKey,
+            action.translationKey,
+            action.kind,
+            sections,
+            action.output
           );
-        } else if (action.previousPrompts.includes(existing.prompt)) {
-          upgradeBuiltin.run(action.name, action.description, action.prompt, existing.id);
+          continue;
         }
+        const upgradesPrompt =
+          existing.sections === null && action.previousPrompts.includes(existing.prompt);
+        if (upgradesPrompt) {
+          upgradeBuiltin.run(action.prompt, sections, existing.id);
+        }
+        settleBuiltin.run(
+          action.translationKey,
+          action.kind,
+          action.sortOrder,
+          action.output,
+          action.previousNames?.includes(existing.name) ? action.name : existing.name,
+          (
+            action.previousDescriptions?.length
+              ? action.previousDescriptions.includes(existing.description)
+              : upgradesPrompt
+          )
+            ? action.description
+            : existing.description,
+          action.icon,
+          existing.id
+        );
       }
+
+      const actionsWithoutClientId = this.db
+        .prepare("SELECT id FROM actions WHERE client_id IS NULL")
+        .all();
+      const setActionClientId = this.db.prepare("UPDATE actions SET client_id = ? WHERE id = ?");
+      for (const row of actionsWithoutClientId) setActionClientId.run(randomUUID(), row.id);
+      this.db.exec(
+        "CREATE UNIQUE INDEX IF NOT EXISTS idx_actions_client_id ON actions(client_id) WHERE client_id IS NOT NULL"
+      );
 
       // Google and Microsoft calendar sync kept OAuth tokens and calendar lists
       // in their own tables; nothing reads them in this build.
@@ -610,6 +736,24 @@ class DatabaseManager {
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      // Every source (see contactSource) that has seen a contact, so a
+      // disconnect only removes people no other source still has. Rows older
+      // builds stored have none.
+      this.db.exec(`
+        CREATE TABLE IF NOT EXISTS contact_sources (
+          email TEXT NOT NULL REFERENCES contacts(email) ON DELETE CASCADE,
+          source TEXT NOT NULL,
+          PRIMARY KEY (email, source)
+        )
+      `);
+      // Pre-release builds kept a single source in contacts.source.
+      if (this.db.pragma("table_info(contacts)").some((column) => column.name === "source")) {
+        this.db.exec(
+          "INSERT OR IGNORE INTO contact_sources (email, source) SELECT email, source FROM contacts WHERE source IS NOT NULL"
+        );
+        this.db.exec("UPDATE contacts SET source = NULL WHERE source IS NOT NULL");
+      }
 
       this.db.exec(`
         CREATE TABLE IF NOT EXISTS speaker_profiles (
@@ -1020,6 +1164,14 @@ class DatabaseManager {
         )
       `);
       this._initVectorChangeJournal();
+      try {
+        noteUndo.initializeNoteUndo(this.db);
+        this.noteUndoReady = true;
+      } catch (error) {
+        // Undo is a convenience: it must never keep the notes database from
+        // opening. Without it, assistant edits save as plain updates.
+        debugLogger.error("Assistant note Undo unavailable", { error: error.message }, "database");
+      }
 
       // One-time re-home (user_version 3): rows an account or a team space owned
       // under older builds move into the private space, the only one this build has.
@@ -2056,11 +2208,50 @@ class DatabaseManager {
     }
   }
 
-  updateNote(id, updates) {
+  getNoteUndos() {
+    return this.noteUndoReady ? noteUndo.getNoteUndos(this) : [];
+  }
+
+  claimNoteUndo(token) {
+    return this.noteUndoReady && noteUndo.claimNoteUndo(this, token);
+  }
+
+  undoNoteUpdate(token) {
+    if (!this.noteUndoReady) return { success: false, error: "note_changed" };
+    return noteUndo.undoNoteUpdate(this, token);
+  }
+
+  discardNoteUndo(id, token) {
+    if (this.noteUndoReady) noteUndo.discardNoteUndo(this, id, token);
+  }
+
+  updateNote(id, updates, options) {
+    if (options?.undoable && this.noteUndoReady) {
+      return noteUndo.updateNoteWithUndo(this, id, updates, options.expected, options.turn);
+    }
     try {
       if (!this.db) throw new Error("Database not initialized");
-      if (!this.getNote(id)) return { success: false, error: "Note not found" };
+      const previous = this.getNote(id);
+      if (!previous) return { success: false, error: "Note not found" };
       updates = { ...updates };
+      const clears = updates.clear_fields ?? [];
+      if (!Array.isArray(clears) || clears.some((field) => !NOTE_TEXT_FIELDS.includes(field))) {
+        return { success: false, error: "Invalid note clear fields" };
+      }
+      // Undo restores an empty field as a clear, with the summary metadata that goes with it.
+      for (const field of clears) {
+        if (
+          updates[field] != null &&
+          (typeof updates[field] !== "string" || updates[field].trim())
+        ) {
+          return { success: false, error: "A clear cannot include nonempty text" };
+        }
+        updates[field] = field === "content" ? "" : null;
+        if (field === "enhanced_content") {
+          for (const key of SUMMARY_CLEARED_METADATA) updates[key] = null;
+        }
+      }
+      delete updates.clear_fields;
       if (updates.folder_id != null) {
         // D2: a note's space always follows its folder's space.
         const folder = this._getFolder(updates.folder_id);
@@ -2075,6 +2266,7 @@ class DatabaseManager {
         "content",
         "enhanced_content",
         "enhancement_prompt",
+        "enhancement_template_id",
         "enhanced_at_content_hash",
         "folder_id",
         "space_id",
@@ -2378,7 +2570,10 @@ class DatabaseManager {
   getActions() {
     try {
       if (!this.db) throw new Error("Database not initialized");
-      return this.db.prepare("SELECT * FROM actions ORDER BY sort_order ASC, created_at ASC").all();
+      return this.db
+        .prepare("SELECT * FROM actions ORDER BY sort_order ASC, created_at ASC")
+        .all()
+        .map(toActionItem);
     } catch (error) {
       debugLogger.error("Error getting actions", { error: error.message }, "notes");
       throw error;
@@ -2388,30 +2583,47 @@ class DatabaseManager {
   getAction(id) {
     try {
       if (!this.db) throw new Error("Database not initialized");
-      return this.db.prepare("SELECT * FROM actions WHERE id = ?").get(id) || null;
+      return toActionItem(this.db.prepare("SELECT * FROM actions WHERE id = ?").get(id));
     } catch (error) {
       debugLogger.error("Error getting action", { error: error.message }, "notes");
       throw error;
     }
   }
 
-  createAction(name, description, prompt, icon = "sparkles") {
+  createAction(
+    name,
+    description,
+    prompt,
+    icon = "sparkles",
+    { kind = "template", sections, output } = {}
+  ) {
     try {
       if (!this.db) throw new Error("Database not initialized");
-      const trimmedName = (name || "").trim();
-      const trimmedPrompt = (prompt || "").trim();
-      if (!trimmedName) return { success: false, error: "Action name is required" };
-      if (!trimmedPrompt) return { success: false, error: "Action prompt is required" };
+      if (kind !== "template" && kind !== "action") {
+        return { success: false, error: "Unknown action kind" };
+      }
+      const fields = resolveActionFields(kind, { name, description, prompt, sections, output });
+      if (fields.error) return { success: false, error: fields.error };
       const maxOrder = this.db.prepare("SELECT MAX(sort_order) as max_order FROM actions").get();
       const sortOrder = (maxOrder?.max_order ?? 0) + 1;
       const result = this.db
         .prepare(
-          "INSERT INTO actions (name, description, prompt, icon, sort_order) VALUES (?, ?, ?, ?, ?)"
+          "INSERT INTO actions (name, description, prompt, icon, sort_order, client_id, kind, sections, output) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)"
         )
-        .run(trimmedName, (description || "").trim(), trimmedPrompt, icon || "sparkles", sortOrder);
-      const action = this.db
-        .prepare("SELECT * FROM actions WHERE id = ?")
-        .get(result.lastInsertRowid);
+        .run(
+          fields.name,
+          fields.description,
+          fields.prompt,
+          icon || "sparkles",
+          sortOrder,
+          randomUUID(),
+          kind,
+          fields.sections,
+          fields.output
+        );
+      const action = toActionItem(
+        this.db.prepare("SELECT * FROM actions WHERE id = ?").get(result.lastInsertRowid)
+      );
       return { success: true, action };
     } catch (error) {
       debugLogger.error("Error creating action", { error: error.message }, "notes");
@@ -2419,24 +2631,42 @@ class DatabaseManager {
     }
   }
 
+  // A row's kind and client id never change; every other field is replaced by
+  // the update or kept, then validated as a whole.
   updateAction(id, updates) {
     try {
       if (!this.db) throw new Error("Database not initialized");
-      const allowedFields = ["name", "description", "prompt", "icon", "sort_order"];
-      const fields = [];
-      const values = [];
-      for (const [key, value] of Object.entries(updates)) {
-        if (allowedFields.includes(key) && value !== undefined) {
-          fields.push(`${key} = ?`);
-          values.push(value);
-        }
+      const current = this.getAction(id);
+      if (!current) return { success: false, error: "Action not found" };
+      const merged = { ...current };
+      for (const key of [
+        "name",
+        "description",
+        "prompt",
+        "icon",
+        "sort_order",
+        "sections",
+        "output",
+      ]) {
+        if (updates[key] !== undefined) merged[key] = updates[key];
       }
-      if (fields.length === 0) return { success: false };
-      fields.push("updated_at = CURRENT_TIMESTAMP");
-      values.push(id);
-      this.db.prepare(`UPDATE actions SET ${fields.join(", ")} WHERE id = ?`).run(...values);
-      const action = this.db.prepare("SELECT * FROM actions WHERE id = ?").get(id);
-      return { success: true, action };
+      const fields = resolveActionFields(current.kind, merged);
+      if (fields.error) return { success: false, error: fields.error };
+      this.db
+        .prepare(
+          "UPDATE actions SET name = ?, description = ?, prompt = ?, icon = ?, sort_order = ?, sections = ?, output = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?"
+        )
+        .run(
+          fields.name,
+          fields.description,
+          fields.prompt,
+          merged.icon,
+          merged.sort_order,
+          fields.sections,
+          fields.output,
+          id
+        );
+      return { success: true, action: this.getAction(id) };
     } catch (error) {
       debugLogger.error("Error updating action", { error: error.message }, "notes");
       throw error;
@@ -2737,7 +2967,8 @@ class DatabaseManager {
             "datetime(start_time) <= datetime('now') AND datetime(end_time) > datetime('now') AND is_all_day = 0 AND status IN ('confirmed', 'tentative')"
           )
         )
-        .all();
+        .all()
+        .filter((event) => event.self_response_status !== "declined");
     } catch (error) {
       debugLogger.error("Error getting active events", { error: error.message }, "calendar");
       throw error;
@@ -2787,7 +3018,8 @@ class DatabaseManager {
             "((datetime(start_time) > datetime('now') AND datetime(start_time) <= datetime('now', '+' || ? || ' minutes')) OR (datetime(start_time) <= datetime('now') AND datetime(end_time) > datetime('now'))) AND is_all_day = 0 AND status IN ('confirmed', 'tentative')"
           )
         )
-        .all(windowMinutes);
+        .all(windowMinutes)
+        .filter((event) => event.self_response_status !== "declined");
     } catch (error) {
       debugLogger.error("Error getting upcoming events", { error: error.message }, "calendar");
       throw error;
@@ -2847,33 +3079,63 @@ class DatabaseManager {
     }
   }
 
-  getNoteByCalendarEventId(eventId, excludeNoteId = null) {
+  // Join & transcribe resumes this note: the newest one linked to the event.
+  getOwnNoteByCalendarEventId(eventId, { throwOnError = false } = {}) {
     try {
       if (!this.db) throw new Error("Database not initialized");
-      const base = "SELECT * FROM notes WHERE calendar_event_id = ?";
-      if (excludeNoteId) {
-        return this.db.prepare(`${base} AND id != ? LIMIT 1`).get(eventId, excludeNoteId) || null;
-      }
-      return this.db.prepare(`${base} LIMIT 1`).get(eventId) || null;
+      return (
+        this.db
+          .prepare(
+            "SELECT * FROM notes WHERE calendar_event_id = ? ORDER BY datetime(created_at) DESC, id DESC LIMIT 1"
+          )
+          .get(eventId) || null
+      );
     } catch (error) {
       debugLogger.error(
         "Error getting note by calendar event id",
         { error: error.message },
         "notes"
       );
+      if (throwOnError) throw error;
       return null;
     }
   }
 
-  upsertContacts(contacts) {
+  createMeetingNoteForNotification({ title, folderId, spaceId, eventId, participants }) {
+    return this.db.transaction(() => {
+      const existing = eventId
+        ? this.getOwnNoteByCalendarEventId(eventId, { throwOnError: true })
+        : null;
+      if (existing) return { created: false, note: existing };
+      const { note } = this.saveNote(title, "", "meeting", null, null, folderId, spaceId);
+      if (!note) throw new Error("Meeting note not saved");
+      if (!eventId) return { created: true, note };
+      const result = this.updateNote(note.id, {
+        calendar_event_id: eventId,
+        ...(participants ? { participants } : {}),
+      });
+      if (!result.success || !result.note) throw new Error("Meeting metadata not saved");
+      return { created: true, note: result.note };
+    })();
+  }
+
+  // With a source (see contactSource), records that it has seen these
+  // contacts.
+  upsertContacts(contacts, source = null) {
     try {
       if (!this.db) throw new Error("Database not initialized");
       const transaction = this.db.transaction((list) => {
-        const stmt = this.db.prepare(
+        const upsert = this.db.prepare(
           "INSERT INTO contacts (email, display_name, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP) ON CONFLICT(email) DO UPDATE SET display_name = COALESCE(excluded.display_name, contacts.display_name), updated_at = CURRENT_TIMESTAMP"
         );
+        const addSource = this.db.prepare(
+          "INSERT OR IGNORE INTO contact_sources (email, source) VALUES (?, ?)"
+        );
         for (const c of list) {
-          if (c.email) stmt.run(c.email.toLowerCase().trim(), c.displayName || null);
+          if (!c.email) continue;
+          const email = c.email.toLowerCase().trim();
+          upsert.run(email, c.displayName || null);
+          if (source) addSource.run(email, source);
         }
       });
       transaction(contacts);
@@ -2884,13 +3146,63 @@ class DatabaseManager {
     }
   }
 
+  // A note participant becomes a hand-added contact only when nothing stored
+  // it before: picking a synced contact from autocomplete leaves it to the
+  // accounts that synced it.
+  addManualContact(contact) {
+    if (!this.db) throw new Error("Database not initialized");
+    const email = contact.email?.toLowerCase().trim();
+    const isNew =
+      Boolean(email) && !this.db.prepare("SELECT 1 FROM contacts WHERE email = ?").get(email);
+    return this.upsertContacts([contact], isNew ? contactSource("manual") : null);
+  }
+
+  // Hand-added contacts stay, whatever a sync says about the address.
+  removeContacts(emails) {
+    try {
+      if (!this.db) throw new Error("Database not initialized");
+      const stmt = this.db.prepare(
+        "DELETE FROM contacts WHERE email = ? AND email NOT IN (SELECT email FROM contact_sources WHERE source = ?)"
+      );
+      const transaction = this.db.transaction((list) => {
+        for (const email of list) stmt.run(email.toLowerCase().trim(), contactSource("manual"));
+      });
+      transaction(emails);
+      return { success: true };
+    } catch (error) {
+      debugLogger.error("Error removing contacts", { error: error.message }, "database");
+      throw error;
+    }
+  }
+
+  // Drops the matching sources and deletes the contacts no other source still
+  // has. Rows older builds stored have no sources and stay.
+  _removeContactSources(match, value) {
+    this.db
+      .prepare(
+        `DELETE FROM contacts
+          WHERE email IN (SELECT email FROM contact_sources WHERE ${match})
+            AND email NOT IN (SELECT email FROM contact_sources WHERE NOT (${match}))`
+      )
+      .run(value, value);
+    this.db.prepare(`DELETE FROM contact_sources WHERE ${match}`).run(value);
+  }
+
+  // A calendar sync's attendees. Rooms and the user's own addresses are
+  // deleted rather than stored: older builds stored them, and nothing else
+  // prunes this table.
+  syncCalendarContacts(provider, accountEmail, contacts, notContacts) {
+    if (contacts.length > 0) this.upsertContacts(contacts, contactSource(provider, accountEmail));
+    if (notContacts.length > 0) this.removeContacts(notContacts);
+  }
+
   searchContacts(query) {
     try {
       if (!this.db) throw new Error("Database not initialized");
       const pattern = `%${query || ""}%`;
       return this.db
         .prepare(
-          "SELECT * FROM contacts WHERE email LIKE ? OR display_name LIKE ? ORDER BY display_name ASC, email ASC LIMIT 20"
+          "SELECT email, display_name, created_at, updated_at FROM contacts WHERE email LIKE ? OR display_name LIKE ? ORDER BY display_name ASC, email ASC LIMIT 20"
         )
         .all(pattern, pattern);
     } catch (error) {
@@ -2980,6 +3292,7 @@ class DatabaseManager {
       const transaction = this.db.transaction(() => {
         this.db.prepare("DELETE FROM calendar_events WHERE provider = 'apple'").run();
         this.db.prepare("DELETE FROM apple_calendars").run();
+        this._removeContactSources("source = ?", contactSource("apple"));
       });
       transaction();
       return { success: true };

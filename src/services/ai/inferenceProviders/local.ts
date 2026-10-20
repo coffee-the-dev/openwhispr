@@ -2,6 +2,7 @@ import type { InferenceProvider } from "./types";
 import { wrapCleanupTranscript } from "../../../config/prompts";
 import logger from "../../../utils/logger";
 import { buildLocalInferenceError } from "../../../utils/localInferenceError";
+import { chosenReasoningEffort } from "../chatRequestBody";
 
 export const localProvider: InferenceProvider = {
   id: "local",
@@ -15,11 +16,13 @@ export const localProvider: InferenceProvider = {
 
     logger.logReasoning("LOCAL_IPC_CALL", { model, textLength: text.length });
 
-    const systemPrompt = config.systemPrompt || ctx.getSystemPrompt(agentName);
+    const systemPrompt = config.systemPrompt || ctx.getSystemPrompt(agentName, config.toneStyle);
     const userContent = config.systemPrompt ? text : wrapCleanupTranscript(text);
     const result = await window.electronAPI.processLocalReasoning(userContent, model, agentName, {
       ...config,
       systemPrompt,
+      // Only a level Settings offers for this model reaches the server.
+      reasoningEffort: chosenReasoningEffort("local", model, config),
     });
 
     const processingTimeMs = Date.now() - startTime;

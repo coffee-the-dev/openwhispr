@@ -9,6 +9,7 @@ export interface InferenceScopeStoreKeys {
   disableThinking?: keyof SettingsState;
   toolCalling?: keyof SettingsState;
   acceptsImages?: keyof SettingsState;
+  reasoningEffort?: keyof SettingsState;
 }
 
 export interface InferenceScopeDefinition {
@@ -27,6 +28,7 @@ export const INFERENCE_SCOPES = {
       remoteUrl: "cleanupRemoteUrl",
       customApiKey: "cleanupCustomApiKey",
       disableThinking: "cleanupDisableThinking",
+      reasoningEffort: "cleanupReasoningEffort",
     },
   },
   dictationAgent: {
@@ -39,6 +41,7 @@ export const INFERENCE_SCOPES = {
       disableThinking: "dictationAgentDisableThinking",
       toolCalling: "dictationAgentToolCalling",
       acceptsImages: "dictationAgentAcceptsImages",
+      reasoningEffort: "dictationAgentReasoningEffort",
     },
   },
   noteFormatting: {
@@ -49,6 +52,7 @@ export const INFERENCE_SCOPES = {
       remoteUrl: "noteFormattingRemoteUrl",
       customApiKey: "noteFormattingCustomApiKey",
       disableThinking: "noteFormattingDisableThinking",
+      reasoningEffort: "noteFormattingReasoningEffort",
     },
     fallbackScope: "dictationCleanup",
   },
@@ -65,6 +69,7 @@ export const INFERENCE_SCOPES = {
       disableThinking: "chatAgentDisableThinking",
       toolCalling: "chatAgentToolCalling",
       acceptsImages: "chatAgentAcceptsImages",
+      reasoningEffort: "chatAgentReasoningEffort",
     },
   },
   dictationTranslation: {
@@ -75,6 +80,7 @@ export const INFERENCE_SCOPES = {
       remoteUrl: "translationRemoteUrl",
       customApiKey: "translationCustomApiKey",
       disableThinking: "translationDisableThinking",
+      reasoningEffort: "translationReasoningEffort",
     },
   },
 } as const satisfies Record<string, InferenceScopeDefinition>;

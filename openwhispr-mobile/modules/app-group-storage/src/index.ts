@@ -1,5 +1,8 @@
 import { EventEmitter, requireNativeModule } from 'expo';
 import { Platform } from 'react-native';
+import { NO_RETURN_TARGET, parseReturnOutcome, type ReturnOutcome } from './returnOutcome';
+
+export { NO_RETURN_TARGET, parseReturnOutcome, type ReturnOutcome } from './returnOutcome';
 
 type EventSubscription = {
   remove(): void;
@@ -14,7 +17,8 @@ interface AppGroupStorageModule {
   analyzeSpeechActivity(fileUri: string): Promise<SpeechActivityAnalysis>;
   convertRecordingToWav(fileUri: string): Promise<RecordingConversionResult>;
   getActiveInputModes(): string[];
-  returnToPreviousApp(): void;
+  returnToPreviousApp(): Promise<unknown>;
+  openHostApp(): Promise<unknown>;
   startNativeRecording(): boolean;
   stopNativeRecording(): void;
   endProcessingTask(): void;
@@ -140,9 +144,24 @@ export const AppGroupStorage = {
     }
   },
 
-  returnToPreviousApp(): void {
-    if (!NativeModule) return;
-    NativeModule.returnToPreviousApp();
+  /** Sends the user back to the keyboard's host app. Resolves `no_target` whenever it can't. */
+  async returnToPreviousApp(): Promise<ReturnOutcome> {
+    if (!NativeModule) return NO_RETURN_TARGET;
+    try {
+      return parseReturnOutcome(await NativeModule.returnToPreviousApp());
+    } catch {
+      return NO_RETURN_TARGET;
+    }
+  },
+
+  /** "Back to <App>" button: reopens the host resolved by the last return. */
+  async openHostApp(): Promise<ReturnOutcome> {
+    if (!NativeModule) return NO_RETURN_TARGET;
+    try {
+      return parseReturnOutcome(await NativeModule.openHostApp());
+    } catch {
+      return NO_RETURN_TARGET;
+    }
   },
 
   startNativeRecording(): boolean {
@@ -281,6 +300,9 @@ export const APP_GROUP_KEYS = {
   KEYBOARD_AGENT_APPLICABLE: 'keyboard_agent_applicable',
   KEYBOARD_AGENT_NAME: 'keyboard_agent_name',
   KEYBOARD_AGENT_SHARE_CONTEXT: 'keyboard_agent_share_context',
+  // App → keyboard: hide the example instructions until this time (ms), while onboarding's
+  // voice assistant step says what to dictate.
+  KEYBOARD_AGENT_HINTS_HIDDEN_UNTIL_MS: 'keyboard_agent_hints_hidden_until_ms',
   // Agent mode — one-shot / per-job keys (cleared on app launch)
   KEYBOARD_AGENT_REQUEST: 'keyboard_agent_request',
   KEYBOARD_AGENT_JOB: 'keyboard_agent_job',

@@ -12,6 +12,7 @@ const baseSettings = {
   translationRemoteUrl: "",
   translationCustomApiKey: "",
   translationDisableThinking: true,
+  translationReasoningEffort: "low",
 };
 
 test("local mode routes to llama.cpp with its translation settings", async () => {
@@ -24,6 +25,7 @@ test("local mode routes to llama.cpp with its translation settings", async () =>
   assert.equal(result.config.provider, "local");
   assert.equal(result.config.language, "es");
   assert.equal(result.config.disableThinking, true);
+  assert.equal(result.config.reasoningEffort, "low");
   assert.equal(result.config.inferenceScope, "dictationTranslation");
   assert.equal(result.displayProvider, "local");
 });

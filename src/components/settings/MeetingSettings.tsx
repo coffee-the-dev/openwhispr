@@ -39,6 +39,21 @@ export function MeetingKeepAudioRow() {
   );
 }
 
+function MeetingEchoCancellationRow() {
+  const { t } = useTranslation();
+  const meetingAecEnabled = useSettingsStore((s) => s.meetingAecEnabled);
+  const setMeetingAecEnabled = useSettingsStore((s) => s.setMeetingAecEnabled);
+
+  return (
+    <SettingsRow
+      label={t("settingsPage.transcription.aec.toggle.title")}
+      description={t("settingsPage.transcription.aec.toggle.description")}
+    >
+      <Toggle checked={meetingAecEnabled} onChange={setMeetingAecEnabled} />
+    </SettingsRow>
+  );
+}
+
 // One diarizer for meetings and uploads. Naming speakers from saved voice
 // profiles stays on-device either way.
 export function SpeakerDetectionServerPanel() {
@@ -193,6 +208,7 @@ export function MeetingTranscriptionPanel() {
         />
       )}
       <MeetingSpeakerDetectionRow />
+      <MeetingEchoCancellationRow />
       <MeetingKeepAudioRow />
       <SpeakerDetectionServerPanel />
     </div>

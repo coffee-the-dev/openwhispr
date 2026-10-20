@@ -9,7 +9,7 @@ import { GlassIconButton } from '@/components/ui/GlassIconButton';
 import { safeHaptics } from '@/lib/utils';
 import type { Folder, Space } from '@/data';
 
-type MoveToFolderSheetProps = {
+export type MoveToFolderSheetProps = {
   visible: boolean;
   /** The folders offered as targets, always from the same space as the note being moved: the
    * private space's folders for personal content, the browsed space's folders for space content.

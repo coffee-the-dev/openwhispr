@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { Check, Copy, Plus, X } from "../icons";
 import { BrandMarkIcon } from "./BrandMarkIcon";
 import { MarkdownRenderer } from "../ui/MarkdownRenderer";
+import { openProviderSettings } from "../../utils/describeProviderError";
 import { Button } from "../ui/button";
 import { useChatPersistence } from "../chat/useChatPersistence";
 import { useChatStreaming } from "../chat/useChatStreaming";
@@ -42,6 +43,7 @@ import {
   deliverAssistantResponse,
   type AssistantResponseDelivery,
 } from "../../helpers/assistantResponseDelivery";
+import { buildAssistantCommandSendOptions } from "./assistantCommandOptions";
 
 export interface AssistantCommand {
   id: number;
@@ -195,28 +197,18 @@ export function AssistantPanel({
     }
     consumedCommandIdRef.current = pendingCommand.id;
     const commandId = pendingCommand.id;
-    const delivery = pendingCommand.delivery;
-    const targetsCapturedInput = delivery?.mode === "paste";
-    // A caret in a markdown-friendly app still keeps the compact pill.
-    const plainTextResponse = delivery?.mode === "paste" && delivery.plainText;
-    let responseDelivered = false;
+    const { options: sendOptions, wasDelivered } = buildAssistantCommandSendOptions(
+      pendingCommand,
+      {
+        deliver: deliverAssistantResponse,
+        confirmCopied: (content) => confirmCopied(content, AUTO_COPY_FEEDBACK_MS),
+      }
+    );
     if (pendingCommand.selectedContext) {
       setSelectedContext(null);
       onSelectionContextChange(null);
     }
-    void sendMessage(pendingCommand.text, {
-      attachment: pendingCommand.attachment ?? undefined,
-      selectedContext: pendingCommand.selectedContext ?? undefined,
-      suppressResponseContent: targetsCapturedInput,
-      plainTextResponse,
-      onComplete: delivery
-        ? async ({ content }) => {
-            const result = await deliverAssistantResponse(delivery, content);
-            responseDelivered = result.pasted;
-            if (result.copied) confirmCopied(content, AUTO_COPY_FEEDBACK_MS);
-          }
-        : undefined,
-    })
+    void sendMessage(pendingCommand.text, sendOptions)
       .then((sent) => {
         if (sent) {
           onCommandConsumed(commandId);
@@ -244,7 +236,7 @@ export function AssistantPanel({
           },
         ]);
       })
-      .finally(() => onCommandSettled(commandId, { showPanel: !responseDelivered }));
+      .finally(() => onCommandSettled(commandId, { showPanel: !wasDelivered() }));
   }, [
     historyReady,
     submissionInFlight,
@@ -253,6 +245,7 @@ export function AssistantPanel({
     onCommandDiscarded,
     onCommandSettled,
     onSelectionContextChange,
+    onResponseContent,
     confirmCopied,
     sendMessage,
     setMessages,
@@ -503,21 +496,36 @@ export function AssistantPanel({
             }`}
           >
             {displayedResponse ? (
-              <div
-                ref={responseSelectionRootRef}
-                style={{ animation: "agent-message-in 160ms ease-out both" }}
-              >
-                <StableAssistantMarkdown
-                  content={displayedResponse}
-                  className="text-[15px] leading-relaxed text-foreground selection:bg-agent-brand/35 selection:text-foreground [&_p]:text-[15px] [&_li]:text-[15px]"
-                />
-                {latestAssistantMessage?.isStreaming && (
-                  <span
-                    className="ms-0.5 inline-block h-4 w-0.5 align-middle bg-foreground/70"
-                    style={{ animation: "agent-cursor-blink 1s ease-in-out infinite" }}
+              <>
+                <div
+                  ref={responseSelectionRootRef}
+                  style={{ animation: "agent-message-in 160ms ease-out both" }}
+                >
+                  <StableAssistantMarkdown
+                    content={displayedResponse}
+                    className="text-[15px] leading-relaxed text-foreground selection:bg-agent-brand/35 selection:text-foreground [&_p]:text-[15px] [&_li]:text-[15px]"
                   />
+                  {latestAssistantMessage?.isStreaming && (
+                    <span
+                      className="ms-0.5 inline-block h-4 w-0.5 align-middle bg-foreground/70"
+                      style={{ animation: "agent-cursor-blink 1s ease-in-out infinite" }}
+                    />
+                  )}
+                </div>
+                {/* Outside responseSelectionRootRef: a drag-select + copy over the
+                    response must never pick up this affordance. */}
+                {latestAssistantMessage?.error?.settingsTarget && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      openProviderSettings(latestAssistantMessage.error!.settingsTarget!)
+                    }
+                    className="mt-2 text-[13px] font-medium text-primary hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/40 rounded-sm"
+                  >
+                    {t("providerErrors.openSettings")}
+                  </button>
                 )}
-              </div>
+              </>
             ) : null}
             {thinking && (
               <div role="status">

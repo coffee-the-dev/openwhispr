@@ -1,4 +1,5 @@
 import { PENDING_LOCAL_MODELS_KEY } from "./pendingLocalModels";
+import type { PermissionGuideId } from "../../types/permissionGuide";
 
 export const ONBOARDING_SESSION_KEY = "onboardingSessionV2";
 export const LEGACY_ONBOARDING_STEP_KEY = "onboardingCurrentStep";
@@ -69,6 +70,7 @@ export interface OnboardingSession {
    * dropped with the session at finalization.
    */
   screenContextRequested: boolean;
+  permissionGuide: PermissionGuideId | null;
   resume: OnboardingResumeState;
 }
 
@@ -166,6 +168,7 @@ export function createOnboardingSession(): OnboardingSession {
     history: [],
     setupMode: null,
     screenContextRequested: false,
+    permissionGuide: null,
     resume: createOnboardingResumeState(),
   };
 }
@@ -198,6 +201,13 @@ export function getNotesFooterAction({
 
 export function isOnboardingStepId(value: unknown): value is OnboardingStepId {
   return typeof value === "string" && KNOWN_STEPS.has(value as OnboardingStepId);
+}
+
+function isPermissionGuideId(value: unknown): value is PermissionGuideId {
+  return (
+    typeof value === "string" &&
+    ["microphone", "accessibility", "system-audio", "screen-context"].includes(value)
+  );
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -306,6 +316,7 @@ export function parseOnboardingSession(value: string | null): OnboardingSession 
       history: parsed.history.filter(isOnboardingStepId),
       setupMode,
       screenContextRequested: parsed.screenContextRequested ?? false,
+      permissionGuide: isPermissionGuideId(parsed.permissionGuide) ? parsed.permissionGuide : null,
       resume: parseOnboardingResumeState(parsed.resume, parsed.currentStepId),
     };
   } catch {

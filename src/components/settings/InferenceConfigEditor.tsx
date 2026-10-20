@@ -14,7 +14,6 @@ import ReasoningModelSelector from "../ReasoningModelSelector";
 import OpenAICompatiblePanel from "../OpenAICompatiblePanel";
 import { Toggle } from "../ui/toggle";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
-import ProviderConnectionTest from "../onboarding/ProviderConnectionTest";
 import {
   TOOL_CALLING_SETTINGS,
   effectiveToolCallingSetting,
@@ -22,6 +21,11 @@ import {
 import type { InferenceMode } from "../../types/electron";
 import type { InferenceScope } from "../../config/inferenceScopes";
 import { isProviderValidForMode, getLocalModel } from "../../models/ModelRegistry";
+import { AUTO_REASONING_EFFORT, isReasoningEffortSupported } from "../../models/reasoningEffort";
+import { selectableReasoningEffort } from "../../services/ai/chatRequestBody";
+
+// Radix Select can't hold an empty value, so Auto ("") gets a sentinel.
+const AUTO_REASONING_EFFORT_VALUE = "__auto__";
 
 const MODE_LABEL_PREFIX: Record<InferenceScope, string> = {
   dictationCleanup: "settingsPage.aiModels.modes",
@@ -30,8 +34,6 @@ const MODE_LABEL_PREFIX: Record<InferenceScope, string> = {
   chatIntelligence: "agentMode.settings.modes",
   dictationTranslation: "settingsPage.aiModels.modes",
 };
-
-const ignoreConnectionResult = () => {};
 
 interface InferenceConfigEditorProps {
   scope: InferenceScope;
@@ -43,6 +45,8 @@ export default function InferenceConfigEditor({ scope, onModeChange }: Inference
   const config = useSettingsStore(
     useShallow((settings): ResolvedLLMConfig => selectResolvedLLMConfig(settings, scope))
   );
+  const keepLocalModelLoaded = useSettingsStore((s) => s.keepLocalModelLoaded);
+  const setKeepLocalModelLoaded = useSettingsStore((s) => s.setKeepLocalModelLoaded);
 
   const prefix = MODE_LABEL_PREFIX[scope];
   const modes: InferenceModeOption[] = [
@@ -89,13 +93,18 @@ export default function InferenceConfigEditor({ scope, onModeChange }: Inference
 
   const setModel = setField("model");
 
-  const remoteUrl = config.remoteUrl?.trim() ?? "";
   const showToolCalling = config.toolCalling !== undefined;
   const showAcceptsImages = effectiveMode === "self-hosted" && config.acceptsImages !== undefined;
 
   const showThinkingToggle =
     effectiveMode === "self-hosted" ||
     (effectiveMode === "local" && !!getLocalModel(config.model)?.supportsThinking);
+
+  const effortCapability = selectableReasoningEffort(
+    effectiveMode === "self-hosted" ? "lan" : "local",
+    config.model,
+    config
+  );
 
   return (
     <div className="space-y-3">
@@ -124,13 +133,6 @@ export default function InferenceConfigEditor({ scope, onModeChange }: Inference
               {t("reasoning.selfHosted.endpointHelp")}
             </p>
           }
-        />
-      )}
-
-      {effectiveMode === "self-hosted" && remoteUrl && (
-        <ProviderConnectionTest
-          config={{ baseUrl: remoteUrl, apiKey: config.customApiKey ?? "", model: config.model }}
-          onSuccessChange={ignoreConnectionResult}
         />
       )}
 
@@ -183,6 +185,66 @@ export default function InferenceConfigEditor({ scope, onModeChange }: Inference
             <p className="text-xs text-muted-foreground">{t("reasoning.disableThinking.help")}</p>
           </div>
           <Toggle checked={config.disableThinking} onChange={setField("disableThinking")} />
+        </div>
+      )}
+
+      {effortCapability && (
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-medium text-foreground">{t("reasoning.effort.title")}</h4>
+            <p className="text-xs text-muted-foreground">
+              {effortCapability.defaultValue
+                ? t("reasoning.effort.descriptionWithDefault", {
+                    value: t(`reasoning.effort.options.${effortCapability.defaultValue}`),
+                  })
+                : t("reasoning.effort.description")}
+            </p>
+          </div>
+          <Select
+            value={
+              isReasoningEffortSupported(effortCapability, config.reasoningEffort)
+                ? config.reasoningEffort
+                : AUTO_REASONING_EFFORT_VALUE
+            }
+            onValueChange={(value) =>
+              setField("reasoningEffort")(
+                value === AUTO_REASONING_EFFORT_VALUE ? AUTO_REASONING_EFFORT : value
+              )
+            }
+          >
+            <SelectTrigger className="h-7 w-44 shrink-0 text-xs rounded-lg px-2.5 [&>svg]:h-3 [&>svg]:w-3">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem
+                value={AUTO_REASONING_EFFORT_VALUE}
+                className="text-xs py-1.5 ps-2.5 pe-7 rounded-md"
+              >
+                {t("reasoning.effort.auto")}
+              </SelectItem>
+              {effortCapability.options.map((effort) => (
+                <SelectItem
+                  key={effort}
+                  value={effort}
+                  className="text-xs py-1.5 ps-2.5 pe-7 rounded-md"
+                >
+                  {t(`reasoning.effort.options.${effort}`)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
+      {effectiveMode === "local" && (
+        <div className="flex items-start justify-between gap-3 pt-1">
+          <div className="flex-1 min-w-0">
+            <h4 className="text-sm font-medium text-foreground">
+              {t("reasoning.keepModelLoaded.label")}
+            </h4>
+            <p className="text-xs text-muted-foreground">{t("reasoning.keepModelLoaded.help")}</p>
+          </div>
+          <Toggle checked={keepLocalModelLoaded} onChange={setKeepLocalModelLoaded} />
         </div>
       )}
     </div>

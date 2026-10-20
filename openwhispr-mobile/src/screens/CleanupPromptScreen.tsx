@@ -28,7 +28,7 @@ export default function CleanupPromptScreen() {
   const setCustomPrompt = useCustomPromptsStore((state) => state.setCustomPrompt);
   const resetCustomPrompt = useCustomPromptsStore((state) => state.resetCustomPrompt);
   const cleanupEnabled = useConfigStore((state) => state.config?.cleanupEnabled ?? true);
-  const cleanupSelected = useConfigStore((state) => !!state.config?.inference?.cleanup);
+  const cleanupMode = useConfigStore((state) => state.config?.inference?.cleanup?.mode);
   const activeMode = useProcessingModeStore((state) => state.activeMode);
   const keyboardHeight = useKeyboardHeight();
 
@@ -36,14 +36,12 @@ export default function CleanupPromptScreen() {
   const baseline = override ?? DEFAULT_CLEANUP_PROMPT;
   const [draft, setDraft] = useState(baseline);
 
-  // On-Device transcripts stay raw, and Bring Your Own Key skips cleanup until it has a selection.
+  // Bring Your Own Key skips cleanup until it has a selection.
   const inactiveNotice = !cleanupEnabled
     ? 'Text Cleanup is off. Your prompt is saved and applies once you turn it on.'
-    : activeMode === 'private'
-      ? 'On-Device mode keeps the raw transcript, so cleanup is skipped. Your prompt is saved and applies when dictation leaves On-Device.'
-      : activeMode === 'providers' && !cleanupSelected
-        ? 'Bring Your Own Key skips cleanup until Text Cleanup has a selection. Your prompt is saved and applies once it does.'
-        : null;
+    : activeMode === 'providers' && !cleanupMode
+      ? 'Bring Your Own Key skips cleanup until Text Cleanup has a selection. Your prompt is saved and applies once it does.'
+      : null;
   const isDirty = draft !== baseline;
   const missingPlaceholder = !hasAgentNamePlaceholder(draft);
 

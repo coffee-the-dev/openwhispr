@@ -1,5 +1,5 @@
 import { jsonSchema } from "ai";
-import type { Tool } from "ai";
+import type { Tool, ToolExecutionOptions } from "ai";
 
 export interface ToolResult {
   success: boolean;
@@ -7,12 +7,51 @@ export interface ToolResult {
   displayText: string;
 }
 
+/**
+ * Per-call context from the chat turn that invoked the tool. Absent when a
+ * tool runs outside a chat turn (tests, direct calls).
+ */
+export interface ToolExecutionContext {
+  /** The assistant message the call belongs to. */
+  messageId: string;
+  toolCallId: string;
+  /** Aborts when the turn is cancelled or its conversation ends. */
+  signal: AbortSignal;
+}
+
 export interface ToolDefinition {
   name: string;
   description: string;
   parameters: Record<string, unknown>;
   readOnly: boolean;
-  execute: (args: Record<string, unknown>) => Promise<ToolResult>;
+  execute: (args: Record<string, unknown>, context?: ToolExecutionContext) => Promise<ToolResult>;
+}
+
+// What an aborted call returns; its turn is over, so nobody shows it.
+const ABORTED_RESULT: ToolResult = { success: false, data: null, displayText: "" };
+
+/**
+ * Runs a tool, but settles as soon as its turn is aborted: a tool that
+ * ignores the signal (a fetch with no timeout) must not keep a cancelled turn,
+ * and the chat's send lock, waiting. Its late result is dropped, and a call
+ * that arrives after the abort never runs.
+ */
+export function executeTool(
+  def: ToolDefinition,
+  args: Record<string, unknown>,
+  context?: ToolExecutionContext
+): Promise<ToolResult> {
+  const signal = context?.signal;
+  if (!signal) return def.execute(args, context);
+  if (signal.aborted) return Promise.resolve(ABORTED_RESULT);
+  return new Promise((resolve, reject) => {
+    const settleAborted = () => resolve(ABORTED_RESULT);
+    signal.addEventListener("abort", settleAborted, { once: true });
+    def
+      .execute(args, context)
+      .then(resolve, reject)
+      .finally(() => signal.removeEventListener("abort", settleAborted));
+  });
 }
 
 export class ToolRegistry {
@@ -30,15 +69,27 @@ export class ToolRegistry {
     return Array.from(this.tools.values());
   }
 
-  toAISDKFormat(): Record<string, Tool> {
+  /**
+   * The AI SDK hands the stream only the model-facing output, so
+   * `onDisplayText` receives each call's displayText for its tool step.
+   */
+  toAISDKFormat(
+    createContext?: (toolCallId: string, abortSignal?: AbortSignal) => ToolExecutionContext,
+    onDisplayText?: (toolCallId: string, displayText: string) => void
+  ): Record<string, Tool> {
     const result: Record<string, Tool> = {};
     for (const def of this.getAll()) {
       result[def.name] = {
         description: def.description,
         inputSchema: jsonSchema(def.parameters),
-        execute: async (args: unknown) => {
+        execute: async (args: unknown, options: ToolExecutionOptions) => {
           try {
-            const toolResult = await def.execute(args as Record<string, unknown>);
+            const toolResult = await executeTool(
+              def,
+              args as Record<string, unknown>,
+              createContext?.(options.toolCallId, options.abortSignal)
+            );
+            onDisplayText?.(options.toolCallId, toolResult.displayText);
             return toolResult.success ? toolResult.data : { error: toolResult.displayText };
           } catch (error) {
             return { error: (error as Error).message || "Tool execution failed" };

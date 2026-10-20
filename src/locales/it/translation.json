@@ -140,9 +140,14 @@
       "mouseButtonOnlyMac": "Le scorciatoie con i tasti del mouse sono attualmente supportate solo su macOS.",
       "alreadyRegistered": "\"{{hotkey}}\" è già registrata da un'altra applicazione.",
       "osReserved": "\"{{hotkey}}\" potrebbe essere riservata dal sistema operativo.",
+      "keyNotInKeymap": "GNOME non può usare \"{{hotkey}}\" con il tuo layout di tastiera. Scegli un altro tasto.",
+      "keyReservedByGnome": "GNOME usa già \"{{hotkey}}\" per una delle sue scorciatoie. Scegli un altro tasto.",
       "rightModifierNeedsListener": "\"{{hotkey}}\" non può essere usato su questo desktop, le cui scorciatoie richiedono un tasto normale. Aggiungi un tasto, ad esempio Control+Alt+Space.",
       "holdNeedsReleaseKey": "Tieni premuto per parlare richiede un tasto di cui macOS rilevi il rilascio: Globo, un tasto destro come Opzione destra o una scorciatoia con modificatore. Tocca funziona con qualsiasi tasto.",
+      "holdNeedsRegularKey": "Per usare Tieni premuto, aggiungi un tasto normale alla scorciatoia, ad esempio Control+Alt+Space. Il desktop non può rilevare la pressione prolungata dei soli tasti modificatori.",
+      "holdNeedsGnomePortal": "Per usare Tieni premuto, GNOME ha bisogno del portale delle scorciatoie globali, incluso da GNOME 48 in poi. Tocca funziona anche senza.",
       "registrationFailed": "Impossibile registrare \"{{hotkey}}\". Potrebbe essere in uso da un'altra applicazione.",
+      "windowsKeyListenerMissing": "\"{{hotkey}}\" richiede il listener di tasti di Windows, che manca in questa installazione. Scegli una scorciatoia con un tasto normale.",
       "updateFailedCheckFormat": "Impossibile aggiornare la scorciatoia a \"{{hotkey}}\". Verifica che il formato sia valido.",
       "trySuggestions": "Prova: {{suggestions}}",
       "slotConflict": "Questa scorciatoia è già utilizzata per {{slot}}."
@@ -163,7 +168,7 @@
     "close": "Chiudi"
   },
   "windows": {
-    "pttUnavailable": "Il listener nativo Push-to-Talk non è disponibile"
+    "pttUnavailable": "Il listener di tasti di OpenWhispr non è disponibile."
   },
   "common": {
     "continue": "Continua",
@@ -187,17 +192,20 @@
     "error": "Si è verificato un errore",
     "unknownError": "Si è verificato un errore sconosciuto",
     "copied": "Copiato",
-    "skip": "Salta"
+    "skip": "Salta",
+    "resizePanel": "Ridimensiona il pannello",
+    "next": "Avanti",
+    "copy": "Copia"
   },
   "onboarding": {
     "rehaul": {
       "permissions": {
         "title": "Configura OpenWhispr in 3 minuti",
-        "microphoneDescription": "Trasforma quello che dici in testo. Attivo solo durante la registrazione.",
-        "accessibilityDescription": "Incolla il testo nell’app che stai usando.",
+        "microphoneDescription": "Ascolta solo mentre registri.",
+        "accessibilityDescription": "Incolla il testo in qualsiasi app.",
         "systemAudioTitle": "Audio di Sistema",
-        "systemAudioDescription": "Registra le altre persone nelle tue chiamate per le note delle riunioni. Solo durante la registrazione.",
-        "screenContextDescription": "Mostra lo schermo al tuo assistente vocale quando gli chiedi qualcosa. Mai salvato.",
+        "systemAudioDescription": "Registra gli altri nelle chiamate.",
+        "screenContextDescription": "Mostra lo schermo all’assistente.",
         "enable": "Attiva",
         "enabled": "Attivato"
       },
@@ -338,18 +346,18 @@
         "endpointPlaceholder": "Incolla l’URL del tuo endpoint",
         "optional": "Facoltativo",
         "modelId": "ID modello",
-        "testConnection": "Prova la connessione",
         "proceed": "Procedi",
-        "runTest": "Esegui test",
         "testing": "Test in corso…",
         "connected": "Connesso",
         "connectionFailed": "Non è stato possibile verificare la connessione.",
+        "unverified": "Impossibile verificare: {{reason}}",
         "errors": {
           "endpointRequired": "Inserisci l’URL dell’endpoint prima di eseguire il test.",
           "invalidUrl": "L’endpoint deve essere un URL HTTP o HTTPS valido.",
           "httpsRequired": "Gli endpoint pubblici devono usare HTTPS. HTTP è consentito solo su indirizzi privati.",
           "credentialsRejected": "Il provider ha rifiutato queste credenziali.",
           "endpointNotFound": "L’endpoint non espone un elenco di modelli compatibile con OpenAI.",
+          "transcriptionEndpointNotFound": "Questo indirizzo non accetta trascrizioni.",
           "modelNotFound": "Il modello selezionato non è disponibile presso questo provider.",
           "providerStatus": "Il provider ha restituito lo stato {{status}}.",
           "timeout": "Il test di connessione è scaduto.",
@@ -427,7 +435,20 @@
         }
       }
     },
-    "welcomeSubtitle": "Il potere della tua voce. Alle tue condizioni."
+    "permissionGuide": {
+      "label": "Guida ai permessi",
+      "return": "Torna alla configurazione",
+      "missingApp": "Oppure seleziona l’app con +",
+      "failed": "Impossibile verificare l’accesso.",
+      "microphone": "Attiva OpenWhispr in Microfono.",
+      "accessibility": "Trascina OpenWhispr in Accessibilità e attivalo.",
+      "systemAudio": "Attiva OpenWhispr in Solo registrazione audio di sistema.",
+      "screenContext": "Trascina OpenWhispr in Registrazione schermo e audio di sistema e attivalo.",
+      "settings": "Impostazioni",
+      "check": "Ricontrolla",
+      "restart": "Riavvia l’app",
+      "restartRequired": "Riavvia OpenWhispr per applicare l’accesso allo schermo."
+    }
   },
   "controlPanel": {
     "accessibilityMissing": {
@@ -446,12 +467,14 @@
       "couldNotDeleteTitle": "Impossibile eliminare",
       "couldNotDeleteDescription": "Questa trascrizione potrebbe essere già stata rimossa.",
       "couldNotDeleteDescriptionGeneric": "Qualcosa è andato storto. Riprova.",
-      "empty": "Nessuna trascrizione",
-      "emptyDescription": "Premi la scorciatoia in qualsiasi app e inizia a parlare. Ogni trascrizione viene salvata qui, in privato, sul tuo dispositivo.",
-      "sectionTitle": "Trascrizioni",
+      "empty": "Inizia la tua prima dettatura",
+      "emptyDescription": "Il tuo testo dettato apparirà qui.",
+      "shortcutHint": "Premi {{shortcut}} e inizia a parlare.",
       "dataRetentionDisabled": "La conservazione dei dati è disattivata. Trascrizioni e audio non vengono salvati nella cronologia.",
-      "press": "Premi",
-      "toStart": "per iniziare",
+      "welcomeBack": "Bentornato",
+      "welcomeBackNamed": "Bentornato, {{name}}",
+      "welcome": "Benvenuto",
+      "welcomeNamed": "Benvenuto, {{name}}",
       "dateGroups": {
         "today": "Oggi",
         "yesterday": "Ieri"
@@ -460,6 +483,8 @@
       "failedCtaSettings": "Configura il tuo provider di trascrizione",
       "failedCtaAndRetry": "poi clicca su riprova",
       "failedCtaSettingsOnly": "Configura il tuo provider di trascrizione nelle Impostazioni",
+      "failedCtaAiSettings": "Controlla il modello dell'Assistente vocale nelle Impostazioni",
+      "editFailedTranscriptKept": "Modifica non applicata · trascrizione conservata",
       "failedLimitReached": "Limite giornaliero raggiunto",
       "failedOffline": "Offline",
       "clearAll": "Cancella tutto",
@@ -479,6 +504,9 @@
       "retryTranscription": "Ritrascrivi",
       "retrySuccess": "Trascrizione aggiornata",
       "retryError": "Ritrascrizione non riuscita",
+      "retryErrors": {
+        "invalidResponse": "Il motore di trascrizione ha restituito una risposta inattesa. Riprova."
+      },
       "audioNotFound": "File audio non trovato o scaduto",
       "noAiProcessing": "Nessuna elaborazione IA applicata a questa trascrizione",
       "rawTranscript": "Trascrizione grezza",
@@ -530,10 +558,29 @@
       "noSearchResults": "Nessun modello corrisponde a \"{{query}}\"",
       "selectModelHint": "Nessun modello selezionato — scegline uno dall'elenco qui sotto."
     },
+    "effort": {
+      "title": "Livello di ragionamento",
+      "description": "Quanto ragiona il modello prima di rispondere.",
+      "descriptionWithDefault": "Quanto ragiona il modello prima di rispondere. Auto usa l'impostazione predefinita del provider ({{value}}).",
+      "auto": "Auto",
+      "options": {
+        "none": "Nessuno",
+        "minimal": "Minimo",
+        "low": "Basso",
+        "medium": "Medio",
+        "high": "Alto",
+        "xhigh": "Molto alto",
+        "max": "Massimo"
+      }
+    },
     "availableModels": "Modelli disponibili",
     "disableThinking": {
       "label": "Disattiva output di ragionamento",
       "help": "Salta i token di ragionamento per un output più pulito. Consigliato per la pulizia. Alcuni server ignorano questo suggerimento."
+    },
+    "keepModelLoaded": {
+      "label": "Mantieni il modello caricato",
+      "help": "Resta in memoria invece di essere rimosso dopo 5 minuti di inattività, così la richiesta successiva evita l'avvio a freddo. Vale per tutte le funzioni che usano un modello locale."
     },
     "selfHosted": {
       "endpointHelp": "Punta a un server compatibile con OpenAI sulla tua rete locale (es. Ollama, LM Studio, vLLM o llama-server)."
@@ -569,12 +616,12 @@
   },
   "hooks": {
     "audioRecording": {
+      "cleanupUnconfigured": "La pulizia IA è attiva, ma non è configurato alcun modello di pulizia.",
       "errorTitles": {
         "sessionExpired": "Sessione scaduta",
         "offline": "Sei offline",
         "agentUnavailable": "Assistente non disponibile",
         "screenContextSkipped": "Contesto dello schermo ignorato",
-        "dailyLimitReached": "Limite giornaliero raggiunto",
         "providerRateLimited": "Limite di velocità del provider"
       },
       "errorActions": {
@@ -617,14 +664,26 @@
         "description": "La dettatura si è interrotta mentre il tasto era ancora premuto, quindi il testo non è stato incollato. La trascrizione è negli appunti.",
         "descriptionClipboardFailed": "La dettatura si è interrotta mentre il tasto era ancora premuto: il testo non è stato incollato e non è stato possibile copiarlo negli appunti."
       },
+      "modifiersHeld": {
+        "title": "Trascrizione non incollata",
+        "description": "Un tasto modificatore (come Ctrl o Maiusc) era ancora premuto, quindi il testo non è stato incollato. La trascrizione è negli appunti.",
+        "descriptionClipboardFailed": "Un tasto modificatore (come Ctrl o Maiusc) era ancora premuto: il testo non è stato incollato e non è stato possibile copiarlo negli appunti."
+      },
       "selectionEditing": {
         "notAppliedTitle": "Modifica della selezione non applicata",
         "changed": "Il testo selezionato o l’app di destinazione è cambiato durante l’elaborazione. Non è stato sostituito nulla.",
         "expired": "La modifica è scaduta. Seleziona di nuovo il testo e riprova.",
         "pasteFailed": "OpenWhispr ha generato la modifica, ma non ha potuto sostituire il testo selezionato.",
+        "modifiersHeld": "OpenWhispr ha generato la modifica, ma un tasto modificatore (come Ctrl o Maiusc) era ancora premuto, quindi non è stata applicata. La modifica è negli appunti.",
+        "modifiersHeldClipboardFailed": "OpenWhispr ha generato la modifica, ma un tasto modificatore (come Ctrl o Maiusc) era ancora premuto, quindi non è stata applicata e non è stato possibile copiarla negli appunti.",
         "unavailable": "OpenWhispr non ha potuto leggere in sicurezza il testo selezionato. Controlla i permessi di accessibilità o automazione.",
         "tooLarge": "La selezione è troppo grande. Seleziona al massimo 6.000 caratteri.",
-        "reasoningFailed": "L’IA non ha potuto completare la modifica. Il testo originale non è stato cambiato."
+        "reasoningFailed": "L’IA non ha potuto completare la modifica. Il testo originale non è stato cambiato.",
+        "invalidResponse": "L’IA ha restituito una risposta di modifica non valida. Non è stato sostituito nulla. Seleziona il testo e riprova.",
+        "emptyResponse": "L’IA ha restituito una modifica vuota. Non è stato sostituito nulla. Prova con un’istruzione più specifica.",
+        "truncatedResponse": "L’IA si è fermata prima di completare la modifica. Non è stato sostituito nulla. Prova a selezionare meno testo.",
+        "wlCopyMissing": "OpenWhispr ha generato la modifica, ma su questo desktop le app Wayland possono leggere il testo incollato solo tramite wl-copy. Installa wl-clipboard per applicare le modifiche.",
+        "wlCopyFailed": "OpenWhispr ha generato la modifica, ma wl-copy non è riuscito a copiarla per le app Wayland, quindi non è stata applicata."
       },
       "pastePermission": {
         "title": "Consenti di incollare automaticamente",
@@ -637,6 +696,12 @@
       },
       "pasteFailed": {
         "title": "Impossibile incollare automaticamente"
+      },
+      "interruptedRecordingRecovered": "Recuperata dopo la chiusura di OpenWhispr prima della fine di questa dettatura.",
+      "waylandClipboard": {
+        "title": "Trascrizione non incollata",
+        "wlCopyMissing": "Su questo desktop, le app Wayland possono leggere il testo incollato solo tramite wl-copy. Installa wl-clipboard per incollare le tue dettature.",
+        "wlCopyFailed": "wl-copy non è riuscito a copiare il testo per le app Wayland, quindi non è stato incollato. Premi Riprova per riprovare."
       }
     },
     "clipboard": {
@@ -888,8 +953,11 @@
     "waylandClipboardTitle": "Modalità appunti su Wayland",
     "windowsReady": "Windows supporta l'incollaggio automatico senza configurazione aggiuntiva!",
     "withoutToolPrefix": "Senza questo strumento, OpenWhispr copierà il testo negli appunti. Potrai poi incollare manualmente con Ctrl+V.",
+    "wtypeCosmicTerminalsDescription": "Su COSMIC, i terminali come Warp ricevono il testo incollato solo tramite wtype. Nelle altre app l'incollaggio funziona già senza.",
     "wtypeFallbackDescription": "wtype è il metodo di incollaggio automatico preferito per questo compositor wlroots. È disponibile un'alternativa, ma potrebbe essere meno affidabile.",
-    "xwaylandAppsOnly": "l'incollaggio automatico funziona solo per le app XWayland"
+    "xwaylandAppsOnly": "l'incollaggio automatico funziona solo per le app XWayland",
+    "wlClipboardTitle": "Installa wl-clipboard per incollare nelle app Wayland",
+    "wlClipboardDescription": "Su questo desktop, le app Wayland possono leggere il testo copiato da OpenWhispr solo tramite wl-copy. Per incollarvi la dettatura, installa wl-clipboard:"
   },
   "promptStudio": {
     "common": {
@@ -966,6 +1034,10 @@
       "hotkeys": {
         "description": "Scorciatoia di dettatura e attivazione",
         "label": "Scorciatoie"
+      },
+      "toneStyle": {
+        "label": "Tono e stile",
+        "description": "Come scrive la correzione in ogni app"
       },
       "speechToText": {
         "description": "Motori per dettatura e registrazione di note",
@@ -1179,7 +1251,7 @@
         "recheck": "Ricontrolla",
         "copy": "Copia",
         "ydotoolDesc": "Strumento di automazione input per Wayland",
-        "wtypeDesc": "Strumento di automazione input preferito sui compositor wlroots",
+        "wtypeDesc": "Strumento di automazione input preferito sui compositor wlroots; su COSMIC, usato per incollare nei terminali",
         "ydotooldDesc": "Daemon per ydotool (pacchetto separato su Ubuntu/Pop!_OS)",
         "uinputDesc": "Accesso al dispositivo di input del kernel",
         "uinputRuleFound": "Regola presente ma non attiva. Un riavvio dovrebbe risolvere.",
@@ -1233,6 +1305,10 @@
             "step1Desc": "Avvia ydotoold e abilitalo per l'esecuzione a ogni accesso.",
             "step2Title": "Verifica che sia in esecuzione"
           },
+          "wlCopy": {
+            "step1Title": "Installa wl-clipboard",
+            "step2Title": "Verifica l'installazione"
+          },
           "xclip": {
             "step1Title": "Installa xclip"
           }
@@ -1246,7 +1322,8 @@
           "flakeTitle": "Stai installando tramite il nostro flake?",
           "flakeDesc": "Se installi OpenWhispr dal flake, programs.openwhispr.enable attiva ydotool, il modulo uinput e le appartenenze ai gruppi per te.",
           "rebuildNote": "Esegui sudo nixos-rebuild switch, poi disconnettiti e riconnettiti affinché la modifica al gruppo e la regola /dev/uinput abbiano effetto. Sostituisci <you> con il tuo nome utente."
-        }
+        },
+        "wlCopyDesc": "Strumento degli appunti da cui le app Wayland leggono il testo incollato su questo desktop"
       },
       "translationHotkey": {
         "title": "Hotkey Traduzione",
@@ -1363,6 +1440,12 @@
       },
       "transcriptionPreview": "Anteprima dal vivo",
       "transcriptionPreviewDescription": "Mostra la trascrizione in una finestra flottante prima della correzione",
+      "aec": {
+        "toggle": {
+          "title": "Cancellazione dell'eco per le riunioni",
+          "description": "Cancella l'audio della riunione che si infiltra nel microfono. Lascia questa opzione disattivata quando usi cuffie o auricolari: non c'è alcun eco da cancellare e potrebbe sopprimere completamente la tua voce."
+        }
+      },
       "vad": {
         "title": "Rilevamento attività vocale",
         "description": "Configura come Silero VAD rileva e segmenta il parlato per la trascrizione locale Whisper",
@@ -1509,7 +1592,7 @@
     },
     "sidebar": {
       "newNote": "Nuova nota",
-      "actions": "Azioni"
+      "templatesAndActions": "Modelli e azioni"
     },
     "spaces": {
       "privateSpaces": "Note private",
@@ -1564,8 +1647,8 @@
       "asTranscriptMarkdown": "Come Markdown (.md)",
       "aiSummary": "Riepilogo AI",
       "saving": "Salvataggio",
-      "transcriptEmptyTitle": "Nessuna registrazione",
-      "transcriptEmptyDescription": "Premi registra per iniziare a trascrivere. Tutto ciò che viene detto compare qui in tempo reale.",
+      "transcriptEmptyTitle": "Ancora nessuna trascrizione",
+      "transcriptEmptyDescription": "Avvia una registrazione e tutto ciò che viene detto apparirà qui.",
       "startRecording": "Avvia registrazione",
       "generateSummary": "Genera riepilogo AI",
       "startWriting": "Inizia a scrivere...",
@@ -1663,7 +1746,7 @@
       "speakerDetectionDescription": "Identifica i diversi parlanti nell'audio",
       "numSpeakersPlaceholder": "Rilevamento automatico",
       "numSpeakersLabel": "Numero di parlanti",
-      "numSpeakersHint": "Indicare il numero esatto migliora la precisione, soprattutto nelle registrazioni lunghe.",
+      "numSpeakersHint": "I parlanti vengono rilevati automaticamente, fino a questo numero.",
       "downloadingModels": "Download modelli in corso...",
       "batchCancelled": "Annullato",
       "batchTranscriptionFailed": "Trascrizione non riuscita",
@@ -1713,8 +1796,8 @@
       "openInObsidian": "Apri in Obsidian"
     },
     "actions": {
+      "allActions": "Tutte le azioni",
       "manage": "Gestisci azioni...",
-      "manageTitle": "Azioni personalizzate",
       "addAction": "Nuova azione",
       "editAction": "Modifica azione",
       "namePlaceholder": "Nome dell'azione",
@@ -1728,14 +1811,13 @@
       "promptLabel": "Istruzione",
       "emptyEditorTitle": "Seleziona un'azione",
       "emptyEditorDescription": "Scegli un'azione dall'elenco o creane una nuova",
-      "runAction": "Esegui {{name}}",
       "selectAction": "Seleziona azione",
       "done": "Fatto",
       "chunkProgress": "Parte {{step}} di {{total}}",
       "emptyReply": "Il modello ha restituito una risposta vuota. Riprova o scegli un altro modello.",
       "builtin": {
         "generateNotes": {
-          "name": "Genera note",
+          "name": "Riepilogo AI",
           "description": "Pulire, strutturare e migliorare le note"
         },
         "followUpEmail": {
@@ -1746,13 +1828,92 @@
         "detailedNotes": {
           "name": "Note dettagliate",
           "description": "Note di riunione accurate e complete con decisioni e azioni"
+        },
+        "makeTodos": {
+          "name": "Crea attività",
+          "description": "Elenca ogni attività e il suo responsabile nella chat"
+        },
+        "createOutline": {
+          "name": "Crea scaletta",
+          "description": "Organizza gli argomenti della nota nella chat"
+        },
+        "oneOnOne": {
+          "name": "1:1",
+          "description": "Aggiornamenti, feedback, crescita e prossimi passi di un incontro individuale"
+        },
+        "standUp": {
+          "name": "Stand-up",
+          "description": "Progressi, piani e blocchi di ciascuno"
+        },
+        "salesCall": {
+          "name": "Chiamata di vendita",
+          "description": "Esigenze, obiezioni, budget e processo decisionale"
+        },
+        "userInterview": {
+          "name": "Intervista utente",
+          "description": "Flusso di lavoro, problemi, reazioni e citazioni di un partecipante"
+        },
+        "shorten": {
+          "name": "Accorcia le note",
+          "description": "Accorcia il riepilogo IA salvato mantenendo i fatti principali",
+          "cta": "Accorcia le note"
+        },
+        "addTldr": {
+          "name": "Scrivi un breve riepilogo",
+          "description": "Scrivi un riepilogo di due o tre frasi nella chat",
+          "cta": "Scrivi un breve riepilogo"
+        },
+        "slackUpdate": {
+          "name": "Aggiornamento Slack",
+          "description": "Scrivi un breve aggiornamento per il team da pubblicare su Slack",
+          "cta": "Scrivi un aggiornamento Slack"
+        },
+        "lengthen": {
+          "name": "Amplia le note",
+          "description": "Amplia il riepilogo IA salvato con dettagli supportati dal contenuto",
+          "cta": "Amplia le note"
         }
       },
       "errors": {
         "noModel": "Nessun modello IA selezionato. Configurane uno nelle Impostazioni.",
         "actionFailed": "Azione non riuscita",
-        "noEndpoint": "Nessun URL del server self-hosted impostato. Configurane uno nelle Impostazioni."
-      }
+        "noEndpoint": "Nessun URL del server self-hosted impostato. Configurane uno nelle Impostazioni.",
+        "outputTruncated": "Il modello AI ha esaurito lo spazio prima di finire, quindi la nota è rimasta com'era.",
+        "nothingToSummarize": "Questa nota non ha ancora nulla da riassumere, quindi il riepilogo AI è rimasto invariato.",
+        "saveFailed": "Impossibile salvare. Controlla che nulla sia troppo lungo e riprova."
+      },
+      "tab": "Azioni",
+      "output": {
+        "chat": "Chat",
+        "summary": "Riepilogo AI",
+        "chatHint": "Questa azione risponde nella chat. Il riepilogo IA salvato resta invariato.",
+        "summaryHint": "Questa azione integrata aggiorna il riepilogo IA salvato. Puoi annullare la modifica."
+      },
+      "applied": "Riepilogo AI aggiornato con {{name}}"
+    },
+    "templates": {
+      "tab": "Modelli",
+      "managerTitle": "Modelli e azioni",
+      "manage": "Gestisci modelli...",
+      "select": "Scegli modello",
+      "regenerate": "Rigenera",
+      "addTemplate": "Nuovo modello",
+      "editTemplate": "Modifica modello",
+      "namePlaceholder": "Nome del modello",
+      "contextLabel": "Contesto",
+      "contextPlaceholder": "Che tipo di riunione è e su cosa deve concentrarsi il riepilogo?",
+      "sectionsLabel": "Sezioni",
+      "addSection": "Aggiungi sezione",
+      "sectionHeadingPlaceholder": "Titolo della sezione",
+      "sectionInstructionPlaceholder": "Cosa va in questa sezione?",
+      "moveSectionUp": "Sposta la sezione su",
+      "moveSectionDown": "Sposta la sezione giù",
+      "removeSection": "Rimuovi sezione",
+      "noSectionsHint": "Senza sezioni, il contesto è l'intera istruzione per il riepilogo.",
+      "noTemplates": "Nessun modello ancora",
+      "emptyEditorTitle": "Seleziona un modello",
+      "emptyEditorDescription": "Scegli un modello dall'elenco o creane uno nuovo",
+      "outputHint": "Applicare un modello crea o sostituisce il riepilogo IA usando le tue note e la trascrizione."
     },
     "empty": {
       "title": "Ancora nessuna nota qui",
@@ -1776,13 +1937,13 @@
         "description": "Le azioni usano l'IA per trasformare le tue note. Configura un modello linguistico per iniziare.",
         "configured": "Modello IA configurato"
       },
-      "actions": {
-        "title": "Azioni basate sull'IA",
-        "description": "Le azioni trasformano le tue note: correggono le trascrizioni, riassumono le riunioni e altro ancora. Usa le azioni integrate o creane di tue.",
-        "builtInLabel": "Integrata",
-        "createTitle": "Crea la tua azione",
-        "createDescription": "Definisci un'azione personalizzata con il tuo prompt IA. Puoi sempre modificarle o aggiungerne altre nelle impostazioni.",
-        "created": "Creata!"
+      "templates": {
+        "title": "Modelli e azioni",
+        "description": "I modelli danno forma al tuo riepilogo AI, dalle note di riunione dettagliate alle sezioni che definisci tu. Le azioni si eseguono su una nota, come scrivere un'email di follow-up nella chat.",
+        "builtInLabel": "I tuoi modelli",
+        "createTitle": "Crea il tuo modello",
+        "createDescription": "Descrivi il riepilogo che desideri. Puoi aggiungere sezioni, altri modelli e azioni in seguito.",
+        "created": "Creato!"
       },
       "getStarted": "Inizia",
       "systemAudio": {
@@ -1797,11 +1958,11 @@
     },
     "speaker": {
       "you": "Tu",
-      "me": "Io",
       "them": "Loro",
       "unknown": "Partecipante sconosciuto",
       "label": "Partecipante {{n}}",
       "knownSpeakers": "Parlanti noti",
+      "thisIsMe": "Sono io",
       "meetingAttendees": "Partecipanti alla riunione",
       "selected": "{{n}} selezionati",
       "assignTo": "Assegna a…",
@@ -1854,12 +2015,14 @@
         "chips": {
           "catchUp": "Aggiornami",
           "keyDecisions": "Elenca le decisioni chiave",
-          "inFlight": "Mostra i progetti in corso"
+          "openActionItems": "Elenca le attività aperte"
         }
-      },
-      "list": {
-        "empty": "Ancora nessuna nota qui"
       }
+    },
+    "assistantUndo": {
+      "applied": "L’assistente ha aggiornato «{{title}}»",
+      "changed": "Questa nota è cambiata dopo la modifica dell’assistente. Non è più possibile annullarla.",
+      "failed": "Impossibile annullare la modifica. Riprova."
     }
   },
   "dictionary": {
@@ -1903,19 +2066,14 @@
       "examples": {
         "linkedinTrigger": "Il mio LinkedIn",
         "linkedinText": "linkedin.com/in/tu",
-        "rewriteTrigger": "Prompt di riscrittura",
-        "rewriteText": "Riscrivi questo testo in modo più conciso e professionale",
-        "introTrigger": "Email di presentazione",
-        "introText": "Ciao, mi piacerebbe trovare un momento per parlare questa settimana…",
         "signoffTrigger": "Firma",
         "signoffText": "Saluti, Alex · alex@example.com"
       },
       "addPlaceholder": "Aggiungi una frase trigger: \"mio calendario\", \"il mio LinkedIn\""
     },
-    "emptyTitle": "Il tuo dizionario è vuoto",
+    "emptyTitle": "Aggiungi parole al tuo dizionario",
     "emptyDescription": "Aggiungi le parole che {{agentName}} deve sempre riconoscere: nomi, strumenti, acronimi.",
     "addFirstWord": "Aggiungi la tua prima parola",
-    "importList": "Importa un elenco",
     "agentDefault": "Aggiunto di default"
   },
   "insights": {
@@ -1960,8 +2118,10 @@
     "newChat": "Nuova chat",
     "search": "Cerca conversazioni...",
     "archived": "Archiviate",
-    "noConversations": "Inizia la tua prima conversazione",
-    "selectChat": "Seleziona una conversazione o avviane una nuova",
+    "noConversations": "Ancora nessuna chat",
+    "allArchived": "Tutte le chat sono archiviate",
+    "noConversationsDescription": "Le tue chat con l'Assistente appariranno qui.",
+    "loadFailed": "Impossibile caricare le chat",
     "today": "Oggi",
     "yesterday": "Ieri",
     "previousWeek": "Ultimi 7 giorni",
@@ -1971,7 +2131,11 @@
     "delete": "Elimina",
     "deleteConfirm": "Questa conversazione verrà eliminata permanentemente. Non è possibile annullare.",
     "searchChats": "Cerca chat",
-    "newChatEmpty": "Chiedi delle tue note, trascrizioni o qualsiasi altra cosa"
+    "inputPlaceholder": "Chiedi qualcosa...",
+    "starters": {
+      "todos": "Elenca le mie attività recenti",
+      "meeting": "Preparami per la prossima riunione"
+    }
   },
   "support": {
     "documentation": "Documentazione",
@@ -2006,6 +2170,10 @@
     "activationFailedDescription": "OpenWhispr sta usando la trascrizione CPU.",
     "reasoningActivationFailedDescription": "OpenWhispr sta usando l'elaborazione CPU.",
     "retryActivation": "Riprova l'accelerazione GPU",
+    "redownloadNeeded": "Il pacchetto GPU deve essere scaricato di nuovo",
+    "redownloadNeededDescription": "Questa versione di OpenWhispr non può usare il pacchetto GPU installato. Scaricalo di nuovo per riattivare l'accelerazione GPU.",
+    "redownloadButton": "Scarica di nuovo il pacchetto GPU",
+    "downloadFailed": "Impossibile scaricare il pacchetto GPU.",
     "remove": "Rimuovi",
     "dismiss": "Non ora",
     "cancel": "Annulla"
@@ -2029,7 +2197,7 @@
       },
       "gpuPackMigration": {
         "title": "Il pacchetto GPU deve essere scaricato di nuovo",
-        "description": "Un aggiornamento ha rimosso un'installazione obsoleta del pacchetto GPU ({{packs}}). Scaricalo di nuovo nelle Impostazioni per ripristinare l'accelerazione GPU."
+        "description": "Questa versione non può usare il pacchetto GPU precedente ({{packs}}). Scaricalo di nuovo nelle Impostazioni per riattivare l'accelerazione GPU."
       },
       "cleanupFailed": {
         "title": "Pulizia non riuscita",
@@ -2121,7 +2289,11 @@
       "transcribing": "Trascrizione...",
       "thinking": "Pensiero...",
       "typeMessage": "Scrivi un messaggio...",
-      "send": "Invia"
+      "send": "Invia",
+      "commands": "Comandi",
+      "slashNavigate": "per navigare",
+      "slashSelect": "per selezionare",
+      "slashClose": "per chiudere"
     },
     "tools": {
       "search_notesName": "Cerca nelle note",
@@ -2211,6 +2383,19 @@
       "title": "OpenWhispr è un registratore di riunioni, non un bot",
       "description": "OpenWhispr cattura l'audio direttamente dal tuo sistema — non entra mai nelle tue riunioni come partecipante. Basta collegare il calendario e prendere appunti normalmente."
     },
+    "nav": {
+      "label": "Sezioni integrazioni",
+      "groups": {
+        "meetings": "Riunioni",
+        "developer": "Sviluppatori"
+      },
+      "sections": {
+        "calendars": "Calendari",
+        "cli": "Riga di comando"
+      },
+      "docs": "Documentazione integrazioni"
+    },
+    "readDocs": "Leggi la documentazione",
     "systemAudio": {
       "title": "Autorizzazione Audio di Sistema richiesta",
       "description": "Per trascrivere le riunioni, OpenWhispr necessita dell'autorizzazione Audio di Sistema per catturare l'audio degli altri partecipanti. Non registriamo mai il tuo schermo. Verrai reindirizzato alle Impostazioni di Sistema per attivarla.",
@@ -2218,12 +2403,14 @@
     }
   },
   "upcoming": {
-    "title": "In arrivo",
     "now": "In corso",
     "untitledEvent": "Evento senza titolo",
     "joinAndTranscribe": "Partecipa e trascrivi",
     "takeNotes": "Prendi note",
-    "noEventsToday": "Nessun evento oggi",
+    "noEventsToday": "Oggi niente più riunioni",
+    "emptyDayDescription": "È ora di toccare un po' d'erba",
+    "touchGrass": "Tocca l'erba",
+    "touchGrassLabel": "Un prato. Accarezzalo con il puntatore o con i tasti freccia. Premi Esc per tornare indietro.",
     "noUpcomingEvents": "Nessun evento in programma",
     "moreCalendarsHint": "Vuoi altri calendari?",
     "connectHere": "Collegali qui",
@@ -2260,15 +2447,11 @@
     }
   },
   "embeddedChat": {
-    "askPlaceholder": "Chiedi qualcosa...",
-    "send": "Invia",
-    "title": "Chat",
-    "emptyState": "Fai una domanda su questa nota",
-    "dock": "Ancora nella barra laterale",
-    "undock": "Sgancia dalla barra laterale",
+    "askPlaceholder": "Chiedi qualcosa sulla tua nota",
     "close": "Chiudi chat",
     "newChat": "Nuova chat",
-    "conversationSelector": "Cambia conversazione"
+    "conversationSelector": "Cambia conversazione",
+    "history": "Cronologia"
   },
   "transcriptionPreview": {
     "label": "Anteprima",
@@ -2310,6 +2493,171 @@
       "underway": "Sembra che la tua riunione sia già in corso. Vuoi prendere appunti?"
     },
     "start": "Prendi appunti",
-    "join": "Partecipa e trascrivi"
+    "join": "Partecipa e trascrivi",
+    "folders": {
+      "choose": "Scegli cartella della riunione",
+      "search": "Cerca cartelle",
+      "clear": "Cancella ricerca",
+      "private": "Privato",
+      "shared": "Condiviso",
+      "current": "Destinazione attuale",
+      "recent": "Usate di recente",
+      "folders": "Cartelle",
+      "new": "Nuova cartella",
+      "name": "Nome",
+      "location": "Posizione",
+      "cancel": "Annulla",
+      "create": "Crea e seleziona",
+      "empty": "Nessuna cartella trovata. Prova un altro nome o crea una cartella.",
+      "loading": "Caricamento cartelle…",
+      "unavailable": "Impossibile caricare le cartelle.",
+      "retry": "Riprova",
+      "dismiss": "Chiudi notifica riunione",
+      "selected": "{{destination}} selezionato",
+      "linked": "Questa riunione ha già una nota. Partecipando, la nota resterà in {{destination}}.",
+      "errors": {
+        "STALE_NOTIFICATION": "Questa notifica non è più attuale.",
+        "INVALID_REQUEST": "Impossibile completare. Riprova.",
+        "FOLDERS_UNAVAILABLE": "Impossibile caricare le cartelle.",
+        "FOLDER_UNAVAILABLE": "Questa destinazione non è disponibile. Scegli un’altra cartella.",
+        "SPACE_UNAVAILABLE": "Questa destinazione non è disponibile. Scegli un’altra cartella.",
+        "FOLDER_NAME_REQUIRED": "Inserisci un nome per la cartella.",
+        "FOLDER_NAME_TAKEN": "Esiste già una cartella con questo nome in questa posizione.",
+        "CREATE_FAILED": "Impossibile completare. Riprova.",
+        "LINKED_NOTE_CHANGED": "Controlla la destinazione, poi partecipa di nuovo.",
+        "NOTE_UNAVAILABLE": "Questa nota non è disponibile. Riprova senza crearne un’altra.",
+        "START_FAILED": "Impossibile completare. Riprova."
+      }
+    }
+  },
+  "providerErrors": {
+    "authFailed": "{{provider}} ha rifiutato la tua chiave API.",
+    "accessDenied": "{{provider}} ha negato l’accesso. La tua chiave potrebbe non includere questo modello.",
+    "quotaExhausted": "Il tuo account {{provider}} ha esaurito il credito.",
+    "rateLimited": "{{provider}} ha limitato la richiesta. Attendi un momento e riprova.",
+    "modelNotFound": "{{provider}} non riconosce il modello “{{model}}”.",
+    "modelNotFoundNoModel": "{{provider}} non riconosce il modello selezionato.",
+    "payloadTooLarge": "Questa registrazione è troppo grande per {{provider}}.",
+    "requestTooLarge": "Questa richiesta è troppo grande per {{provider}}.",
+    "badRequest": "{{provider}} non è riuscito a elaborare questa richiesta.",
+    "unavailable": "{{provider}} sta avendo problemi in questo momento. Riprova a breve.",
+    "timeout": "{{provider}} ha impiegato troppo tempo a rispondere.",
+    "unreachable": "Impossibile contattare {{provider}}. Controlla la tua connessione.",
+    "noResponse": "Nessuna risposta da {{provider}}. Controlla la tua chiave API e la connessione.",
+    "unknown": "{{provider}} ha restituito un errore imprevisto.",
+    "keyMissing": "Nessuna chiave API impostata per {{provider}}. Aggiungila in Impostazioni → Modelli linguistici.",
+    "selfHosted": {
+      "authFailed": "Il tuo server ha rifiutato la chiave API.",
+      "accessDenied": "Il tuo server ha negato l’accesso. La chiave potrebbe non includere questo modello.",
+      "quotaExhausted": "Il tuo server segnala che l'account ha esaurito il credito.",
+      "rateLimited": "Il tuo server ha limitato la richiesta. Attendi un momento e riprova.",
+      "modelNotFound": "Il tuo server non riconosce il modello “{{model}}”.",
+      "modelNotFoundNoModel": "Il tuo server non riconosce il modello selezionato.",
+      "payloadTooLarge": "Questa registrazione è troppo grande per il tuo server.",
+      "requestTooLarge": "Questa richiesta è troppo grande per il tuo server.",
+      "badRequest": "Il tuo server non è riuscito a elaborare questa richiesta.",
+      "unavailable": "Il tuo server sta avendo problemi in questo momento. Riprova a breve.",
+      "timeout": "Il tuo server ha impiegato troppo tempo a rispondere.",
+      "unreachable": "Impossibile contattare il tuo server. Verifica che sia in esecuzione.",
+      "noResponse": "Nessuna risposta dal tuo server. Verifica la sua chiave API e che sia in esecuzione.",
+      "unknown": "Il tuo server ha restituito un errore imprevisto."
+    },
+    "openSettings": "Apri Impostazioni",
+    "copyDetails": "Copia dettagli",
+    "titles": {
+      "transcription": "Trascrizione non riuscita",
+      "llm": "Richiesta IA non riuscita"
+    },
+    "details": {
+      "provider": "Provider",
+      "requestId": "ID richiesta",
+      "httpStatus": "Stato HTTP",
+      "underlyingError": "Errore sottostante"
+    }
+  },
+  "toneStyle": {
+    "title": "Tono e stile",
+    "description": "Imposta tono e stile per app diverse.",
+    "turnOnAndSetUp": "Attiva e configura",
+    "categories": {
+      "personal": {
+        "title": "Messaggi personali",
+        "inline": "i tuoi messaggi personali",
+        "question": "Come scrivi\n{{category}}?"
+      },
+      "work": {
+        "title": "Messaggi di lavoro",
+        "inline": "i tuoi messaggi di lavoro",
+        "question": "Come scrivi\n{{category}}?"
+      },
+      "email": {
+        "title": "Email",
+        "inline": "le tue email",
+        "question": "Come scrivi\n{{category}}?"
+      },
+      "other": {
+        "title": "Altre app",
+        "inline": "nelle altre app",
+        "question": "Come scrivi\n{{category}}?"
+      }
+    },
+    "tones": {
+      "formal": "Formale",
+      "casual": "Informale",
+      "very_casual": "Molto informale",
+      "excited": "Entusiasta!"
+    },
+    "samples": {
+      "personal": {
+        "formal": "Ciao, sei disponibile stasera? Pensavo potessimo prendere un caffè verso le 18. Fammi sapere.",
+        "casual": "Ciao, ci sei stasera? Pensavo a un caffè verso le 6, fammi sapere",
+        "very_casual": "ehi ci sei stasera? caffè verso le 6? fammi sapere"
+      },
+      "work": {
+        "sender": "Jimmy",
+        "time": "18:20",
+        "formal": "Ciao, potresti mandarmi la presentazione prima della call? I numeri della slide 3 sembrano superati. Nessuna fretta.",
+        "casual": "Ciao, mi mandi la presentazione prima della call? Mi sa che i numeri della slide 3 sono vecchi, nessuna fretta.",
+        "excited": "Ciao! Mi mandi la presentazione prima della call? Sono quasi sicuro che i numeri della slide 3 siano vecchi, nessuna fretta!"
+      },
+      "email": {
+        "to": "A Sarah",
+        "formal": "Ciao Sarah,\n\ngrazie per il tempo dedicatomi oggi. Ti invierò la proposta aggiornata entro giovedì. Fammi sapere se ti serve altro.\n\nCordiali saluti",
+        "casual": "Ciao Sarah,\n\ngrazie per oggi. Ti mando la proposta aggiornata entro giovedì, dimmi se ti serve qualcosa prima.\n\nGrazie",
+        "excited": "Ciao Sarah,\n\ngrazie mille per il tuo tempo oggi! Ti mando la proposta aggiornata entro giovedì. Fammi sapere se ti serve qualcosa prima!\n\nGrazie"
+      },
+      "other": {
+        "formal": "Note della call: hanno apprezzato la pagina dei prezzi e vorrebbero un onboarding più breve. Ricontattarli la prossima settimana.",
+        "casual": "Note call: piaciuta la pagina prezzi, vogliono onboarding più corto. Ricontattare settimana prossima",
+        "excited": "Note call: hanno adorato la pagina prezzi! Vogliono un onboarding più corto. Ricontattare la settimana prossima!"
+      }
+    },
+    "setup": {
+      "introTitle": "Fai scrivere OpenWhispr\ncome parli tu",
+      "introDescription": "Imposta tono e stile per app diverse.",
+      "personalize": "Personalizza",
+      "cleanupOffTitle": "Insegna a OpenWhispr\nil tuo stile",
+      "cleanupOffDescription": "Attiva la correzione testo, poi imposta tono e stile per app diverse.",
+      "stepDescription": "Scegli l'esempio che ti somiglia di più.",
+      "progress": "Passo {{current}} di {{total}}",
+      "finish": "Fine"
+    },
+    "banner": {
+      "title": "Insegna a OpenWhispr come scrivi",
+      "description": "Imposta il tuo tono preferito per lavoro, amici e tutto ciò che sta in mezzo.",
+      "start": "Inizia ora",
+      "cleanupOffTitle": "Insegna a OpenWhispr il tuo stile",
+      "cleanupOffDescription": "Attiva la correzione testo e scegli un tono per messaggi, email e altro.",
+      "notNow": "Non ora",
+      "decoration": "Le tue parole dovrebbero somigliarti. Qualunque cosa tu scriva, per chiunque sia."
+    },
+    "settings": {
+      "saveChanges": "Salva modifiche",
+      "saved": "Tono e stile salvati",
+      "cleanupOff": "La correzione testo è disattivata, quindi questi toni non vengono applicati alla dettatura. L'assistente e le chat li usano comunque.",
+      "turnOnCleanup": "Attiva correzione testo",
+      "enabled": "Toni e voci attivi",
+      "enabledDescription": "La correzione testo, l'assistente e le chat usano il tuo tono per ogni tipo di app. Se disattivato, usano il tono standard."
+    }
   }
 }

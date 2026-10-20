@@ -198,3 +198,36 @@ test("reopening drops Google and Microsoft calendar data", (t) => {
   assert.equal(reopened.getCalendarEventById("microsoft-event"), null);
   reopened.db.close();
 });
+
+test("only self-declined schedule rows are hidden, and reacceptance restores them", (t) => {
+  const db = createDb(t);
+  if (!db) return;
+  t.after(() => db.db.close());
+  const now = Date.now();
+  const make = (id, response) =>
+    appleEvent(id, {
+      start_time: new Date(now - 5 * 60_000).toISOString(),
+      end_time: new Date(now + 30 * 60_000).toISOString(),
+      self_response_status: response,
+    });
+  const declined = make("declined", "declined");
+  db.upsertCalendarEvents([
+    declined,
+    ...["accepted", "tentative", "needsAction", "unknown"].map((response) =>
+      make(response, response)
+    ),
+  ]);
+  const note = db.saveNote("Declined meeting notes", "Keep", "meeting").note;
+  db.updateNote(note.id, { calendar_event_id: "declined" });
+  const expected = ["accepted", "needsAction", "tentative", "unknown"];
+  for (const events of [db.getUpcomingEvents(60), db.getActiveEvents()]) {
+    assert.deepEqual(events.map((e) => e.id).sort(), expected);
+  }
+  assert.equal(
+    db.db.prepare("SELECT calendar_event_id FROM notes WHERE id=?").get(note.id).calendar_event_id,
+    "declined"
+  );
+  db.upsertCalendarEvents([{ ...declined, self_response_status: "accepted" }]);
+  assert.ok(db.getUpcomingEvents(60).some((e) => e.id === "declined"));
+  assert.ok(db.getActiveEvents().some((e) => e.id === "declined"));
+});

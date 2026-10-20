@@ -115,3 +115,26 @@ export function resolveDictationRouteKind({
   }
   return "skip";
 }
+
+// A dictation skipped while cleanup is switched on goes out raw, which looks like
+// a cleanup that changed nothing, so it carries a notice. `shownKey` names the
+// broken setup the user was last warned about: the same one warns once, while a
+// different mode or provider warns again. Once cleanup is off or reachable the
+// warning is forgotten (`forget`), so the next broken setup warns.
+// The "llm" surface gives it the same friendly cleanup toast as a provider failure.
+export function cleanupUnconfiguredNotice(shownKey, { skipped, cleanupReachable, settings }) {
+  if (!settings.useCleanupModel || cleanupReachable) return { forget: true, notice: null };
+  if (!skipped) return { forget: false, notice: null };
+  const setupKey = [settings.cleanupMode || "", settings.cleanupProvider || ""].join("\0");
+  if (setupKey === shownKey) return { forget: false, notice: null };
+  return {
+    forget: false,
+    notice: {
+      message: "AI cleanup is on, but no cleanup model is set up.",
+      messageKey: "hooks.audioRecording.cleanupUnconfigured",
+      surface: "llm",
+      settingsTarget: "llms",
+      setupKey,
+    },
+  };
+}

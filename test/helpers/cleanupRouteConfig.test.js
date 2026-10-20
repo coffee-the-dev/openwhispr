@@ -41,7 +41,11 @@ async function loadRouteResolver(t, mode = "local") {
       `,
     },
   });
-  const settings = { useCleanupModel: true, cleanupDisableThinking: true };
+  const settings = {
+    useCleanupModel: true,
+    cleanupDisableThinking: true,
+    cleanupReasoningEffort: "medium",
+  };
   const resolveReasoningRoute = (await vite.ssrLoadModule("/helpers/audioManager.js"))
     .resolveReasoningRoute;
   return (text, { voiceAgentRequested = false, translationRequested = false } = {}) =>
@@ -57,6 +61,7 @@ test("the cleanup route pins temperature 0 and requires complete output", async 
   assert.equal(route.config.inferenceScope, "dictationCleanup");
   assert.equal(route.config.temperature, 0);
   assert.equal(route.config.requireCompleteOutput, true);
+  assert.equal(route.config.reasoningEffort, "medium");
 });
 
 test("the translation chain's cleanup step pins the same config", async (t) => {

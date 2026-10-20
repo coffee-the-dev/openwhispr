@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import App from "./App.jsx";
 import AgentDictationPillOverlay from "./components/dictation/AgentDictationPillOverlay.tsx";
 import MeetingNotificationOverlay from "./components/MeetingNotificationOverlay.tsx";
+import { PermissionGuideOverlay } from "./components/onboarding/PermissionGuideOverlay";
 import BackgroundModelDownloadTray from "./components/onboarding/BackgroundModelDownloadTray.tsx";
 import { useControlPanelWindowDrag } from "./hooks/useControlPanelWindowDrag";
 import { useTheme } from "./hooks/useTheme";
@@ -15,6 +16,8 @@ const OnboardingFlow = React.lazy(() => import("./components/OnboardingFlow.tsx"
 export default function AppRouter() {
   useTheme();
   const params = window.location.search;
+
+  if (params.includes("permission-guide=true")) return <PermissionGuideOverlay />;
 
   if (params.includes("meeting-notification=true")) {
     return <MeetingNotificationOverlay />;

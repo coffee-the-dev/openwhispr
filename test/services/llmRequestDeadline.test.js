@@ -70,7 +70,9 @@ async function runDeadlineScenario(t, startRequest) {
 
   assert.equal(posts.length, 1, "a timed-out request must not be retried");
   assert.ok(outcome?.error, "the request should end in an error once the long deadline expires");
-  assert.match(outcome.error.message, /Request timed out after 600s/);
+  // Self-hosted deadlines surface classified; the raw deadline rides along as the cause.
+  assert.equal(outcome.error.code, "PROVIDER_TIMEOUT");
+  assert.match(outcome.error.cause?.message ?? "", /Request timed out after 600s/);
   await request;
 }
 
@@ -109,7 +111,9 @@ test("dictation cleanup keeps its 30-second deadline", async (t) => {
     await settle();
     await request;
 
-    assert.match(outcome?.error?.message ?? "", /Request timed out after 30s/);
+    // Self-hosted deadlines surface classified; the raw deadline rides along as the cause.
+    assert.equal(outcome?.error?.code, "PROVIDER_TIMEOUT");
+    assert.match(outcome?.error?.cause?.message ?? "", /Request timed out after 30s/);
   } finally {
     t.mock.timers.reset();
   }

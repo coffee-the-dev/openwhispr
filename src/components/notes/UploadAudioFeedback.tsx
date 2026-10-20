@@ -3,7 +3,7 @@ import { cn } from "../lib/utils";
 
 // Both completion warnings sit under the transcript preview and share its
 // column, so they share one recipe; only the tone differs.
-const COMPLETION_WARNING = "text-xs max-w-[240px] text-center mb-4 -mt-2";
+const COMPLETION_WARNING = "mt-3 max-w-md text-center text-[13px] leading-relaxed";
 
 interface UploadModelSettingsButtonProps {
   label: string;

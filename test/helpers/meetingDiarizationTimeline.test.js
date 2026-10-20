@@ -73,6 +73,7 @@ function diarizeMeeting({
 
   const fakeThis = Object.assign(Object.create(IPCHandlers.prototype), {
     diarizationRoute: { transport: "local" },
+    _diarizationSpeakerReservations: new Map(),
     diarizationManager,
     databaseManager: { getSpeakerProfiles: () => [] },
     speakerDiarizationEnabled: enabled,

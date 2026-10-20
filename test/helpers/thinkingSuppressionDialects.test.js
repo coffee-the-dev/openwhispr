@@ -40,6 +40,18 @@ test("lan sends a family's suppress floor inside the reasoning object, not a fla
   assert.ok(!("reasoning_effort" in body), "flat reasoning_effort trips vLLM on lan (#1611)");
 });
 
+test("lan glm-5.3 floors at low: the family cannot disable reasoning", async () => {
+  const { suppressThinking } = await load();
+
+  const body = {};
+  suppressThinking(body, "lan", "glm-5.3-flash");
+
+  assert.deepEqual(body, {
+    reasoning: { effort: "low" },
+    chat_template_kwargs: { enable_thinking: false },
+  });
+});
+
 test("the gpt-oss floor covers the whole family case-insensitively", async () => {
   const { suppressThinking } = await load();
 

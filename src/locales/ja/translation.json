@@ -140,9 +140,14 @@
       "mouseButtonOnlyMac": "マウスボタンのホットキーは現在 macOS でのみサポートされています。",
       "alreadyRegistered": "\"{{hotkey}}\" は別のアプリケーションで既に登録されています。",
       "osReserved": "\"{{hotkey}}\" はデスクトップ環境で予約されている可能性があります。",
+      "keyNotInKeymap": "GNOME は現在のキーボードレイアウトでは \"{{hotkey}}\" を使用できません。別のキーを選んでください。",
+      "keyReservedByGnome": "GNOME はすでに \"{{hotkey}}\" を独自のショートカットに使用しています。別のキーを選んでください。",
       "rightModifierNeedsListener": "\"{{hotkey}}\" はこのデスクトップでは使用できません。ショートカットには通常のキーが必要です。Control+Alt+Space のようにキーを追加してください。",
       "holdNeedsReleaseKey": "ホールドして話すには、macOS が離したことを検知できるキーが必要です。Globe、右 Option のような右側のキー、または修飾キー付きのショートカットです。タップならどのキーでも使えます。",
+      "holdNeedsRegularKey": "ホールドを使うには、Control+Alt+Space のようにショートカットに通常のキーを追加してください。デスクトップは修飾キーだけを押し続けていることを検知できません。",
+      "holdNeedsGnomePortal": "ホールドを使うには、GNOME 48 以降に含まれるグローバルショートカットポータルが必要です。タップはポータルがなくても使えます。",
       "registrationFailed": "\"{{hotkey}}\" を登録できませんでした。別のアプリケーションで使用されている可能性があります。",
+      "windowsKeyListenerMissing": "\"{{hotkey}}\" には Windows のキーリスナーが必要ですが、このインストールにはありません。通常のキーを使うショートカットを選んでください。",
       "updateFailedCheckFormat": "「{{hotkey}}」へのホットキーの更新に失敗しました。形式が正しいか確認してください。",
       "trySuggestions": "お試しください: {{suggestions}}",
       "slotConflict": "このホットキーは既に{{slot}}で使用されています。"
@@ -163,7 +168,7 @@
     "close": "閉じる"
   },
   "windows": {
-    "pttUnavailable": "プッシュトゥトークのネイティブリスナーが利用できません"
+    "pttUnavailable": "OpenWhispr のキーリスナーを利用できません。"
   },
   "common": {
     "continue": "続ける",
@@ -187,17 +192,20 @@
     "error": "問題が発生しました",
     "unknownError": "不明なエラーが発生しました",
     "copied": "コピーしました",
-    "skip": "スキップ"
+    "skip": "スキップ",
+    "resizePanel": "パネルのサイズを変更",
+    "next": "次へ",
+    "copy": "コピー"
   },
   "onboarding": {
     "rehaul": {
       "permissions": {
         "title": "3 分で OpenWhispr を設定",
-        "microphoneDescription": "話した内容をテキストにします。録音中のみ有効です。",
-        "accessibilityDescription": "テキストを、いま使っているアプリに貼り付けます。",
+        "microphoneDescription": "録音中だけ音声を聞き取ります。",
+        "accessibilityDescription": "どのアプリにもテキストを貼り付けます。",
         "systemAudioTitle": "システムオーディオ",
-        "systemAudioDescription": "会議メモのために、通話相手の音声を録音します。録音中のみ有効です。",
-        "screenContextDescription": "音声アシスタントに何かを頼んだとき、画面の内容を見られるようにします。保存は一切されません。",
+        "systemAudioDescription": "通話相手の音声を録音します。",
+        "screenContextDescription": "アシスタントが画面を見られるようにします。",
         "enable": "有効にする",
         "enabled": "有効"
       },
@@ -338,18 +346,18 @@
         "endpointPlaceholder": "エンドポイント URL を貼り付け",
         "optional": "任意",
         "modelId": "モデル ID",
-        "testConnection": "接続をテスト",
         "proceed": "次へ進む",
-        "runTest": "テストを実行",
         "testing": "テスト中…",
         "connected": "接続済み",
         "connectionFailed": "接続を確認できませんでした。",
+        "unverified": "確認できませんでした：{{reason}}",
         "errors": {
           "endpointRequired": "テストの前にエンドポイント URL を入力してください。",
           "invalidUrl": "エンドポイントは有効な HTTP または HTTPS の URL である必要があります。",
           "httpsRequired": "公開エンドポイントにはHTTPSが必要です。HTTPはプライベートアドレスでのみ使用できます。",
           "credentialsRejected": "プロバイダーがこの認証情報を拒否しました。",
           "endpointNotFound": "このエンドポイントは OpenAI 互換のモデル一覧を公開していません。",
+          "transcriptionEndpointNotFound": "このアドレスでは文字起こしを受け付けていません。",
           "modelNotFound": "選択したモデルはこのプロバイダーでは利用できません。",
           "providerStatus": "プロバイダーがステータス {{status}} を返しました。",
           "timeout": "接続テストがタイムアウトしました。",
@@ -427,7 +435,20 @@
         }
       }
     },
-    "welcomeSubtitle": "あなたの声の力を、あなたのやり方で。"
+    "permissionGuide": {
+      "label": "権限ガイド",
+      "return": "初期設定に戻る",
+      "missingApp": "または＋でアプリを選択",
+      "failed": "アクセスを確認できませんでした。",
+      "microphone": "「マイク」でOpenWhisprをオンにしてください。",
+      "accessibility": "OpenWhisprを「アクセシビリティ」にドラッグしてオンにしてください。",
+      "systemAudio": "「システムオーディオの録音のみ」でOpenWhisprをオンにしてください。",
+      "screenContext": "OpenWhisprを「画面収録とシステムオーディオ録音」にドラッグしてオンにしてください。",
+      "settings": "設定を開く",
+      "check": "再確認",
+      "restart": "アプリを再起動",
+      "restartRequired": "画面アクセスを適用するにはOpenWhisprを再起動してください。"
+    }
   },
   "controlPanel": {
     "accessibilityMissing": {
@@ -446,12 +467,14 @@
       "couldNotDeleteTitle": "削除できませんでした",
       "couldNotDeleteDescription": "この文字起こしは既に削除されている可能性があります。",
       "couldNotDeleteDescriptionGeneric": "問題が発生しました。もう一度お試しください。",
-      "empty": "文字起こし履歴はまだありません",
-      "emptyDescription": "どのアプリでもホットキーを押して話し始めてください。すべての文字起こしは、このデバイス上にプライベートに保存されます。",
-      "sectionTitle": "文字起こし",
+      "empty": "最初のディクテーションを始めましょう",
+      "emptyDescription": "ディクテーションしたテキストがここに表示されます。",
+      "shortcutHint": "{{shortcut}} を押して話し始めてください。",
       "dataRetentionDisabled": "データ保持が無効です。文字起こしと音声は履歴に保存されません。",
-      "press": "押してください",
-      "toStart": "開始するには",
+      "welcomeBack": "おかえりなさい",
+      "welcomeBackNamed": "おかえりなさい、{{name}}さん",
+      "welcome": "ようこそ",
+      "welcomeNamed": "ようこそ、{{name}}さん",
       "dateGroups": {
         "today": "今日",
         "yesterday": "昨日"
@@ -460,6 +483,8 @@
       "failedCtaSettings": "文字起こしプロバイダーを設定してください",
       "failedCtaAndRetry": "その後、再試行をクリックしてください",
       "failedCtaSettingsOnly": "設定で文字起こしプロバイダーを設定してください",
+      "failedCtaAiSettings": "設定で音声アシスタントのモデルを確認してください",
+      "editFailedTranscriptKept": "編集は適用されませんでした · 文字起こしは保存済み",
       "failedLimitReached": "1日の上限に達しました",
       "failedOffline": "オフラインです",
       "clearAll": "すべて削除",
@@ -479,6 +504,9 @@
       "retryTranscription": "再文字起こし",
       "retrySuccess": "文字起こしが更新されました",
       "retryError": "再文字起こしに失敗しました",
+      "retryErrors": {
+        "invalidResponse": "文字起こしエンジンから予期しない応答が返されました。もう一度お試しください。"
+      },
       "audioNotFound": "音声ファイルが見つからないか有効期限切れです",
       "noAiProcessing": "この文字起こしにはAI処理が適用されていません",
       "rawTranscript": "生の文字起こし",
@@ -530,10 +558,29 @@
       "noSearchResults": "「{{query}}」に一致するモデルはありません",
       "selectModelHint": "モデルが未選択です — 下のリストから選択してください。"
     },
+    "effort": {
+      "title": "推論の深さ",
+      "description": "モデルが回答する前にどれだけ考えるかを設定します。",
+      "descriptionWithDefault": "モデルが回答する前にどれだけ考えるかを設定します。自動ではプロバイダーの既定値（{{value}}）を使用します。",
+      "auto": "自動",
+      "options": {
+        "none": "なし",
+        "minimal": "最小",
+        "low": "低",
+        "medium": "中",
+        "high": "高",
+        "xhigh": "非常に高い",
+        "max": "最大"
+      }
+    },
     "availableModels": "利用可能なモデル",
     "disableThinking": {
       "label": "思考出力を無効にする",
       "help": "推論トークンをスキップして出力をクリーンに保ちます。クリーンアップに推奨。一部のサーバーはこのヒントを無視します。"
+    },
+    "keepModelLoaded": {
+      "label": "モデルを読み込んだままにする",
+      "help": "5分間使われなくてもアンロードせずメモリに保持するため、次のリクエストでコールドスタートが発生しません。ローカルモデルを使うすべての機能に適用されます。"
     },
     "selfHosted": {
       "endpointHelp": "ローカルネットワーク上の OpenAI 互換サーバーを指定します（例: Ollama、LM Studio、vLLM、llama-server）。"
@@ -569,12 +616,12 @@
   },
   "hooks": {
     "audioRecording": {
+      "cleanupUnconfigured": "AIクリーンアップはオンですが、クリーンアップモデルが設定されていません。",
       "errorTitles": {
         "sessionExpired": "セッション期限切れ",
         "offline": "オフラインです",
         "agentUnavailable": "アシスタントを利用できません",
         "screenContextSkipped": "画面コンテキストをスキップしました",
-        "dailyLimitReached": "1 日の上限に達しました",
         "providerRateLimited": "プロバイダーのレート制限"
       },
       "errorActions": {
@@ -617,14 +664,26 @@
         "description": "ホットキーが押されたままディクテーションが終了したため、テキストは貼り付けられませんでした。文字起こしはクリップボードにあります。",
         "descriptionClipboardFailed": "ホットキーが押されたままディクテーションが終了したため、テキストは貼り付けられず、クリップボードにもコピーできませんでした。"
       },
+      "modifiersHeld": {
+        "title": "文字起こしは貼り付けられませんでした",
+        "description": "修飾キー（Ctrl や Shift など）が押されたままだったため、テキストは貼り付けられませんでした。文字起こしはクリップボードにあります。",
+        "descriptionClipboardFailed": "修飾キー（Ctrl や Shift など）が押されたままだったため、テキストは貼り付けられず、クリップボードにもコピーできませんでした。"
+      },
       "selectionEditing": {
         "notAppliedTitle": "選択範囲の編集を適用できませんでした",
         "changed": "処理中に選択したテキストまたは対象アプリが変更されました。置換は行われていません。",
         "expired": "選択範囲の編集が期限切れになりました。テキストを選択し直して再試行してください。",
         "pasteFailed": "OpenWhispr は編集を生成しましたが、選択したテキストを置換できませんでした。",
+        "modifiersHeld": "OpenWhispr は編集を生成しましたが、修飾キー（Ctrl や Shift など）が押されたままだったため、適用されませんでした。編集内容はクリップボードにあります。",
+        "modifiersHeldClipboardFailed": "OpenWhispr は編集を生成しましたが、修飾キー（Ctrl や Shift など）が押されたままだったため、適用されず、クリップボードにもコピーできませんでした。",
         "unavailable": "OpenWhispr は選択したテキストを安全に読み取れませんでした。アクセシビリティまたは入力自動化の権限を確認してください。",
         "tooLarge": "選択範囲が大きすぎます。6,000文字以内を選択してください。",
-        "reasoningFailed": "AI は選択範囲の編集を完了できませんでした。元のテキストは変更されていません。"
+        "reasoningFailed": "AI は選択範囲の編集を完了できませんでした。元のテキストは変更されていません。",
+        "invalidResponse": "AI が無効な編集応答を返しました。テキストは置き換えられていません。テキストを選択して、もう一度お試しください。",
+        "emptyResponse": "AI が空の編集結果を返しました。テキストは置き換えられていません。より具体的な指示をお試しください。",
+        "truncatedResponse": "AI が編集の完了前に停止しました。テキストは置き換えられていません。選択するテキストを減らしてお試しください。",
+        "wlCopyMissing": "OpenWhispr は編集を生成しましたが、このデスクトップでは Wayland アプリは wl-copy を通してしか貼り付けたテキストを読み取れません。編集を適用するには wl-clipboard をインストールしてください。",
+        "wlCopyFailed": "OpenWhispr は編集を生成しましたが、wl-copy が Wayland アプリ向けにコピーできなかったため、適用されませんでした。"
       },
       "pastePermission": {
         "title": "自動貼り付けを許可",
@@ -637,6 +696,12 @@
       },
       "pasteFailed": {
         "title": "自動貼り付けに失敗しました"
+      },
+      "interruptedRecordingRecovered": "このディクテーションの完了前に OpenWhispr が終了したため、録音を復元しました。",
+      "waylandClipboard": {
+        "title": "文字起こしは貼り付けられませんでした",
+        "wlCopyMissing": "このデスクトップでは、Wayland アプリは wl-copy を通してしか貼り付けたテキストを読み取れません。音声入力を貼り付けるには wl-clipboard をインストールしてください。",
+        "wlCopyFailed": "wl-copy が Wayland アプリ向けにテキストをコピーできなかったため、貼り付けられませんでした。「再試行」を押してもう一度お試しください。"
       }
     },
     "clipboard": {
@@ -888,8 +953,11 @@
     "waylandClipboardTitle": "Wayland でのクリップボードモード",
     "windowsReady": "Windows は自動貼り付けに標準対応しています。設定は不要です！",
     "withoutToolPrefix": "このツールがない場合、OpenWhispr はテキストをクリップボードにコピーします。Ctrl+V で手動で貼り付けてください。",
+    "wtypeCosmicTerminalsDescription": "COSMIC では、Warp などのターミナルは wtype 経由でのみ貼り付けを受け取ります。その他のアプリには wtype なしで貼り付けられます。",
     "wtypeFallbackDescription": "この wlroots 系コンポジターでは wtype が推奨される自動貼り付け方法です。代替手段も利用できますが、信頼性が低い場合があります。",
-    "xwaylandAppsOnly": "自動貼り付けは XWayland アプリのみで動作します"
+    "xwaylandAppsOnly": "自動貼り付けは XWayland アプリのみで動作します",
+    "wlClipboardTitle": "Wayland アプリに貼り付けるには wl-clipboard をインストールしてください",
+    "wlClipboardDescription": "このデスクトップでは、Wayland アプリは OpenWhispr がコピーしたテキストを wl-copy を通してしか読み取れません。音声入力を貼り付けるには、wl-clipboard をインストールしてください："
   },
   "promptStudio": {
     "common": {
@@ -966,6 +1034,10 @@
       "hotkeys": {
         "description": "ディクテーションホットキーと起動モード",
         "label": "ホットキー"
+      },
+      "toneStyle": {
+        "label": "トーンとスタイル",
+        "description": "アプリごとの補正の書き方"
       },
       "speechToText": {
         "description": "ディクテーションとノート録音用エンジン",
@@ -1179,7 +1251,7 @@
         "recheck": "再確認",
         "copy": "コピー",
         "ydotoolDesc": "Wayland 用入力自動化ツール",
-        "wtypeDesc": "wlroots 系コンポジターで推奨される入力自動化ツール",
+        "wtypeDesc": "wlroots 系コンポジターで推奨される入力自動化ツール。COSMIC ではターミナルへの貼り付けに使用",
         "ydotooldDesc": "ydotool デーモン（Ubuntu/Pop!_OS では別パッケージ）",
         "uinputDesc": "カーネル入力デバイスへのアクセス",
         "uinputRuleFound": "ルールは存在しますが未適用です。再起動で解決するはずです。",
@@ -1233,6 +1305,10 @@
             "step1Desc": "ydotoold を起動し、毎回のログイン時に実行されるよう有効化します。",
             "step2Title": "実行中か確認"
           },
+          "wlCopy": {
+            "step1Title": "wl-clipboard をインストール",
+            "step2Title": "インストールの確認"
+          },
           "xclip": {
             "step1Title": "xclipをインストール"
           }
@@ -1246,7 +1322,8 @@
           "flakeTitle": "flakeからインストールする場合",
           "flakeDesc": "flakeからOpenWhisprをインストールする場合、programs.openwhispr.enableを有効にするとydotool、uinputモジュール、グループのメンバーシップが自動で設定されます。",
           "rebuildNote": "sudo nixos-rebuild switchを実行し、グループの変更と/dev/uinputのルールを反映させるためにログアウト後に再ログインしてください。<you>はあなたのユーザー名に置き換えてください。"
-        }
+        },
+        "wlCopyDesc": "このデスクトップで Wayland アプリが貼り付けるテキストを読み取るクリップボードツール"
       },
       "translationHotkey": {
         "title": "翻訳ホットキー",
@@ -1363,6 +1440,12 @@
       },
       "transcriptionPreview": "リアルタイム文字起こしプレビュー",
       "transcriptionPreviewDescription": "クリーンアップ前にフローティングウィンドウで文字起こしを表示",
+      "aec": {
+        "toggle": {
+          "title": "会議のエコーキャンセル",
+          "description": "マイクに漏れ込む会議の音声をキャンセルします。ヘッドフォンやイヤフォンを使用しているときはオフのままにしてください。キャンセルすべきエコーがなく、あなたの声を完全に抑制してしまう可能性があります。"
+        }
+      },
       "vad": {
         "title": "音声アクティビティ検出",
         "description": "ローカル Whisper 文字起こしで Silero VAD が発話を検出・分割する方法を設定します",
@@ -1509,7 +1592,7 @@
     },
     "sidebar": {
       "newNote": "新しいノート",
-      "actions": "アクション"
+      "templatesAndActions": "テンプレートとアクション"
     },
     "spaces": {
       "privateSpaces": "プライベートノート",
@@ -1539,8 +1622,8 @@
       "asTranscriptMarkdown": "Markdown (.md)",
       "aiSummary": "AI要約",
       "saving": "保存中",
-      "transcriptEmptyTitle": "まだ録音がありません",
-      "transcriptEmptyDescription": "録音ボタンを押すと文字起こしが始まります。話した内容がここにリアルタイムで表示されます。",
+      "transcriptEmptyTitle": "文字起こしはまだありません",
+      "transcriptEmptyDescription": "録音を始めると、話した内容がここに表示されます。",
       "startRecording": "録音を開始",
       "generateSummary": "AI要約を生成",
       "startWriting": "書き始める...",
@@ -1592,8 +1675,8 @@
       "openInObsidian": "Obsidian で開く"
     },
     "actions": {
+      "allActions": "すべてのアクション",
       "manage": "アクションを管理...",
-      "manageTitle": "カスタムアクション",
       "addAction": "新しいアクション",
       "editAction": "アクションを編集",
       "namePlaceholder": "アクション名",
@@ -1607,14 +1690,13 @@
       "promptLabel": "プロンプト",
       "emptyEditorTitle": "アクションを選択",
       "emptyEditorDescription": "リストからアクションを選択するか、新しく作成してください",
-      "runAction": "{{name}} を実行",
       "selectAction": "アクションを選択",
       "done": "完了",
       "chunkProgress": "パート {{step}} / {{total}}",
       "emptyReply": "モデルから空の応答が返されました。もう一度お試しいただくか、別のモデルを選択してください。",
       "builtin": {
         "generateNotes": {
-          "name": "ノートを生成",
+          "name": "AI要約",
           "description": "ノートを整理、構成、強化する"
         },
         "followUpEmail": {
@@ -1625,13 +1707,92 @@
         "detailedNotes": {
           "name": "詳細ノート",
           "description": "決定事項とアクションを含む正確で網羅的な会議ノート"
+        },
+        "makeTodos": {
+          "name": "ToDoを作成",
+          "description": "すべてのToDoと担当者をチャットに一覧表示"
+        },
+        "createOutline": {
+          "name": "アウトラインを作成",
+          "description": "ノートのトピックをチャットでアウトライン化"
+        },
+        "oneOnOne": {
+          "name": "1on1",
+          "description": "1on1での近況、フィードバック、成長、次のステップ"
+        },
+        "standUp": {
+          "name": "スタンドアップ",
+          "description": "各メンバーの進捗、予定、ブロッカー"
+        },
+        "salesCall": {
+          "name": "商談",
+          "description": "ニーズ、懸念点、予算、意思決定プロセス"
+        },
+        "userInterview": {
+          "name": "ユーザーインタビュー",
+          "description": "参加者のワークフロー、課題、反応、発言の引用"
+        },
+        "shorten": {
+          "name": "ノートを短くする",
+          "description": "重要な事実を残して保存済みのAI要約を短くします",
+          "cta": "ノートを短くする"
+        },
+        "addTldr": {
+          "name": "短い要約を書く",
+          "description": "2〜3文の短い要約をチャットに書きます",
+          "cta": "短い要約を書く"
+        },
+        "slackUpdate": {
+          "name": "Slack用の共有",
+          "description": "Slackに投稿するチーム向けの短い共有文を作成します",
+          "cta": "Slack用の共有を書く"
+        },
+        "lengthen": {
+          "name": "ノートを詳しくする",
+          "description": "内容に裏付けられた詳細を保存済みのAI要約に追加します",
+          "cta": "ノートを詳しくする"
         }
       },
       "errors": {
         "noModel": "AIモデルが選択されていません。設定で構成してください。",
         "actionFailed": "アクションに失敗しました",
-        "noEndpoint": "セルフホストサーバーの URL が設定されていません。設定で構成してください。"
-      }
+        "noEndpoint": "セルフホストサーバーの URL が設定されていません。設定で構成してください。",
+        "outputTruncated": "AIモデルが出力の上限に達して最後まで書けなかったため、ノートは変更されていません。",
+        "nothingToSummarize": "このノートにはまだ要約できる内容がないため、AI要約はそのままです。",
+        "saveFailed": "保存できませんでした。長すぎる項目がないか確認して、もう一度お試しください。"
+      },
+      "tab": "アクション",
+      "output": {
+        "chat": "チャット",
+        "summary": "AI要約",
+        "chatHint": "このアクションはチャットに返信します。保存済みのAI要約は変更されません。",
+        "summaryHint": "この組み込みアクションは保存済みのAI要約を更新します。変更は元に戻せます。"
+      },
+      "applied": "{{name}}でAI要約を更新しました"
+    },
+    "templates": {
+      "tab": "テンプレート",
+      "managerTitle": "テンプレートとアクション",
+      "manage": "テンプレートを管理...",
+      "select": "テンプレートを選択",
+      "regenerate": "再生成",
+      "addTemplate": "新しいテンプレート",
+      "editTemplate": "テンプレートを編集",
+      "namePlaceholder": "テンプレート名",
+      "contextLabel": "コンテキスト",
+      "contextPlaceholder": "どのような会議で、要約では何に重点を置くべきですか？",
+      "sectionsLabel": "セクション",
+      "addSection": "セクションを追加",
+      "sectionHeadingPlaceholder": "セクションの見出し",
+      "sectionInstructionPlaceholder": "このセクションに何を書きますか？",
+      "moveSectionUp": "セクションを上に移動",
+      "moveSectionDown": "セクションを下に移動",
+      "removeSection": "セクションを削除",
+      "noSectionsHint": "セクションがない場合、コンテキストが要約への指示のすべてになります。",
+      "noTemplates": "テンプレートはまだありません",
+      "emptyEditorTitle": "テンプレートを選択",
+      "emptyEditorDescription": "リストからテンプレートを選択するか、新しく作成してください",
+      "outputHint": "テンプレートを適用すると、ノートと文字起こしをもとにAI要約を作成、または置き換えます。"
     },
     "empty": {
       "title": "まだノートがありません",
@@ -1731,7 +1892,7 @@
       "speakerDetectionDescription": "音声内の異なる話者を識別",
       "numSpeakersPlaceholder": "自動検出",
       "numSpeakersLabel": "話者の人数",
-      "numSpeakersHint": "正確な人数を設定すると、特に長い録音で精度が向上します。",
+      "numSpeakersHint": "話者はこの人数を上限として自動で検出されます。",
       "downloadingModels": "モデルをダウンロード中...",
       "batchCancelled": "キャンセル済み",
       "batchTranscriptionFailed": "文字起こしに失敗しました",
@@ -1776,12 +1937,12 @@
         "description": "アクションは AI を使ってノートを変換します。言語モデルを設定して始めましょう。",
         "configured": "AI モデルが設定されました"
       },
-      "actions": {
-        "title": "AI アクション",
-        "description": "アクションでノートを変換できます — 文字起こしの整理、議事録の要約など。組み込みアクションを使うか、独自のアクションを作成できます。",
-        "builtInLabel": "組み込み",
-        "createTitle": "独自のアクションを作成",
-        "createDescription": "独自の AI プロンプトでカスタムアクションを定義できます。設定からいつでも編集・追加できます。",
+      "templates": {
+        "title": "テンプレートとアクション",
+        "description": "テンプレートでAI要約の形を決められます — 詳しい議事録から独自のセクションまで。アクションはノートに対して実行され、たとえばチャットでフォローアップメールを下書きできます。",
+        "builtInLabel": "あなたのテンプレート",
+        "createTitle": "独自のテンプレートを作成",
+        "createDescription": "必要な要約を説明してください。セクションや他のテンプレート、アクションは後から追加できます。",
         "created": "作成しました！"
       },
       "getStarted": "始める",
@@ -1797,11 +1958,11 @@
     },
     "speaker": {
       "you": "あなた",
-      "me": "自分",
       "them": "相手",
       "unknown": "不明な話者",
       "label": "話者 {{n}}",
       "knownSpeakers": "登録済みの話者",
+      "thisIsMe": "これは自分です",
       "meetingAttendees": "会議の参加者",
       "selected": "{{n}}件選択中",
       "assignTo": "割り当て…",
@@ -1854,12 +2015,14 @@
         "chips": {
           "catchUp": "最新情報をまとめて",
           "keyDecisions": "重要な決定事項を一覧に",
-          "inFlight": "進行中のプロジェクトを表示"
+          "openActionItems": "未完了のアクションアイテムを一覧に"
         }
-      },
-      "list": {
-        "empty": "まだノートがありません"
       }
+    },
+    "assistantUndo": {
+      "applied": "アシスタントが「{{title}}」を更新しました",
+      "changed": "アシスタントの編集後にノートが変更されたため、元に戻せません。",
+      "failed": "編集を元に戻せませんでした。もう一度お試しください。"
     }
   },
   "dictionary": {
@@ -1903,19 +2066,14 @@
       "examples": {
         "linkedinTrigger": "私のLinkedIn",
         "linkedinText": "linkedin.com/in/you",
-        "rewriteTrigger": "書き直しプロンプト",
-        "rewriteText": "これをより簡潔でプロフェッショナルに書き直して",
-        "introTrigger": "挨拶メール",
-        "introText": "こんにちは、今週どこかでお話しできれば嬉しいです…",
         "signoffTrigger": "署名",
         "signoffText": "よろしくお願いします。Alex · alex@example.com"
       },
       "addPlaceholder": "トリガーフレーズを追加 — 「カレンダーリンク」「署名」など"
     },
-    "emptyTitle": "辞書は空です",
+    "emptyTitle": "辞書に単語を追加しましょう",
     "emptyDescription": "{{agentName}}に正しく認識してほしい言葉を追加しましょう。名前、ツール、略語など。",
     "addFirstWord": "最初の単語を追加",
-    "importList": "リストをインポート",
     "agentDefault": "デフォルトで追加済み"
   },
   "insights": {
@@ -1960,8 +2118,10 @@
     "newChat": "新しいチャット",
     "search": "会話を検索...",
     "archived": "アーカイブ済み",
-    "noConversations": "最初の会話を始めましょう",
-    "selectChat": "会話を選択するか、新しく始めてください",
+    "noConversations": "チャットはまだありません",
+    "allArchived": "すべてのチャットはアーカイブ済みです",
+    "noConversationsDescription": "アシスタントとのチャットはここに表示されます。",
+    "loadFailed": "チャットを読み込めませんでした",
     "today": "今日",
     "yesterday": "昨日",
     "previousWeek": "過去7日間",
@@ -1971,7 +2131,11 @@
     "delete": "削除",
     "deleteConfirm": "この会話は完全に削除されます。元に戻すことはできません。",
     "searchChats": "チャットを検索",
-    "newChatEmpty": "ノートや文字起こし、その他なんでも聞いてください"
+    "inputPlaceholder": "何でも聞いてください...",
+    "starters": {
+      "todos": "最近のTo Doを一覧にして",
+      "meeting": "次の会議に備えさせて"
+    }
   },
   "support": {
     "documentation": "ドキュメント",
@@ -2006,6 +2170,10 @@
     "activationFailedDescription": "OpenWhispr は CPU 文字起こしに切り替えました。",
     "reasoningActivationFailedDescription": "OpenWhispr は CPU 処理に切り替えました。",
     "retryActivation": "GPU アクセラレーションを再試行",
+    "redownloadNeeded": "GPU パックの再ダウンロードが必要です",
+    "redownloadNeededDescription": "このバージョンの OpenWhispr はインストール済みの GPU パックを使用できません。再ダウンロードすると GPU アクセラレーションが再び有効になります。",
+    "redownloadButton": "GPU パックを再ダウンロード",
+    "downloadFailed": "GPU パックをダウンロードできませんでした。",
     "remove": "削除",
     "dismiss": "後で",
     "cancel": "キャンセル"
@@ -2029,7 +2197,7 @@
       },
       "gpuPackMigration": {
         "title": "GPU パックの再ダウンロードが必要です",
-        "description": "アップデートにより古い GPU パックのインストール（{{packs}}）が削除されました。設定から再ダウンロードすると GPU アクセラレーションが復元されます。"
+        "description": "このバージョンでは以前の GPU パック（{{packs}}）を使用できません。設定から再ダウンロードすると GPU アクセラレーションが再び有効になります。"
       },
       "cleanupFailed": {
         "title": "クリーンアップに失敗しました",
@@ -2121,7 +2289,11 @@
       "transcribing": "文字起こし中...",
       "thinking": "考え中...",
       "typeMessage": "メッセージを入力...",
-      "send": "送信"
+      "send": "送信",
+      "commands": "コマンド",
+      "slashNavigate": "で移動",
+      "slashSelect": "で選択",
+      "slashClose": "で閉じる"
     },
     "tools": {
       "search_notesName": "ノートを検索",
@@ -2211,6 +2383,19 @@
       "title": "OpenWhispr はミーティング録音ツールであり、ボットではありません",
       "description": "OpenWhispr はシステムから直接オーディオをキャプチャします — 参加者としてミーティングに参加することはありません。カレンダーを接続して、通常通りノートを取るだけです。"
     },
+    "nav": {
+      "label": "連携セクション",
+      "groups": {
+        "meetings": "ミーティング",
+        "developer": "開発者"
+      },
+      "sections": {
+        "calendars": "カレンダー",
+        "cli": "コマンドライン"
+      },
+      "docs": "連携ドキュメント"
+    },
+    "readDocs": "ドキュメントを読む",
     "systemAudio": {
       "title": "システムオーディオの権限が必要です",
       "description": "会議を文字起こしするには、OpenWhispr に他の参加者の音声を録音するためのシステムオーディオの権限が必要です。画面を録画することはありません。システム設定に移動して有効にします。",
@@ -2218,12 +2403,14 @@
     }
   },
   "upcoming": {
-    "title": "今後の予定",
     "now": "進行中",
     "untitledEvent": "無題のイベント",
     "joinAndTranscribe": "参加して文字起こし",
     "takeNotes": "メモを取る",
-    "noEventsToday": "今日の予定はありません",
+    "noEventsToday": "今日の会議はもうありません",
+    "emptyDayDescription": "そろそろ芝生に触れる時間です",
+    "touchGrass": "芝生に触れる",
+    "touchGrassLabel": "芝生です。ポインターか矢印キーでなでてみてください。Esc キーで戻ります。",
     "noUpcomingEvents": "今後の予定はありません",
     "moreCalendarsHint": "他のカレンダーも連携しますか？",
     "connectHere": "ここから連携",
@@ -2260,15 +2447,11 @@
     }
   },
   "embeddedChat": {
-    "askPlaceholder": "何でも聞いてください...",
-    "send": "送信",
-    "title": "チャット",
-    "emptyState": "このノートについて質問してください",
-    "dock": "サイドバーに固定",
-    "undock": "サイドバーから外す",
+    "askPlaceholder": "ノートについて何でも質問",
     "close": "チャットを閉じる",
     "newChat": "新しいチャット",
-    "conversationSelector": "会話を切り替え"
+    "conversationSelector": "会話を切り替え",
+    "history": "履歴"
   },
   "transcriptionPreview": {
     "label": "プレビュー",
@@ -2310,6 +2493,171 @@
       "underway": "会議はすでに進行中のようです。メモを取りますか？"
     },
     "start": "メモを取る",
-    "join": "参加して文字起こし"
+    "join": "参加して文字起こし",
+    "folders": {
+      "choose": "会議フォルダーを選択",
+      "search": "フォルダーを検索",
+      "clear": "検索をクリア",
+      "private": "プライベート",
+      "shared": "共有",
+      "current": "現在の保存先",
+      "recent": "最近使用したフォルダー",
+      "folders": "フォルダー",
+      "new": "新しいフォルダー",
+      "name": "名前",
+      "location": "保存先",
+      "cancel": "キャンセル",
+      "create": "作成して選択",
+      "empty": "フォルダーが見つかりません。別の名前を検索するか、作成してください。",
+      "loading": "フォルダーを読み込み中…",
+      "unavailable": "フォルダーを読み込めませんでした。",
+      "retry": "再試行",
+      "dismiss": "会議通知を閉じる",
+      "selected": "{{destination}}を選択しました",
+      "linked": "この会議にはすでにノートがあります。参加しても{{destination}}に保存されます。",
+      "errors": {
+        "STALE_NOTIFICATION": "この通知は無効になりました。",
+        "INVALID_REQUEST": "完了できませんでした。再試行してください。",
+        "FOLDERS_UNAVAILABLE": "フォルダーを読み込めませんでした。",
+        "FOLDER_UNAVAILABLE": "この保存先は利用できません。別のフォルダーを選択してください。",
+        "SPACE_UNAVAILABLE": "この保存先は利用できません。別のフォルダーを選択してください。",
+        "FOLDER_NAME_REQUIRED": "フォルダー名を入力してください。",
+        "FOLDER_NAME_TAKEN": "この保存先には同名のフォルダーがあります。",
+        "CREATE_FAILED": "完了できませんでした。再試行してください。",
+        "LINKED_NOTE_CHANGED": "保存先を確認し、もう一度参加してください。",
+        "NOTE_UNAVAILABLE": "このノートは利用できません。新規作成せずに再試行してください。",
+        "START_FAILED": "完了できませんでした。再試行してください。"
+      }
+    }
+  },
+  "providerErrors": {
+    "authFailed": "{{provider}} がAPIキーを拒否しました。",
+    "accessDenied": "{{provider}} がアクセスを拒否しました。お使いのキーがこのモデルに対応していない可能性があります。",
+    "quotaExhausted": "{{provider}} アカウントのクレジットが不足しています。",
+    "rateLimited": "{{provider}} がリクエストを制限しました。しばらく待ってからもう一度お試しください。",
+    "modelNotFound": "{{provider}} はモデル「{{model}}」を認識できません。",
+    "modelNotFoundNoModel": "{{provider}} は選択されたモデルを認識できません。",
+    "payloadTooLarge": "この録音は {{provider}} には大きすぎます。",
+    "requestTooLarge": "このリクエストは {{provider}} には大きすぎます。",
+    "badRequest": "{{provider}} はこのリクエストを処理できませんでした。",
+    "unavailable": "{{provider}} で現在問題が発生しています。しばらくしてから再度お試しください。",
+    "timeout": "{{provider}} からの応答に時間がかかりすぎました。",
+    "unreachable": "{{provider}} に接続できませんでした。接続を確認してください。",
+    "noResponse": "{{provider}} から応答がありませんでした。APIキーと接続を確認してください。",
+    "unknown": "{{provider}} から予期しないエラーが返されました。",
+    "keyMissing": "{{provider}} のAPIキーが設定されていません。設定 → 言語モデル から追加してください。",
+    "selfHosted": {
+      "authFailed": "サーバーがAPIキーを拒否しました。",
+      "accessDenied": "サーバーがアクセスを拒否しました。キーがこのモデルに対応していない可能性があります。",
+      "quotaExhausted": "サーバーがアカウントのクレジット不足を報告しています。",
+      "rateLimited": "サーバーがリクエストを制限しました。しばらく待ってからもう一度お試しください。",
+      "modelNotFound": "サーバーはモデル「{{model}}」を認識できません。",
+      "modelNotFoundNoModel": "サーバーは選択されたモデルを認識できません。",
+      "payloadTooLarge": "この録音はサーバーには大きすぎます。",
+      "requestTooLarge": "このリクエストはサーバーには大きすぎます。",
+      "badRequest": "サーバーはこのリクエストを処理できませんでした。",
+      "unavailable": "サーバーで現在問題が発生しています。しばらくしてから再度お試しください。",
+      "timeout": "サーバーからの応答に時間がかかりすぎました。",
+      "unreachable": "サーバーに接続できませんでした。サーバーが起動しているか確認してください。",
+      "noResponse": "サーバーから応答がありませんでした。APIキーとサーバーが起動しているかを確認してください。",
+      "unknown": "サーバーから予期しないエラーが返されました。"
+    },
+    "openSettings": "設定を開く",
+    "copyDetails": "詳細をコピー",
+    "titles": {
+      "transcription": "文字起こしに失敗しました",
+      "llm": "AIリクエストに失敗しました"
+    },
+    "details": {
+      "provider": "プロバイダー",
+      "requestId": "リクエストID",
+      "httpStatus": "HTTP ステータス",
+      "underlyingError": "原因となったエラー"
+    }
+  },
+  "toneStyle": {
+    "title": "トーンとスタイル",
+    "description": "アプリごとにトーンとスタイルを設定します。",
+    "turnOnAndSetUp": "オンにして設定",
+    "categories": {
+      "personal": {
+        "title": "個人のメッセージ",
+        "inline": "個人のメッセージ",
+        "question": "{{category}}、\nどう書きますか？"
+      },
+      "work": {
+        "title": "仕事のメッセージ",
+        "inline": "仕事のメッセージ",
+        "question": "{{category}}、\nどう書きますか？"
+      },
+      "email": {
+        "title": "メール",
+        "inline": "メール",
+        "question": "{{category}}、\nどう書きますか？"
+      },
+      "other": {
+        "title": "その他のアプリ",
+        "inline": "その他のアプリ",
+        "question": "{{category}}、\nどう書きますか？"
+      }
+    },
+    "tones": {
+      "formal": "フォーマル",
+      "casual": "カジュアル",
+      "very_casual": "とてもカジュアル",
+      "excited": "元気に！"
+    },
+    "samples": {
+      "personal": {
+        "formal": "こんばんは。今夜はお時間ありますか？6時ごろにコーヒーでもいかがでしょうか。ご都合を教えてください。",
+        "casual": "今夜ひま？6時ごろコーヒーどうかなって思ってる、教えて",
+        "very_casual": "今夜ひま？6時くらいにカフェいこ 連絡して"
+      },
+      "work": {
+        "sender": "ジミー",
+        "time": "18:20",
+        "formal": "お疲れさまです。打ち合わせの前に資料を送っていただけますか？3枚目の数字が古いようです。急ぎではありません。",
+        "casual": "打ち合わせ前に資料送ってもらえる？3枚目の数字、古いかも。急ぎじゃないです。",
+        "excited": "お疲れさまです！打ち合わせ前に資料を送ってもらえますか？3枚目の数字、たぶん古いです。急ぎではないです！"
+      },
+      "email": {
+        "to": "宛先: サラ",
+        "formal": "サラ様\n\n本日はありがとうございました。木曜日までに提案書の更新版をお送りします。何かあればお知らせください。\n\nよろしくお願いいたします",
+        "casual": "サラさん\n\n今日はありがとうございました。更新した提案書は木曜までに送りますね。その前に何か必要なら言ってください。\n\nよろしく",
+        "excited": "サラさん\n\n今日は本当にありがとうございました！木曜までに更新した提案書を送ります。その前に何か必要なら、いつでも言ってください！\n\nよろしくお願いします"
+      },
+      "other": {
+        "formal": "通話メモ：料金ページは好評で、オンボーディングを短くしてほしいとのこと。来週フォローアップする。",
+        "casual": "通話メモ：料金ページ好評、オンボーディングは短めがいい。来週フォロー",
+        "excited": "通話メモ：料金ページがすごく好評！オンボーディングは短めがいいとのこと。来週フォロー！"
+      }
+    },
+    "setup": {
+      "introTitle": "OpenWhispr を\nあなたの話し方に",
+      "introDescription": "アプリごとにトーンとスタイルを設定します。",
+      "personalize": "パーソナライズする",
+      "cleanupOffTitle": "あなたの書き方を\nOpenWhispr に",
+      "cleanupOffDescription": "テキスト補正をオンにして、アプリごとにトーンとスタイルを設定します。",
+      "stepDescription": "いちばん自分らしい例を選んでください。",
+      "progress": "ステップ {{current}}/{{total}}",
+      "finish": "完了"
+    },
+    "banner": {
+      "title": "あなたの書き方を OpenWhispr に教えましょう",
+      "description": "仕事にも、友だちにも、その間のすべてにも、好みのトーンを設定できます。",
+      "start": "始める",
+      "cleanupOffTitle": "あなたの書き方を OpenWhispr に",
+      "cleanupOffDescription": "テキスト補正をオンにして、メッセージやメールなどのトーンを選びましょう。",
+      "notNow": "後で",
+      "decoration": "言葉は、あなたらしく。何を書くときも、誰に書くときも。"
+    },
+    "settings": {
+      "saveChanges": "変更を保存",
+      "saved": "トーンとスタイルを保存しました",
+      "cleanupOff": "テキスト補正がオフのため、これらのトーンは音声入力に反映されません。アシスタントとチャットでは引き続き使われます。",
+      "turnOnCleanup": "テキスト補正をオンにする",
+      "enabled": "トーンとボイスを有効化",
+      "enabledDescription": "テキスト補正、アシスタント、チャットがアプリの種類ごとにあなたのトーンを使います。オフのときは標準のトーンになります。"
+    }
   }
 }

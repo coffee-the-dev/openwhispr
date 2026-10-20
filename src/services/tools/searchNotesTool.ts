@@ -2,8 +2,9 @@ import type { SpaceItem } from "../../types/electron";
 import type { ContainerScope } from "../../types/chat";
 import type { ToolDefinition, ToolResult } from "./ToolRegistry";
 import { resolveSpace } from "./utils";
+import { withoutAttendeesFence } from "../../utils/noteAttendees";
 
-const MAX_CONTENT_LENGTH = 500;
+export const MAX_CONTENT_LENGTH = 500;
 
 interface SearchToolOptions {
   /** Pins every search to this container; the LLM's space arg is dropped. */
@@ -116,11 +117,13 @@ async function executeLocalSearch(
   const spaceNameById = new Map(spaces.map((s) => [s.id, s.name]));
   const results = notes.map((note) => ({
     id: note.id,
-    title: note.title,
+    title: withoutAttendeesFence(note.title),
     date: note.created_at,
     type: note.note_type,
     space: spaceNameById.get(note.space_id) ?? null,
-    content: (note.enhanced_content || note.content).slice(0, MAX_CONTENT_LENGTH),
+    content: withoutAttendeesFence(
+      (note.enhanced_content || note.content).slice(0, MAX_CONTENT_LENGTH)
+    ),
   }));
 
   return {

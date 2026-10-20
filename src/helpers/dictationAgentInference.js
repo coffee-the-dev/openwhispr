@@ -33,6 +33,7 @@ export function resolveDictationAgentInference(settings) {
       lanUrl: isSelfHosted ? settings.dictationAgentRemoteUrl : undefined,
       customApiKey: isSelfHosted ? settings.dictationAgentCustomApiKey || undefined : undefined,
       disableThinking: settings.dictationAgentDisableThinking,
+      reasoningEffort: settings.dictationAgentReasoningEffort,
     },
   };
 }

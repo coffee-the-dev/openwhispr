@@ -11,6 +11,7 @@ const baseSettings = {
   dictationAgentRemoteUrl: "",
   dictationAgentCustomApiKey: "",
   dictationAgentDisableThinking: true,
+  dictationAgentReasoningEffort: "high",
 };
 
 test("uses the dictation agent scope, not the cleanup scope", async () => {
@@ -22,12 +23,14 @@ test("uses the dictation agent scope, not the cleanup scope", async () => {
     cleanupMode: "self-hosted",
     cleanupRemoteUrl: "https://cleanup.lan/v1",
     cleanupModel: "qwen3.8-flash-next",
+    cleanupReasoningEffort: "low",
   });
 
   assert.equal(result.model, "qwen3.5-9b-q4_k_m");
   assert.equal(result.config.provider, "local");
   assert.equal(result.config.lanUrl, undefined);
   assert.equal(result.displayProvider, "local");
+  assert.equal(result.config.reasoningEffort, "high");
 });
 
 test("a local agent is unreachable without an explicit model", async () => {

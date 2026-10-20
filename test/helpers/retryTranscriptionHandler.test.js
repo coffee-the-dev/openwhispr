@@ -70,6 +70,11 @@ const CONVERTED_WAV = Buffer.concat([WAV_BUFFER, Buffer.from("converted")]);
 const wavConversions = [];
 let convertBehavior = async () => CONVERTED_WAV;
 
+const textUpdates = [];
+const statusUpdates = [];
+let parakeetBehavior = async () => ({ success: true, text: "local text" });
+let whisperBehavior = async () => ({ success: true, text: "whisper text" });
+
 // Kept installed for the whole file: ffmpegUtils is require()d lazily at
 // handler invocation time, not at module load.
 Module._load = function loadWithMocks(request, parent, isMain) {
@@ -117,10 +122,21 @@ function buildFakeThis() {
       getAudioBuffer: (id) => (id === 7 ? Buffer.from([1, 2, 3]) : id === 8 ? WAV_BUFFER : null),
     },
     databaseManager: {
-      updateTranscriptionText: () => {},
-      updateTranscriptionStatus: () => {},
+      updateTranscriptionText: (id, text) => textUpdates.push({ id, text }),
+      updateTranscriptionStatus: (id, status) => statusUpdates.push({ id, status }),
       updateTranscriptionAudio: () => {},
       getTranscriptionById: (id) => dbRows.get(id),
+    },
+    parakeetManager: {
+      transcribeLocalParakeet: (buffer, options) => parakeetBehavior(buffer, options),
+    },
+    whisperManager: {
+      serverManager: { isAvailable: () => true },
+      transcribeLocalWhisper: (buffer, options) => whisperBehavior(buffer, options),
+    },
+    _resolveWhisperVadOptions: () => ({}),
+    _uploadCancelRegistry: {
+      register: () => ({ signal: new AbortController().signal, release: () => {} }),
     },
     environmentManager: {
       getCustomTranscriptionKey: () => selfHostedKey,
@@ -267,6 +283,128 @@ test("retry: local mode never reaches the network, even with a leftover server U
   assert.equal(fetches.length, 0);
 });
 
+const PARAKEET_SETTINGS = {
+  transcriptionMode: "local",
+  useLocalWhisper: true,
+  localTranscriptionProvider: "nvidia",
+  parakeetModel: "parakeet-tdt-0.6b-v3",
+};
+const WHISPER_SETTINGS = {
+  transcriptionMode: "local",
+  useLocalWhisper: true,
+  localTranscriptionProvider: "whisper",
+  whisperModel: "base",
+};
+
+async function withLocalResult(behavior, settings, run) {
+  const key = settings === WHISPER_SETTINGS ? "whisper" : "parakeet";
+  const original = key === "whisper" ? whisperBehavior : parakeetBehavior;
+  if (key === "whisper") whisperBehavior = behavior;
+  else parakeetBehavior = behavior;
+  textUpdates.length = 0;
+  statusUpdates.length = 0;
+  try {
+    return await run(await invoke(settings));
+  } finally {
+    if (key === "whisper") whisperBehavior = original;
+    else parakeetBehavior = original;
+  }
+}
+
+test("retry: a clean local decode reports no warning", async () => {
+  await withLocalResult(
+    async () => ({ success: true, text: "local text" }),
+    PARAKEET_SETTINGS,
+    (result) => {
+      assert.equal(result.success, true);
+      assert.equal("warning" in result, false);
+      assert.deepEqual(textUpdates, [{ id: 7, text: "local text" }]);
+    }
+  );
+});
+
+test("retry: a truncated Parakeet decode keeps its text and returns the warning", async () => {
+  await withLocalResult(
+    async () => ({ success: true, text: "first half", warning: "truncated" }),
+    PARAKEET_SETTINGS,
+    (result) => {
+      assert.equal(result.success, true);
+      assert.equal(result.warning, "truncated", "the renderer needs it for the partial toast");
+      assert.deepEqual(textUpdates, [{ id: 7, text: "first half" }]);
+      assert.deepEqual(statusUpdates, [{ id: 7, status: "completed" }]);
+    }
+  );
+});
+
+test("retry: an all-empty Parakeet decode reports the invalid response, not a missing engine", async () => {
+  await withLocalResult(
+    async () => ({
+      success: false,
+      error: "invalid_response",
+      message: "Transcription engine returned an unexpected response",
+    }),
+    PARAKEET_SETTINGS,
+    (result) => {
+      assert.equal(result.success, false);
+      assert.equal(result.code, "INVALID_RESPONSE");
+      assert.equal(result.messageKey, "controlPanel.history.retryErrors.invalidResponse");
+      assert.equal(result.error, "Transcription engine returned an unexpected response");
+      assert.equal(textUpdates.length, 0, "a failed retry must leave the row alone");
+      assert.equal(statusUpdates.length, 0);
+    }
+  );
+});
+
+test("retry: no speech from a local engine is reported as such", async (t) => {
+  for (const [name, settings, failure] of [
+    [
+      "parakeet",
+      PARAKEET_SETTINGS,
+      { success: false, code: "NO_SPEECH_DETECTED", message: "No audio detected" },
+    ],
+    ["whisper", WHISPER_SETTINGS, { success: false, message: "No audio detected" }],
+  ]) {
+    await t.test(name, () =>
+      withLocalResult(
+        async () => failure,
+        settings,
+        (result) => {
+          assert.equal(result.success, false);
+          assert.equal(result.code, "NO_SPEECH_DETECTED");
+          assert.equal(result.messageKey, "notes.upload.noSpeechDetected");
+          assert.equal(textUpdates.length, 0);
+        }
+      )
+    );
+  }
+});
+
+test("retry: an unclassified local failure keeps the engine's own message", async () => {
+  await withLocalResult(
+    async () => ({ success: false, error: "decode_failed", message: "Decoder crashed" }),
+    PARAKEET_SETTINGS,
+    (result) => {
+      assert.equal(result.success, false);
+      assert.equal(result.error, "Decoder crashed");
+      assert.equal(result.messageKey, undefined);
+    }
+  );
+});
+
+test("retry: an empty answer from the self-hosted server is no speech, not a missing engine", async (t) => {
+  const originalFetchResponse = fetchResponse;
+  t.after(() => {
+    fetchResponse = originalFetchResponse;
+  });
+  fetchResponse = () => ({ ok: true, status: 200, json: async () => ({ text: "" }) });
+  textUpdates.length = 0;
+  const result = await invoke(SELF_HOSTED_SETTINGS);
+  assert.equal(result.success, false);
+  assert.equal(result.code, "NO_SPEECH_DETECTED");
+  assert.equal(result.messageKey, "notes.upload.noSpeechDetected");
+  assert.equal(textUpdates.length, 0);
+});
+
 const fsNode = require("node:fs");
 const osNode = require("node:os");
 const pathNode = require("node:path");
@@ -369,4 +507,66 @@ test("upload: a server that rejects verbose_json is retried as plain json", asyn
   } finally {
     fetchResponse = previous;
   }
+});
+
+// Electron's net.fetch rejects with a plain Error whose message is the Chromium
+// net error and no code; the self-hosted handlers must classify it before replying.
+async function withFetchRejecting(message, run) {
+  const originalFetchResponse = fetchResponse;
+  fetchResponse = () => {
+    throw new Error(message);
+  };
+  try {
+    return await run();
+  } finally {
+    fetchResponse = originalFetchResponse;
+  }
+}
+
+test("retry: a self-hosted timeout names the user's server", async () => {
+  const result = await withFetchRejecting("net::ERR_CONNECTION_TIMED_OUT", () =>
+    invoke(SELF_HOSTED_SETTINGS)
+  );
+  assert.equal(result.code, "PROVIDER_TIMEOUT");
+  assert.equal(result.messageKey, "providerErrors.selfHosted.timeout");
+});
+
+test("retry: a cancelled request (net::ERR_ABORTED) is not classified", async () => {
+  const result = await withFetchRejecting("net::ERR_ABORTED", () => invoke(SELF_HOSTED_SETTINGS));
+  assert.equal(result.success, false);
+  assert.equal(result.messageKey, undefined);
+  assert.equal(result.error, "net::ERR_ABORTED");
+});
+
+test("upload: an HTTP failure logs its status and a redacted body", async (t) => {
+  const debugLogger = require("../../src/helpers/debugLogger");
+  const warnings = [];
+  t.mock.method(debugLogger, "warn", (message, meta) => warnings.push({ message, meta }));
+  const originalFetchResponse = fetchResponse;
+  t.after(() => {
+    fetchResponse = originalFetchResponse;
+  });
+  const body = '{"error":{"message":"Incorrect API key provided: sk-proj-leakedKey12345"}}';
+  fetchResponse = () => ({
+    ok: false,
+    status: 401,
+    headers: new Headers(),
+    text: async () => body,
+    json: async () => JSON.parse(body),
+  });
+
+  const result = await invokeUpload({
+    transcriptionMode: "self-hosted",
+    remoteTranscriptionUrl: "http://192.168.1.20:8000/v1",
+    remoteTranscriptionModel: "whisper-1",
+  });
+
+  assert.equal(result.code, "PROVIDER_AUTH_FAILED");
+  const failure = warnings.find(
+    ({ message }) => message === "Self-hosted file transcription failed"
+  );
+  assert.ok(failure, "the failure must be logged");
+  assert.equal(failure.meta.status, 401);
+  assert.match(failure.meta.body, /Incorrect API key provided/);
+  assert.equal(failure.meta.body.includes("sk-proj-leakedKey12345"), false);
 });

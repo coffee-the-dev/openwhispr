@@ -5,6 +5,7 @@ const path = require("node:path");
 const vm = require("node:vm");
 const { createRequire } = require("node:module");
 const createWatchdog = require("../../src/helpers/meetingSystemAudioWatchdog");
+const createMeetingSystemAudioHandover = require("../../src/helpers/meetingSystemAudioHandover");
 const micGate = require("../../src/helpers/meetingMicGate");
 
 // Execute the real IPC closures with only their native/network boundaries replaced.
@@ -54,6 +55,7 @@ function harness({ native = true } = {}) {
       },
     },
     meetingSystemAudioWatchdog: watchdog,
+    meetingSystemAudioHandover: createMeetingSystemAudioHandover(),
     meetingEchoLeakDetector: { recordSystemChunk: (buffer) => echo.push(buffer) },
     meetingAecEnabled: true,
     flushPendingMeetingMicChunks() {},

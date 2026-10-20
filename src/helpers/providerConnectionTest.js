@@ -134,6 +134,15 @@ function buildModelEndpoints(base) {
   });
 }
 
+// Where the app sends a self-hosted server's audio: buildApiUrl(normalizeBaseUrl(url),
+// "/audio/transcriptions") in src/config/constants.ts and transcriptionRoute.ts.
+// buildApiUrl normalises its base again, which strips a suffix a trailing slash hid
+// from the first pass, so this address takes the same two passes.
+function buildTranscriptionEndpoint(base) {
+  const { path, query, hash } = splitUrlDecorators(normalizeBaseUrl(normalizeBaseUrl(base)));
+  return joinUrlDecorators(`${path}/audio/transcriptions`, query, hash);
+}
+
 // Every connection test targets the user's own OpenAI-compatible server.
 function resolveProviderRequest(config) {
   const apiKey = typeof config?.apiKey === "string" ? config.apiKey.trim() : "";
@@ -157,27 +166,49 @@ function resolveProviderRequest(config) {
     );
   }
   const endpoints = buildModelEndpoints(parsed.toString());
+  const transcriptionEndpoint = buildTranscriptionEndpoint(parsed.toString());
 
   const headers = { Accept: "application/json" };
   if (apiKey) headers.Authorization = `Bearer ${apiKey}`;
 
-  return { endpoint: endpoints[0], endpoints, headers };
+  return { endpoint: endpoints[0], endpoints, headers, transcriptionEndpoint };
 }
 
-// When several candidate endpoints fail, report the most actionable failure.
+// When several candidate endpoints fail, report the most actionable failure. An answer that
+// faults the setup outranks no answer (unverified), so a busy candidate never hides a refused
+// key or a missing model. No answer outranks a candidate without a model list, which may only
+// be an address the server doesn't use.
 const FAILURE_PRIORITY = {
-  credentialsRejected: 4,
-  providerStatus: 3,
-  modelNotFound: 2.5,
-  endpointNotFound: 2,
-  timeout: 1,
-  network: 0,
+  credentialsRejected: 6,
+  providerStatus: 5,
+  modelNotFound: 4,
+  endpointNotFound: 0,
 };
+const UNVERIFIED_PRIORITY = { providerStatus: 3, timeout: 2, network: 1 };
 
 function pickFailure(current, next) {
   if (!current) return next;
-  return FAILURE_PRIORITY[next.errorCode] > FAILURE_PRIORITY[current.errorCode] ? next : current;
+  const rank = (failure) =>
+    (failure.unverified ? UNVERIFIED_PRIORITY : FAILURE_PRIORITY)[failure.errorCode];
+  return rank(next) > rank(current) ? next : current;
 }
+
+// A server that is slow, busy or down gives no verdict on the settings. Such a failure is
+// marked unverified: the app may go ahead with them, and only a later check can tell.
+function isUnverifiedStatus(status) {
+  return status === 408 || status === 429 || status >= 500;
+}
+
+const TIMEOUT_FAILURE = {
+  errorCode: "timeout",
+  error: "The connection test timed out.",
+  unverified: true,
+};
+const NETWORK_FAILURE = {
+  errorCode: "network",
+  error: "The server could not be reached.",
+  unverified: true,
+};
 
 function describeStatusFailure(status) {
   if (status === 401 || status === 403) {
@@ -194,7 +225,12 @@ function describeStatusFailure(status) {
       status,
     };
   }
-  return { errorCode: "providerStatus", error: `The server returned status ${status}.`, status };
+  const failure = {
+    errorCode: "providerStatus",
+    error: `The server returned status ${status}.`,
+    status,
+  };
+  return isUnverifiedStatus(status) ? { ...failure, unverified: true } : failure;
 }
 
 function normalizeModelId(value) {
@@ -218,53 +254,56 @@ function responseModelIds(payload) {
     .filter(Boolean);
 }
 
+// An empty or non-JSON body reads as undefined. A body that never arrives (the 12 s cap
+// firing, a dropped connection) is not an answer, so its error goes on to probe's catch.
+async function readJson(response) {
+  try {
+    return await response.json();
+  } catch (error) {
+    if (error instanceof SyntaxError) return undefined;
+    throw error;
+  }
+}
+
 async function responseOffersModel(response, model) {
   if (!model) return true;
+  return responseModelIds(await readJson(response)).includes(normalizeModelId(model));
+}
+
+// One request (a GET unless `init` says otherwise) under the 12 s cap. `judge` reads the
+// response inside that window, so a body that stalls cannot hold the check past the cap.
+async function probe(endpoint, request, fetchImpl, judge, init = { method: "GET" }) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 12000);
   try {
-    const payload = await response.json();
-    return responseModelIds(payload).includes(normalizeModelId(model));
-  } catch {
-    return false;
+    const response = await fetchImpl(endpoint, {
+      ...init,
+      headers: request.headers,
+      signal: controller.signal,
+    });
+    return await judge(response);
+  } catch (error) {
+    return { failure: error?.name === "AbortError" ? TIMEOUT_FAILURE : NETWORK_FAILURE };
+  } finally {
+    clearTimeout(timeout);
   }
 }
 
 // GET each candidate model-list endpoint in turn. `onResponse` decides what an
-// OK response means; returning undefined keeps trying the next candidate.
+// OK response means: `{ result }` ends the probe, `{ failure }` tries the next
+// candidate. Resolves `everyListMissing` when every candidate answered 404.
 async function probeModelEndpoints(request, onResponse, fetchImpl) {
   let failure = null;
+  let everyListMissing = true;
   for (const endpoint of request.endpoints) {
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), 12000);
-    try {
-      const response = await fetchImpl(endpoint, {
-        method: "GET",
-        headers: request.headers,
-        signal: controller.signal,
-      });
-      if (response.ok) {
-        const outcome = await onResponse(response);
-        if (outcome.result) return outcome.result;
-        failure = pickFailure(failure, outcome.failure);
-        continue;
-      }
-      failure = pickFailure(failure, describeStatusFailure(response.status));
-    } catch (error) {
-      if (error?.name === "AbortError") {
-        failure = pickFailure(failure, {
-          errorCode: "timeout",
-          error: "The connection test timed out.",
-        });
-      } else {
-        failure = pickFailure(failure, {
-          errorCode: "network",
-          error: "The server could not be reached.",
-        });
-      }
-    } finally {
-      clearTimeout(timeout);
-    }
+    const outcome = await probe(endpoint, request, fetchImpl, async (response) =>
+      response.ok ? onResponse(response) : { failure: describeStatusFailure(response.status) }
+    );
+    if (outcome.result) return outcome.result;
+    everyListMissing = everyListMissing && outcome.failure.status === 404;
+    failure = pickFailure(failure, outcome.failure);
   }
-  return { success: false, ...failure };
+  return { success: false, ...failure, everyListMissing };
 }
 
 function resolveRequestOrFailure(config) {
@@ -282,7 +321,7 @@ function resolveRequestOrFailure(config) {
 async function listRemoteModels(config, fetchImpl = fetch) {
   const { request, failure } = resolveRequestOrFailure(config);
   if (failure) return { ...failure, models: [] };
-  const result = await probeModelEndpoints(
+  const { everyListMissing: _everyListMissing, ...result } = await probeModelEndpoints(
     request,
     async (response) => {
       let models = [];
@@ -306,7 +345,7 @@ async function testProviderConnection(config, fetchImpl = fetch) {
   if (failure) return failure;
 
   const model = String(config?.model || "").trim();
-  return probeModelEndpoints(
+  const { everyListMissing, ...result } = await probeModelEndpoints(
     request,
     async (response) =>
       (await responseOffersModel(response, model))
@@ -319,6 +358,43 @@ async function testProviderConnection(config, fetchImpl = fetch) {
           },
     fetchImpl
   );
+  if (!result.success && everyListMissing && config?.scope === "transcription") {
+    return testTranscriptionEndpoint(request, model, fetchImpl);
+  }
+  return result;
 }
 
-module.exports = { resolveProviderRequest, testProviderConnection, listRemoteModels, isPrivateHost };
+// A speech-only server may publish no model list. Its transcription address answers a
+// request that carries no audio with 400 or 422, which proves the address without
+// transcribing anything. The model is not checked.
+async function testTranscriptionEndpoint(request, model, fetchImpl) {
+  const body = new FormData();
+  body.append("model", model);
+  const outcome = await probe(
+    request.transcriptionEndpoint,
+    request,
+    fetchImpl,
+    async (response) => {
+      if (response.status === 400 || response.status === 422) return {};
+      if (response.status === 404 || response.status === 405) {
+        return {
+          failure: {
+            errorCode: "transcriptionEndpointNotFound",
+            error: "Nothing takes transcriptions at this address.",
+            status: response.status,
+          },
+        };
+      }
+      return { failure: describeStatusFailure(response.status) };
+    },
+    { method: "POST", body }
+  );
+  return outcome.failure ? { success: false, ...outcome.failure } : { success: true };
+}
+
+module.exports = {
+  resolveProviderRequest,
+  testProviderConnection,
+  listRemoteModels,
+  isPrivateHost,
+};

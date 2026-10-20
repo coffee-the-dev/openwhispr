@@ -14,6 +14,12 @@ const modelManager = {
   stopServer: async () => {
     modelManager.stops += 1;
   },
+  serverManager: {
+    keepResident: null,
+    setKeepResident: (keepResident) => {
+      modelManager.serverManager.keepResident = keepResident;
+    },
+  },
 };
 
 const electronStub = {
@@ -123,4 +129,12 @@ test("a window sync keeps the server while another scope still needs its model",
 test("a window sync stops the server once no scope needs its model", async () => {
   await sync({ loaded: MODEL, chatAgentMode: "local", chatAgentModel: "gemma-4-e2b" });
   assert.equal(modelManager.stops, 1);
+});
+
+test("Keep model loaded reaches the shared llama-server", async () => {
+  await sync({ loaded: MODEL, keepLocalModelLoaded: true });
+  assert.equal(modelManager.serverManager.keepResident, true);
+
+  await sync({ loaded: MODEL });
+  assert.equal(modelManager.serverManager.keepResident, false, "missing means off");
 });

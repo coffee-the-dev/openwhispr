@@ -1,4 +1,5 @@
 const assert = require("node:assert/strict");
+const http = require("node:http");
 const test = require("node:test");
 const providerTest = require("../../src/helpers/providerConnectionTest.js");
 
@@ -88,7 +89,12 @@ test("maps authentication and transport failures to safe messages", async () => 
     await testProviderConnection({ baseUrl: "https://vllm.lan/v1", apiKey: "bad" }, async () => {
       throw new Error("secret upstream detail");
     }),
-    { success: false, errorCode: "network", error: "The server could not be reached." }
+    {
+      success: false,
+      errorCode: "network",
+      error: "The server could not be reached.",
+      unverified: true,
+    }
   );
 
   assert.deepEqual(
@@ -101,6 +107,7 @@ test("maps authentication and transport failures to safe messages", async () => 
       errorCode: "providerStatus",
       error: "The server returned status 500.",
       status: 500,
+      unverified: true,
     }
   );
 });
@@ -231,4 +238,265 @@ test("model listing reports rejected credentials and empty lists", async () => {
   );
   assert.equal(empty.success, false);
   assert.deepEqual(empty.models, []);
+});
+
+const jsonResponse = (status, body) => ({
+  ok: status >= 200 && status < 300,
+  status,
+  // undefined is an empty body; a string is raw text (JSON.parse throws on non-JSON).
+  json: async () => {
+    if (body === undefined) throw new SyntaxError("Unexpected end of JSON input");
+    return typeof body === "string" ? JSON.parse(body) : body;
+  },
+});
+
+function recordingFetch(answer) {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    return answer(url, init);
+  };
+  return { calls, fetchImpl };
+}
+
+async function listen(t, handler) {
+  const server = http.createServer(handler);
+  await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
+  t.after(() => {
+    server.closeAllConnections();
+    server.close();
+  });
+  return `http://127.0.0.1:${server.address().port}`;
+}
+
+test("a server that is slow, busy or down gives no verdict, so the failure is unverified", async () => {
+  for (const status of [408, 429, 500, 502, 503, 504]) {
+    const result = await testProviderConnection(
+      { baseUrl: "https://vllm.lan/v1", apiKey: "k" },
+      async () => ({
+        ok: false,
+        status,
+      })
+    );
+    assert.equal(result.success, false, String(status));
+    assert.equal(result.errorCode, "providerStatus", String(status));
+    assert.equal(result.unverified, true, String(status));
+  }
+  const aborted = Object.assign(new Error("This operation was aborted"), { name: "AbortError" });
+  for (const [error, errorCode] of [
+    [aborted, "timeout"],
+    [new TypeError("fetch failed"), "network"],
+  ]) {
+    const result = await testProviderConnection(
+      { baseUrl: "https://vllm.lan/v1", apiKey: "k" },
+      async () => {
+        throw error;
+      }
+    );
+    assert.equal(result.errorCode, errorCode);
+    assert.equal(result.unverified, true, errorCode);
+  }
+});
+
+test("an answer that faults the key or the setup is never unverified", async () => {
+  const base = { baseUrl: "https://vllm.lan/v1", apiKey: "k" };
+  const cases = [
+    [base, () => ({ ok: false, status: 401 }), "credentialsRejected"],
+    [base, () => ({ ok: false, status: 403 }), "credentialsRejected"],
+    [base, () => ({ ok: false, status: 400 }), "providerStatus"],
+    [base, () => ({ ok: false, status: 402 }), "providerStatus"],
+    [
+      { ...base, model: "gone" },
+      () => ({ ok: true, status: 200, json: async () => ({ data: [{ id: "other" }] }) }),
+      "modelNotFound",
+    ],
+    [{ baseUrl: "http://localhost:1234" }, () => ({ ok: false, status: 404 }), "endpointNotFound"],
+  ];
+  for (const [config, answer, errorCode] of cases) {
+    const result = await testProviderConnection(config, async () => answer());
+    assert.equal(result.errorCode, errorCode, errorCode);
+    assert.equal(result.unverified, undefined, errorCode);
+  }
+});
+
+test("across a server's addresses, an answer outranks no answer", async () => {
+  const base = "http://localhost:1234";
+  const aborted = Object.assign(new Error("This operation was aborted"), { name: "AbortError" });
+  const answer = (models, v1) => async (url) => {
+    const reply = url.includes("/v1/models") ? v1 : models;
+    if (reply instanceof Error) throw reply;
+    return reply;
+  };
+  const check = (config, fetchImpl) =>
+    testProviderConnection({ baseUrl: base, ...config }, fetchImpl);
+  const listWithout = {
+    ok: true,
+    status: 200,
+    json: async () => ({ data: [{ id: "other" }] }),
+  };
+
+  // A busy address never hides a refused key or a missing model on the other one.
+  const missing = await check({ model: "m" }, answer({ ok: false, status: 503 }, listWithout));
+  assert.equal(missing.errorCode, "modelNotFound");
+  assert.equal(missing.unverified, undefined);
+  const refused = await check({ apiKey: "bad" }, answer(aborted, { ok: false, status: 401 }));
+  assert.equal(refused.errorCode, "credentialsRejected");
+
+  // A real status wins whichever address answered it.
+  for (const [first, second] of [
+    [400, 503],
+    [503, 400],
+  ]) {
+    const result = await check(
+      {},
+      answer({ ok: false, status: first }, { ok: false, status: second })
+    );
+    assert.equal(result.status, 400, `${first} then ${second}`);
+    assert.equal(result.unverified, undefined, `${first} then ${second}`);
+  }
+
+  // No answer outranks an address without a model list, which the server may not use.
+  const busy = await check({}, answer({ ok: false, status: 404 }, { ok: false, status: 503 }));
+  assert.equal(busy.status, 503);
+  assert.equal(busy.unverified, true);
+  const slow = await check({}, answer({ ok: false, status: 404 }, aborted));
+  assert.equal(slow.errorCode, "timeout");
+  assert.equal(slow.unverified, true);
+});
+
+// A stand-in speech server with no model list. Its transcription address answers `status`,
+// and every request it gets is recorded with its body.
+async function speechServer(t, status) {
+  const received = [];
+  const base = await listen(t, (request, response) => {
+    let body = "";
+    request.on("data", (chunk) => (body += chunk));
+    request.on("end", () => {
+      received.push({ method: request.method, url: request.url, headers: request.headers, body });
+      response.writeHead(request.method === "POST" ? status : 404).end("{}");
+    });
+  });
+  return { base, received };
+}
+
+const speech = (baseUrl, extra = {}) => ({
+  scope: "transcription",
+  baseUrl,
+  model: "whisper-large-v3",
+  ...extra,
+});
+
+test("a speech server with no model list is checked at its transcription address", async (t) => {
+  for (const status of [400, 422]) {
+    const { base, received } = await speechServer(t, status);
+    const result = await testProviderConnection(speech(base, { apiKey: "sk-local" }));
+    assert.deepEqual(result, { success: true }, String(status));
+    assert.deepEqual(
+      received.map((entry) => `${entry.method} ${entry.url}`),
+      ["GET /models", "GET /v1/models", "POST /audio/transcriptions"]
+    );
+    const post = received[2];
+    assert.match(post.headers["content-type"], /^multipart\/form-data; boundary=/);
+    assert.equal(post.headers.authorization, "Bearer sk-local");
+    assert.match(post.body, /name="model"\r\n\r\nwhisper-large-v3\r\n/);
+    assert.doesNotMatch(post.body, /filename=/, "no audio is sent");
+  }
+});
+
+test("the transcription address is the one the app sends audio to", async (t) => {
+  const { base, received } = await speechServer(t, 422);
+  assert.deepEqual(await testProviderConnection(speech(`${base}/v1`)), { success: true });
+  assert.deepEqual(
+    received.map((entry) => `${entry.method} ${entry.url}`),
+    ["GET /v1/models", "POST /v1/audio/transcriptions"]
+  );
+  assert.equal(received[1].headers.authorization, undefined, "no key, no header");
+
+  // The full address with a trailing slash: the slash hides the suffix from one pass of
+  // normalizeBaseUrl, and the app's second pass is what strips it.
+  const typedInFull = await speechServer(t, 422);
+  const fullAddress = `${typedInFull.base}/v1/audio/transcriptions/`;
+  assert.deepEqual(await testProviderConnection(speech(fullAddress)), { success: true });
+  assert.deepEqual(
+    typedInFull.received
+      .filter((entry) => entry.method === "POST")
+      .map((entry) => `${entry.method} ${entry.url}`),
+    ["POST /v1/audio/transcriptions"]
+  );
+});
+
+test("the transcription address's answers keep their meaning", async (t) => {
+  const nothingHere = "Nothing takes transcriptions at this address.";
+  for (const [status, errorCode, error] of [
+    [401, "credentialsRejected", "The server rejected these credentials."],
+    [403, "credentialsRejected", "The server rejected these credentials."],
+    [404, "transcriptionEndpointNotFound", nothingHere],
+    [405, "transcriptionEndpointNotFound", nothingHere],
+    [500, "providerStatus", "The server returned status 500."],
+    [200, "providerStatus", "The server returned status 200."],
+  ]) {
+    const { base } = await speechServer(t, status);
+    const result = await testProviderConnection(speech(base));
+    assert.equal(result.errorCode, errorCode, String(status));
+    assert.equal(result.status, status);
+    assert.equal(result.error, error, String(status));
+  }
+  const flaky = recordingFetch((url, init) => {
+    if (init.method === "POST") throw new TypeError("fetch failed");
+    return jsonResponse(404);
+  });
+  const offline = await testProviderConnection(speech("http://127.0.0.1:9"), flaky.fetchImpl);
+  assert.equal(offline.errorCode, "network");
+  assert.equal(flaky.calls[2].init.method, "POST");
+});
+
+test("only a speech check with every model list missing asks that address", async (t) => {
+  const { base, received } = await speechServer(t, 422);
+  // A language-model server keeps today's answer.
+  const reasoning = await testProviderConnection({ ...speech(base), scope: "reasoning" });
+  assert.equal(reasoning.errorCode, "endpointNotFound");
+  assert.equal(
+    received.some((entry) => entry.method === "POST"),
+    false
+  );
+
+  const keyed = recordingFetch((url) => jsonResponse(url.endsWith("/v1/models") ? 401 : 404));
+  const config = speech("http://127.0.0.1:9", { apiKey: "k" });
+  const rejected = await testProviderConnection(config, keyed.fetchImpl);
+  assert.equal(rejected.errorCode, "credentialsRejected");
+  assert.equal(keyed.calls.length, 2, "a list that answered anything but 404 already said why");
+
+  const down = recordingFetch(() => {
+    throw new TypeError("fetch failed");
+  });
+  const unreachable = await testProviderConnection(speech("http://127.0.0.1:9"), down.fetchImpl);
+  assert.equal(unreachable.errorCode, "network");
+  assert.equal(down.calls.length, 2);
+});
+
+test("a model list whose body never arrives is no verdict, not a missing model", async () => {
+  const aborted = Object.assign(new Error("This operation was aborted"), { name: "AbortError" });
+  for (const [error, errorCode] of [
+    [aborted, "timeout"],
+    [new TypeError("terminated"), "network"],
+  ]) {
+    const fetchImpl = async () => ({
+      ok: true,
+      status: 200,
+      json: async () => {
+        throw error;
+      },
+    });
+    const result = await testProviderConnection(
+      { baseUrl: "https://vllm.lan/v1", apiKey: "k", model: "qwen-test" },
+      fetchImpl
+    );
+    assert.equal(result.errorCode, errorCode);
+    assert.equal(result.unverified, true);
+  }
+  const unreadable = await testProviderConnection(
+    { baseUrl: "https://vllm.lan/v1", apiKey: "k", model: "qwen-test" },
+    async () => jsonResponse(200, "not json")
+  );
+  assert.equal(unreadable.errorCode, "modelNotFound", "a list that can't be read offers nothing");
 });

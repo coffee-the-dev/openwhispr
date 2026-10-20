@@ -27,6 +27,7 @@ export async function generateNoteTitle(text: string): Promise<string> {
         systemPrompt: TITLE_SYSTEM_PROMPT,
         temperature: 0.3,
         disableThinking: settings.noteFormattingDisableThinking,
+        reasoningEffort: settings.noteFormattingReasoningEffort,
       }
     );
     return sanitizeGeneratedTitle(raw);

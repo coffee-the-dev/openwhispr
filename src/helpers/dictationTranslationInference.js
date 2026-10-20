@@ -28,6 +28,7 @@ export function resolveDictationTranslationInference(settings) {
       lanUrl: isSelfHosted ? settings.translationRemoteUrl : undefined,
       customApiKey: isSelfHosted ? settings.translationCustomApiKey || undefined : undefined,
       disableThinking: settings.translationDisableThinking,
+      reasoningEffort: settings.translationReasoningEffort,
     },
   };
 }

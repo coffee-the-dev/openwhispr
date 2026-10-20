@@ -1,11 +1,21 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type FocusEvent,
+  type ReactNode,
+} from "react";
 import { AudioLines, Check, CircleCheck, Download, MousePointer2 } from "../icons";
 import { useTranslation } from "react-i18next";
-import ProviderConnectionTest from "./ProviderConnectionTest";
+import { FieldLabel, ProviderCheckField } from "../ui/ProviderCheckField";
+import { ConnectionCheckAnnouncer } from "../ui/ConnectionCheckAnnouncer";
 import { Button } from "../ui/button";
-import { Input } from "../ui/input";
 import { ProviderIcon } from "../ui/ProviderIcon";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../ui/select";
+import { useConnectionAutoCheck } from "../../hooks/useConnectionAutoCheck";
+import { isWindowSwitchBlur } from "../../hooks/useFocusHold";
 import { useModelDownload } from "../../hooks/useModelDownload";
 import type { ParakeetCheckResult } from "../../types/electron";
 import { useSettingsStore } from "../../stores/settingsStore";
@@ -103,7 +113,7 @@ function StepPrimaryAction({
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="h-9 rounded-[38px] px-5 text-sm"
+      className={`h-9 rounded-[38px] px-5 text-sm ${className}`}
     >
       {children}
     </Button>
@@ -258,12 +268,6 @@ function resolveInitialLocalSelection(
   };
 }
 
-function FieldLabel({ children }: { children: ReactNode }) {
-  return (
-    <span className="mb-1.5 block text-xs text-[var(--onboarding-text-tertiary)]">{children}</span>
-  );
-}
-
 export function SelfHostedSetupStep({
   stepId,
   onReadinessChange,
@@ -302,7 +306,7 @@ export function SelfHostedSetupStep({
   const [draftBaseUrl, setDraftBaseUrl] = useState(seed.baseUrl);
   const [draftApiKey, setDraftApiKey] = useState(() => savedKeyFor(seed.baseUrl));
   const [draftModel, setDraftModel] = useState(seed.model);
-  const [connected, setConnected] = useState(false);
+  const [endpointFocused, setEndpointFocused] = useState(false);
 
   // Base URL and model are typed, so the write is debounced; the flush covers
   // the pending write this card drops when the step advances and unmounts it.
@@ -329,17 +333,35 @@ export function SelfHostedSetupStep({
     else if (storedKey) setDraftApiKey((current) => (current === storedKey ? "" : current));
   }, [savedKey, storedKey]);
 
-  // Dictation proves its server with the connection test; the assistant's model
+  // Dictation proves its server with the automatic check; the assistant's model
   // list is fetched from the server itself, so a picked model is the proof.
+  const check = useConnectionAutoCheck({
+    config: {
+      scope: "transcription",
+      provider: "custom",
+      apiKey: draftApiKey,
+      baseUrl: draftBaseUrl,
+      model: draftModel.trim() || undefined,
+    },
+    ready: !assistant && Boolean(draftBaseUrl.trim()),
+    // A half-typed address may belong to someone else: nothing is sent while it is edited.
+    hold: endpointFocused,
+  });
+  // A server that gave no verdict (busy, slow or unreachable) refused nothing, so its
+  // setup can be used; only a failure that faults it keeps Proceed locked.
   const ready = assistant
     ? Boolean(draftBaseUrl.trim() && draftModel.trim())
-    : Boolean(connected && draftBaseUrl.trim());
+    : check.phase === "connected" || check.phase === "unverified";
 
   useEffect(() => {
     onReadinessChange(ready);
   }, [onReadinessChange, ready]);
 
-  const handleConnected = useCallback((success: boolean) => setConnected(success), []);
+  // Switching to another app blurs the field but leaves it focused in the page, and the
+  // address there may still be half typed.
+  const releaseEndpoint = (event: FocusEvent<HTMLInputElement>) => {
+    if (!isWindowSwitchBlur(event)) setEndpointFocused(false);
+  };
 
   const commitAndProceed = () => {
     const committedBaseUrl = withHttpsScheme(draftBaseUrl);
@@ -358,9 +380,6 @@ export function SelfHostedSetupStep({
     onProceed();
   };
 
-  const inputClass =
-    "onboarding-provider-input h-9 rounded-xl! border px-3 text-xs shadow-none! focus:ring-2 focus:ring-[color-mix(in_srgb,var(--onboarding-accent)_15%,transparent)]";
-
   return (
     <section className={`mt-5 ${SETUP_CARD_CLASS}`}>
       <SetupStageStepper stepId={stepId} />
@@ -377,63 +396,40 @@ export function SelfHostedSetupStep({
           />
         ) : (
           <>
-            <label className="block">
-              <FieldLabel>{t("onboarding.rehaul.provider.endpointUrl")}</FieldLabel>
-              <Input
-                dir="ltr"
-                value={draftBaseUrl}
-                onChange={(event) => setDraftBaseUrl(event.target.value)}
-                placeholder={t("onboarding.rehaul.provider.endpointPlaceholder")}
-                className={inputClass}
-              />
-            </label>
-            <label className="block">
-              <FieldLabel>{t("onboarding.rehaul.provider.apiKey")}</FieldLabel>
-              <Input
-                dir="ltr"
-                type="password"
-                value={draftApiKey}
-                onChange={(event) => setDraftApiKey(event.target.value)}
-                placeholder={t("onboarding.rehaul.provider.optional")}
-                autoComplete="off"
-                spellCheck={false}
-                className={inputClass}
-              />
-            </label>
-            <label className="block">
-              <FieldLabel>{t("onboarding.rehaul.provider.modelId")}</FieldLabel>
-              <Input
-                dir="ltr"
-                value={draftModel}
-                onChange={(event) => setDraftModel(event.target.value)}
-                placeholder={t("onboarding.rehaul.provider.optional")}
-                className={inputClass}
-              />
-            </label>
-
-            {/* Keyed per step only; field changes reset through the component's
-                config effect instead of a remount on every keystroke. */}
-            <ProviderConnectionTest
-              key={stepId}
-              config={{
-                apiKey: draftApiKey,
-                baseUrl: draftBaseUrl,
-                model: draftModel.trim() || undefined,
-              }}
-              onSuccessChange={handleConnected}
-              variant="inline"
+            <ProviderCheckField
+              label={t("onboarding.rehaul.provider.endpointUrl")}
+              value={draftBaseUrl}
+              onChange={(event) => setDraftBaseUrl(event.target.value)}
+              onFocus={() => setEndpointFocused(true)}
+              onBlur={releaseEndpoint}
+              placeholder={t("onboarding.rehaul.provider.endpointPlaceholder")}
+            />
+            <ProviderCheckField
+              label={t("onboarding.rehaul.provider.apiKey")}
+              type="password"
+              value={draftApiKey}
+              onChange={(event) => setDraftApiKey(event.target.value)}
+              placeholder={t("onboarding.rehaul.provider.optional")}
+              autoComplete="off"
+              spellCheck={false}
+            />
+            <ProviderCheckField
+              label={t("onboarding.rehaul.provider.modelId")}
+              check={check}
+              invalidOn="modelNotFound"
+              value={draftModel}
+              onChange={(event) => setDraftModel(event.target.value)}
+              placeholder={t("onboarding.rehaul.provider.optional")}
             />
           </>
         )}
 
-        <StepPrimaryAction
-          onClick={commitAndProceed}
-          disabled={!ready}
-          className="mt-4! w-full focus-visible:ring-0 focus-visible:ring-offset-0"
-        >
+        <StepPrimaryAction onClick={commitAndProceed} disabled={!ready} className="mt-4! w-full">
           {t("onboarding.rehaul.provider.proceed")}
         </StepPrimaryAction>
       </div>
+
+      <ConnectionCheckAnnouncer announcement={check.announcement} />
     </section>
   );
 }
@@ -696,6 +692,7 @@ export function LocalModelSetupStep({
     pendingSelection && pendingDownload.isDownloadingModel(pendingSelection.modelId)
   );
   const canProceed = selectedReady || hasPendingDownload;
+  const showSkip = anyDownloadActive || (assistant && !selectedReady);
 
   const proceed = () => {
     // Leaving mid-download is the same situation as "download in background":
@@ -707,8 +704,6 @@ export function LocalModelSetupStep({
     onProceed();
   };
 
-  // Only reachable while a download runs (see the action row), so the transfer
-  // always needs the tray to apply its pending selection once it lands.
   const skip = () => {
     localStorage.setItem("localSetupPending", "true");
     onSkip();
@@ -845,12 +840,15 @@ export function LocalModelSetupStep({
         })}
       </div>
 
-      <div className={`mt-5 grid gap-2 ${anyDownloadActive ? "grid-cols-2" : "grid-cols-1"}`}>
-        {/* Skip means "don't wait for this download", never "set up local with no
-            model": leaving with nothing on disk still commits useLocalWhisper,
-            and whisper.js then refuses to load the selected model. */}
-        {anyDownloadActive && (
-          <StepSecondaryAction onClick={skip} disabled={!canProceed} className="h-10!">
+      <div className={`mt-5 grid gap-2 ${showSkip ? "grid-cols-2" : "grid-cols-1"}`}>
+        {/* On the assistant step, Skip also lets local-dictation users finish
+            without configuring a cleanup model. */}
+        {showSkip && (
+          <StepSecondaryAction
+            onClick={skip}
+            disabled={!assistant && !canProceed}
+            className="h-10!"
+          >
             {t("common.skip")}
           </StepSecondaryAction>
         )}
