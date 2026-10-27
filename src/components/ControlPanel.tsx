@@ -186,17 +186,6 @@ export default function ControlPanel({ initialSettingsSection }: ControlPanelPro
   }, [loadTranscriptions]);
 
   useEffect(() => {
-    const { noteFilesEnabled, noteFilesPath, noteFilesBaseTag, noteFilesExportDictations } =
-      useSettingsStore.getState();
-    if (!noteFilesEnabled) return;
-    window.electronAPI?.noteFilesSetEnabled?.(true, noteFilesPath || undefined, {
-      skipRebuild: true,
-      baseTag: noteFilesBaseTag,
-      exportDictations: noteFilesExportDictations,
-    });
-  }, []);
-
-  useEffect(() => {
     if (platform !== "darwin") return;
     window.electronAPI?.getPostMigrationState?.().then((state) => {
       if (state?.justMigrated) setShowPostMigration(true);

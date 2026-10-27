@@ -2478,6 +2478,24 @@ export async function initializeSettings(): Promise<void> {
       );
     }
 
+    // Here rather than in the control panel, which doesn't exist on a minimized
+    // start: the note files export and import must run from launch.
+    if (state.noteFilesEnabled) {
+      try {
+        await window.electronAPI.noteFilesSetEnabled?.(true, state.noteFilesPath || undefined, {
+          skipRebuild: true,
+          baseTag: state.noteFilesBaseTag,
+          exportDictations: state.noteFilesExportDictations,
+        });
+      } catch (err) {
+        logger.warn(
+          "Failed to enable note files on startup",
+          { error: (err as Error).message },
+          "settings"
+        );
+      }
+    }
+
     try {
       const [
         customTx,
