@@ -25,7 +25,7 @@
         "description": "Die Notizdateien konnten nicht neu erstellt werden. Stellen Sie sicher, dass die Funktion aktiviert ist und der Ordner beschreibbar ist."
       },
       "enable": "Notizen als Markdown-Dateien exportieren",
-      "oneWayNotice": "Export in eine Richtung: OpenWhispr überschreibt die Dateien einer Notiz, sobald sich diese Notiz das nächste Mal ändert – Änderungen im Vault bleiben also nicht erhalten. Andere Dateien im Ordner werden nie angefasst.",
+      "syncNotice": "Notizen, die OpenWhispr auf einem anderen Computer in diesen Ordner exportiert hat (zum Beispiel über einen synchronisierten Vault), werden importiert, und neuere Fassungen ersetzen ältere. Von Hand im Vault vorgenommene Änderungen bleiben nicht erhalten: OpenWhispr überschreibt die Dateien einer Notiz, sobald sich diese Notiz das nächste Mal ändert. Andere Dateien im Ordner werden nie angefasst.",
       "meetingsPath": "Meetings werden gespeichert unter:",
       "baseTag": "Basis-Tag",
       "baseTagDescription": "Wird zu den Tags jeder exportierten Datei hinzugefügt, neben dem Notiztyp (zum Beispiel openwhispr, meeting)",

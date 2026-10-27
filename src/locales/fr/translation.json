@@ -25,7 +25,7 @@
         "description": "Impossible de reconstruire les fichiers de notes. Assurez-vous que la fonctionnalité est activée et que le dossier est accessible en écriture."
       },
       "enable": "Exporter les notes en fichiers Markdown",
-      "oneWayNotice": "Export à sens unique : OpenWhispr écrase les fichiers d'une note la prochaine fois que cette note change, les modifications faites dans le coffre ne sont donc pas conservées. Les autres fichiers du dossier ne sont jamais touchés.",
+      "syncNotice": "Les notes qu'OpenWhispr a exportées dans ce dossier depuis un autre ordinateur (par exemple via un coffre synchronisé) sont importées, et leurs versions plus récentes remplacent les anciennes. Les modifications faites à la main dans le coffre ne sont pas conservées : OpenWhispr écrase les fichiers d'une note la prochaine fois que cette note change. Les autres fichiers du dossier ne sont jamais touchés.",
       "meetingsPath": "Les réunions sont enregistrées dans :",
       "baseTag": "Étiquette de base",
       "baseTagDescription": "Ajoutée aux étiquettes de chaque fichier exporté, à côté du type de note (par exemple openwhispr, meeting)",

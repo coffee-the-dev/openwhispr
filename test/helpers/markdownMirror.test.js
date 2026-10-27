@@ -110,6 +110,23 @@ test("a file with another database's openwhispr_uid is not claimed", (t) => {
   assert.deepEqual(ls(dir), ["2026-07-01 Old.md"]);
 });
 
+test("another computer's export of the same note is rewritten in place despite its id", (t) => {
+  const basePath = tempBase(t);
+  const dir = path.join(basePath, "Meetings");
+  fs.mkdirSync(dir, { recursive: true });
+  const notePath = path.join(dir, "2026-07-21 Weekly sync.md");
+  fs.writeFileSync(
+    notePath,
+    "---\nopenwhispr_id: 7\nopenwhispr_uid: uid-42\n---\n\nlaptop\n",
+    "utf8"
+  );
+
+  markdownMirror.writeNote(meeting({ transcript: null }), { folderName: "Meetings" });
+
+  assert.deepEqual(ls(dir), ["2026-07-21 Weekly sync.md"]);
+  assert.equal(parseFrontmatter(fs.readFileSync(notePath, "utf8")).openwhispr_id, "42");
+});
+
 test("legacy <id>-<slug> files are renamed to the new scheme and gain frontmatter", (t) => {
   const basePath = tempBase(t);
   const dir = path.join(basePath, "Meetings");

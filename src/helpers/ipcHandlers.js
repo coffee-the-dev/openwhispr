@@ -288,7 +288,14 @@ class IPCHandlers {
     this.noteFilesSync = new NoteFilesSync({
       databaseManager: this.databaseManager,
       stateFilePath: () => path.join(app.getPath("userData"), "note-files-state.json"),
-      translate: (key) => i18nMain.t(key),
+      translate: (key, options) => i18nMain.t(key, options),
+      onImport: ({ created, updated }) => {
+        setImmediate(() => {
+          for (const note of created) broadcastToWindows("note-added", note);
+          for (const note of updated) broadcastToWindows("note-updated", note);
+        });
+        this.notifyVectorChanges();
+      },
     });
     this._granolaImportPending = null;
     this._analyticsHistoryBackfillPromise = null;

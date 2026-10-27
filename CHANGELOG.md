@@ -19,6 +19,7 @@ A fork of 1.10.2 that runs entirely on-device or against servers on your own net
 
 - First-class self-hosted (LAN) endpoints for dictation, meeting and upload transcription and for every AI scope: optional bearer keys, connection tests, a model list read from `/models`, `verbose_json` segments for uploads, a one-request-at-a-time meeting chunk queue, and per-scope thinking, tool-calling and image toggles.
 - Obsidian-friendly Markdown export of notes, transcripts and dictations, with frontmatter and wikilinks.
+- Notes that OpenWhispr on another computer exported into the same Markdown folder (a synced Obsidian vault) are imported, and newer copies update them, last change wins. Exported files gain `openwhispr_updated` (exact UTC time) and `ai_summary` frontmatter, and the first launch rewrites existing exports once.
 - Web search for the assistant through a self-hosted SearXNG instance.
 - `docs/network-allowlist.md` lists every host the app can contact.
 

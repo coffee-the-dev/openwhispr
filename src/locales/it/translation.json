@@ -25,7 +25,7 @@
         "description": "Impossibile ricostruire i file delle note. Assicurati che la funzione sia abilitata e che la cartella sia scrivibile."
       },
       "enable": "Esporta le note come file Markdown",
-      "oneWayNotice": "Esportazione unidirezionale: OpenWhispr sovrascrive i file di una nota la volta successiva che la nota cambia, quindi le modifiche fatte nel vault non vengono mantenute. Gli altri file nella cartella non vengono mai toccati.",
+      "syncNotice": "Le note che OpenWhispr ha esportato in questa cartella da un altro computer (ad esempio tramite un vault sincronizzato) vengono importate, e le loro versioni più recenti sostituiscono quelle precedenti. Le modifiche fatte a mano nel vault non vengono mantenute: OpenWhispr sovrascrive i file di una nota la volta successiva che la nota cambia. Gli altri file nella cartella non vengono mai toccati.",
       "meetingsPath": "Le riunioni vengono salvate in:",
       "baseTag": "Tag di base",
       "baseTagDescription": "Aggiunto ai tag di ogni file esportato, accanto al tipo di nota (ad esempio openwhispr, meeting)",

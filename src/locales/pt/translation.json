@@ -25,7 +25,7 @@
         "description": "Não foi possível reconstruir os arquivos de notas. Verifique se o recurso está ativado e se a pasta permite gravação."
       },
       "enable": "Exportar notas como arquivos Markdown",
-      "oneWayNotice": "Exportação unidirecional: o OpenWhispr sobrescreve os arquivos de uma nota na próxima vez que ela mudar, então edições feitas no cofre não são mantidas. Outros arquivos da pasta nunca são alterados.",
+      "syncNotice": "As notas que o OpenWhispr exportou para esta pasta a partir de outro computador (por exemplo, por um cofre sincronizado) são importadas, e as versões mais recentes substituem as mais antigas. Edições feitas à mão no cofre não são mantidas: o OpenWhispr sobrescreve os arquivos de uma nota na próxima vez que ela mudar. Outros arquivos da pasta nunca são alterados.",
       "meetingsPath": "As reuniões são salvas em:",
       "baseTag": "Tag base",
       "baseTagDescription": "Adicionada às tags de cada arquivo exportado, junto ao tipo de nota (por exemplo openwhispr, meeting)",

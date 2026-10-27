@@ -10,6 +10,10 @@ const {
 const DEFAULT_BASE_TAG = "openwhispr";
 const TRANSCRIPT_SUFFIX = " (transcript)";
 const MAX_TITLE_LENGTH = 80;
+// Marks where a note file's raw notes start after its AI summary, so the
+// importer (noteImportFormat.js) can split them apart again. An HTML comment:
+// hidden in Obsidian's reading view.
+const NOTES_MARKER = "<!-- openwhispr:notes -->";
 
 const pad = (n) => String(n).padStart(2, "0");
 
@@ -29,6 +33,14 @@ function formatLocalDateTime(value) {
   const date = toDate(value);
   if (!date) return null;
   return `${formatLocalDate(date)}T${pad(date.getHours())}:${pad(date.getMinutes())}:${pad(date.getSeconds())}`;
+}
+
+// The exact last-change time (UTC) another computer's import compares
+// against; `updated` is local time without a zone, which isn't comparable
+// across time zones.
+function formatUtcDateTime(value) {
+  const date = toDate(value);
+  return date ? date.toISOString().replace(/\.\d{3}Z$/, "Z") : null;
 }
 
 function formatLocalTime(date) {
@@ -237,6 +249,7 @@ function commonFrontmatter(note, ctx, type) {
   return [
     ["openwhispr_id", note.id],
     ["openwhispr_uid", note.client_note_id || null],
+    ["openwhispr_updated", formatUtcDateTime(note.updated_at || note.created_at), { raw: true }],
     ["title", note.title || "Untitled"],
     ["type", type],
     ["date", formatLocalDate(note.created_at), { raw: true }],
@@ -251,17 +264,18 @@ function buildNoteMarkdown(note, ctx, stem) {
   const hasTranscript = segments.length > 0;
   const type = mapNoteType(note.note_type);
   const transcriptStem = `${stem}${TRANSCRIPT_SUFFIX}`;
+  const summary = stripLeadingTitleHeading(note.enhanced_content, note.title);
+  const raw = stripLeadingTitleHeading(note.content, note.title);
   const frontmatter = buildFrontmatter([
     ...commonFrontmatter(note, ctx, type),
     ["duration", resolveDuration(note, segments)],
     ["participants", resolveParticipants(note, segments, ctx.speakerMappings)],
     ["calendar_event", formatCalendarEvent(ctx.calendarEvent)],
+    ["ai_summary", summary ? "true" : null, { raw: true }],
     ["tags", buildTags(ctx.baseTag ?? DEFAULT_BASE_TAG, type)],
     ["transcript", hasTranscript ? wikilink(transcriptStem) : null],
   ]);
 
-  const summary = stripLeadingTitleHeading(note.enhanced_content, note.title);
-  const raw = stripLeadingTitleHeading(note.content, note.title);
   const transcriptLabel = ctx.transcriptLabel || "Transcript";
   const notesHeading = ctx.notesHeading || "Notes";
 
@@ -269,7 +283,7 @@ function buildNoteMarkdown(note, ctx, stem) {
   if (hasTranscript) parts.push(`Related: ${wikilink(transcriptStem, transcriptLabel)}`);
   if (summary) {
     parts.push(summary);
-    if (raw && raw !== summary) parts.push(`## ${notesHeading}\n\n${raw}`);
+    if (raw && raw !== summary) parts.push(`${NOTES_MARKER}\n## ${notesHeading}\n\n${raw}`);
     if (hasTranscript) parts.push(`Source: ${wikilink(transcriptStem, transcriptLabel)}`);
   } else if (raw) {
     parts.push(raw);
@@ -331,6 +345,7 @@ function buildDictationEntry(date, text) {
 
 module.exports = {
   DEFAULT_BASE_TAG,
+  NOTES_MARKER,
   TRANSCRIPT_SUFFIX,
   buildDictationEntry,
   buildDictationHeader,
@@ -343,6 +358,7 @@ module.exports = {
   formatDuration,
   formatLocalDate,
   formatLocalDateTime,
+  formatUtcDateTime,
   legacySlug,
   legacyTranscriptFileName,
   mapNoteType,
@@ -354,5 +370,6 @@ module.exports = {
   sanitizeTag,
   stripLeadingTitleHeading,
   transcriptFileName,
+  unquoteYaml,
   yamlScalar,
 };

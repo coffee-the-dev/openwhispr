@@ -25,7 +25,7 @@
         "description": "Could not rebuild note files. Make sure the feature is enabled and the folder is writable."
       },
       "enable": "Export notes as Markdown files",
-      "oneWayNotice": "One-way export: OpenWhispr overwrites a note's files the next time that note changes, so edits made in the vault are not kept. Other files in the folder are never touched.",
+      "syncNotice": "Notes that OpenWhispr on another computer exported to this folder (for example through a synced vault) are imported, and their newer versions replace older ones. Edits made by hand in the vault are not kept: OpenWhispr overwrites a note's files the next time that note changes. Other files in the folder are never touched.",
       "meetingsPath": "Meetings are saved to:",
       "baseTag": "Base tag",
       "baseTagDescription": "Added to every exported file's tags, next to the note type (for example openwhispr, meeting)",

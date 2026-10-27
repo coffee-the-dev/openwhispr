@@ -11,12 +11,15 @@ const HEADER_BYTES = 4096;
 const LEGACY_NOTE_FILE = /^(\d+)-.+\.md$/;
 const IGNORABLE_DIR_ENTRIES = new Set([".DS_Store", "Thumbs.db", "desktop.ini"]);
 
-// One-way export of notes into a directory — typically an Obsidian vault
-// folder the user also writes to. The mirror only ever renames, overwrites or
-// deletes files it provably owns: a frontmatter `openwhispr_id` (plus
-// `openwhispr_uid` when the note has one) naming the note, or — for the
-// one-time rename of pre-Obsidian exports — the exact legacy file shape for a
-// note that still exists. Anything else in the directory is never touched.
+// Export of notes into a directory — typically an Obsidian vault folder the
+// user also writes to, possibly shared with other computers. The mirror only
+// ever renames, overwrites or deletes files it provably owns: a frontmatter
+// `openwhispr_uid` naming the note (or `openwhispr_id` for a note without a
+// uid), or — for the one-time rename of pre-Obsidian exports — the exact
+// legacy file shape for a note that still exists. Anything else in the
+// directory is never touched. The uid alone decides ownership because a note
+// another computer exported (and noteFilesSync imported) has a different id
+// in each database. Reading files back in is noteFilesSync's job.
 class MarkdownMirror {
   constructor() {
     this._basePath = null;
@@ -196,10 +199,11 @@ class MarkdownMirror {
         if (head == null) continue;
         const fields = format.parseFrontmatter(head);
         if (fields?.openwhispr_id && /^\d+$/.test(fields.openwhispr_id)) {
-          const id = Number(fields.openwhispr_id);
+          const uid = fields.openwhispr_uid || null;
+          const key = this._ownerKey(Number(fields.openwhispr_id), uid);
           const kind = fields.summary !== undefined ? "transcript" : "note";
-          if (!owned.has(id)) owned.set(id, []);
-          owned.get(id).push({ path: filePath, kind, uid: fields.openwhispr_uid || null });
+          if (!owned.has(key)) owned.set(key, []);
+          owned.get(key).push({ path: filePath, kind, uid, fields });
           continue;
         }
         const legacy = LEGACY_NOTE_FILE.exec(file);
@@ -218,13 +222,13 @@ class MarkdownMirror {
     return this._index;
   }
 
-  _ownsEntry(entry, noteUid) {
-    return (entry.uid || null) === (noteUid || null);
+  _ownerKey(noteId, noteUid) {
+    return noteUid ? `uid:${noteUid}` : `id:${noteId}`;
   }
 
   _ownedFiles(noteId, noteUid) {
-    const entries = (this._getIndex().owned.get(noteId) || []).filter(
-      (entry) => this._ownsEntry(entry, noteUid) && this._isRegularFile(entry.path)
+    const entries = (this._getIndex().owned.get(this._ownerKey(noteId, noteUid)) || []).filter(
+      (entry) => this._isRegularFile(entry.path)
     );
     const pick = (kind) => entries.find((entry) => entry.kind === kind)?.path || null;
     return { note: pick("note"), transcript: pick("transcript") };
@@ -232,11 +236,38 @@ class MarkdownMirror {
 
   _recordOwned(noteId, noteUid, kind, filePath) {
     const index = this._getIndex();
-    const entries = (index.owned.get(noteId) || []).filter(
-      (entry) => !(entry.kind === kind && this._ownsEntry(entry, noteUid))
-    );
-    if (filePath) entries.push({ path: filePath, kind, uid: noteUid || null });
-    index.owned.set(noteId, entries);
+    const key = this._ownerKey(noteId, noteUid);
+    const entries = (index.owned.get(key) || []).filter((entry) => entry.kind !== kind);
+    if (filePath) entries.push({ path: filePath, kind, uid: noteUid || null, fields: null });
+    index.owned.set(key, entries);
+  }
+
+  // Rescans the directory (files may have arrived from another computer) and
+  // lists every exported note that has a uid, with its frontmatter. When a
+  // note has several files of a kind (a sync conflict copy), the most
+  // recently updated one wins.
+  scanExportedNotes() {
+    if (!this._baseRealPath) return [];
+    this._index = this._buildIndex();
+    const updatedOf = (entry) =>
+      String(entry.fields?.openwhispr_updated || entry.fields?.updated || "");
+    const newest = (entries, kind) =>
+      entries
+        .filter((entry) => entry.kind === kind && this._isRegularFile(entry.path))
+        .sort((a, b) => updatedOf(b).localeCompare(updatedOf(a)))[0] || null;
+    const notes = [];
+    for (const entries of this._index.owned.values()) {
+      const note = newest(entries, "note");
+      if (!note?.uid) continue;
+      const transcript = newest(entries, "transcript");
+      notes.push({
+        uid: note.uid,
+        notePath: note.path,
+        transcriptPath: transcript?.path || null,
+        fields: note.fields,
+      });
+    }
+    return notes;
   }
 
   // A legacy note file carries `id` and the raw `created_at` it was written

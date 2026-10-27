@@ -25,7 +25,7 @@
         "description": "无法重建笔记文件。请确保已启用该功能，并且文件夹可写。"
       },
       "enable": "将笔记导出为 Markdown 文件",
-      "oneWayNotice": "单向导出：笔记下次变更时，OpenWhispr 会覆盖该笔记的文件，因此在库中所做的编辑不会保留。文件夹中的其他文件绝不会被改动。",
+      "syncNotice": "其他电脑上的 OpenWhispr 导出到此文件夹的笔记（例如通过同步的库）会被导入，较新的版本会替换较旧的版本。在库中手动所做的编辑不会保留：笔记下次变更时，OpenWhispr 会覆盖该笔记的文件。文件夹中的其他文件绝不会被改动。",
       "meetingsPath": "会议保存到：",
       "baseTag": "基础标签",
       "baseTagDescription": "添加到每个导出文件的标签中，与笔记类型并列（例如 openwhispr, meeting）",

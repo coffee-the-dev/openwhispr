@@ -2095,6 +2095,83 @@ class DatabaseManager {
     }
   }
 
+  getNoteByClientNoteId(clientNoteId) {
+    if (!this.db) throw new Error("Database not initialized");
+    return (
+      this.db.prepare("SELECT * FROM notes WHERE client_note_id = ?").get(clientNoteId) || null
+    );
+  }
+
+  /**
+   * Creates or updates the note another computer exported into the note-files
+   * folder (noteFilesSync.js), keyed by client_note_id. `columns` holds only
+   * what changed; `folderName` is resolved (or created) in the private space.
+   * The note keeps the exporting computer's timestamps, so it never looks
+   * newer than the file it came from. A replaced transcript drops the note's
+   * speaker mappings: the file carries every speaker name inline.
+   */
+  applyImportedNote(clientNoteId, columns, { createdAt, updatedAt }) {
+    if (!this.db) throw new Error("Database not initialized");
+    const allowed = [
+      "title",
+      "content",
+      "enhanced_content",
+      "note_type",
+      "transcript",
+      "audio_duration_seconds",
+      "participants",
+      "folder_id",
+      "space_id",
+    ];
+    const { id, created } = this.db.transaction(() => {
+      const values = { ...columns };
+      if (values.folderName !== undefined) {
+        const spaceId = this.getPrivateSpaceId();
+        const name = String(values.folderName || "").trim() || "Personal";
+        const folder = this.db
+          .prepare("SELECT id FROM folders WHERE name = ? AND space_id = ?")
+          .get(name, spaceId);
+        values.folder_id = folder?.id ?? this.createFolder(name, spaceId).folder.id;
+        values.space_id = spaceId;
+      }
+      delete values.folderName;
+      if (values.content == null && "content" in values) values.content = "";
+      const entries = Object.entries(values).filter(
+        ([key, value]) => allowed.includes(key) && value !== undefined
+      );
+      const existing = this.db
+        .prepare("SELECT id FROM notes WHERE client_note_id = ?")
+        .get(clientNoteId);
+      if (!existing) {
+        if (!entries.some(([key]) => key === "space_id")) {
+          entries.push(["space_id", this.getPrivateSpaceId()]);
+        }
+        const names = [
+          "client_note_id",
+          ...entries.map(([key]) => key),
+          "created_at",
+          "updated_at",
+        ];
+        const result = this.db
+          .prepare(
+            `INSERT INTO notes (${names.join(", ")}) VALUES (${names.map(() => "?").join(", ")})`
+          )
+          .run(clientNoteId, ...entries.map(([, value]) => value), createdAt, updatedAt);
+        return { id: Number(result.lastInsertRowid), created: true };
+      }
+      if (values.transcript !== undefined) {
+        this.db.prepare("DELETE FROM speaker_mappings WHERE note_id = ?").run(existing.id);
+      }
+      const assignments = [...entries.map(([key]) => `${key} = ?`), "updated_at = ?"];
+      this.db
+        .prepare(`UPDATE notes SET ${assignments.join(", ")} WHERE id = ?`)
+        .run(...entries.map(([, value]) => value), updatedAt, existing.id);
+      return { id: existing.id, created: false };
+    })();
+    this._emitNoteChange({ type: "upsert", noteId: id });
+    return { note: this.getNote(id), created };
+  }
+
   getExistingClientNoteIds(clientNoteIds) {
     try {
       if (!this.db) throw new Error("Database not initialized");

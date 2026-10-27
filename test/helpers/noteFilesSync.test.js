@@ -28,6 +28,7 @@ process.env.NODE_ENV = "test";
 const DatabaseManager = require("../../src/helpers/database.js");
 const { MarkdownMirror } = require("../../src/helpers/markdownMirror");
 const { NoteFilesSync, FORMAT_VERSION } = require("../../src/helpers/noteFilesSync");
+const format = require("../../src/helpers/noteExportFormat");
 
 function isNativeBindingUnavailable(error) {
   const message = String(error?.message || error);
@@ -60,6 +61,7 @@ function setup(t) {
     mirror: new MarkdownMirror(),
     stateFilePath: path.join(userDataDir, "note-files-state.json"),
     debounceMs: 60_000,
+    watch: false,
   });
   sync.enable(exportDir, { baseTag: "openwhispr" });
   return { db, sync, exportDir, meetingsDir: path.join(exportDir, "Meetings") };
@@ -141,4 +143,92 @@ test("changes are ignored while disabled and a format upgrade triggers a rebuild
   db.updateNote(note.id, { title: "Online" });
   sync.flush();
   assert.match(Object.keys(read(meetingsDir))[0], / Online\.md$/);
+});
+
+// Writes the files another computer sharing the folder would export,
+// replacing (renaming) the copy it wrote before.
+function writeForeignExport(exportDir, note, folderName) {
+  const dir = path.join(exportDir, folderName);
+  fs.mkdirSync(dir, { recursive: true });
+  for (const file of fs.readdirSync(dir)) {
+    const text = fs.readFileSync(path.join(dir, file), "utf8");
+    if (text.includes(`openwhispr_uid: ${note.client_note_id}\n`)) fs.rmSync(path.join(dir, file));
+  }
+  const stem = format.buildFileStem(note);
+  const ctx = { folderName };
+  fs.writeFileSync(
+    path.join(dir, format.noteFileName(stem)),
+    format.buildNoteMarkdown(note, ctx, stem)
+  );
+  fs.writeFileSync(
+    path.join(dir, format.transcriptFileName(stem)),
+    format.buildTranscriptMarkdown(note, ctx, stem)
+  );
+}
+
+test("notes another computer exported are imported, kept current, and stay deleted", (t) => {
+  const env = setup(t);
+  if (!env) return;
+  const { db, sync, exportDir } = env;
+  const researchDir = path.join(exportDir, "Research");
+  const foreign = {
+    id: 900,
+    client_note_id: "laptop-note",
+    title: "Vendor call",
+    note_type: "meeting",
+    content: "typed on the laptop",
+    enhanced_content: "## Summary\n- Signed",
+    created_at: "2026-10-01 09:00:00",
+    updated_at: "2026-10-01 10:00:00",
+    transcript: JSON.stringify([{ speaker: "speaker_0", timestamp: 0, text: "Deal." }]),
+  };
+  writeForeignExport(exportDir, foreign, "Research");
+  const exportedFiles = read(researchDir);
+
+  assert.equal(sync.importFromFiles().created.length, 1);
+  const imported = db.getNoteByClientNoteId("laptop-note");
+  assert.notEqual(imported.id, 900);
+  assert.equal(imported.updated_at, "2026-10-01 10:00:00");
+  assert.equal(imported.enhanced_content, "## Summary\n- Signed");
+  assert.equal(imported.content, "typed on the laptop");
+  assert.equal(db.getFolders().find((f) => f.id === imported.folder_id)?.name, "Research");
+  sync.flush();
+  assert.deepEqual(read(researchDir), exportedFiles, "an import never rewrites its source files");
+  assert.equal(sync.importFromFiles().created.length, 0);
+
+  // A local edit rewrites the same files, whatever id the other computer used.
+  db.updateNote(imported.id, { content: "edited here" });
+  sync.flush();
+  const rewritten = read(researchDir);
+  assert.deepEqual(Object.keys(rewritten).sort(), Object.keys(exportedFiles).sort());
+  assert.match(Object.values(rewritten).join("\n"), new RegExp(`openwhispr_id: ${imported.id}\n`));
+
+  // Only a file updated after the note replaces what changed.
+  writeForeignExport(
+    exportDir,
+    { ...foreign, title: "Stale", updated_at: "2026-10-02 00:00:00" },
+    "Research"
+  );
+  assert.equal(sync.importFromFiles().updated.length, 0);
+  assert.equal(db.getNote(imported.id).title, "Vendor call");
+  const newer = {
+    ...foreign,
+    content: "edited here",
+    title: "Vendor call (signed)",
+    updated_at: "2099-01-01 00:00:00",
+  };
+  writeForeignExport(exportDir, newer, "Research");
+  assert.equal(sync.importFromFiles().updated.length, 1);
+  const updated = db.getNote(imported.id);
+  assert.equal(updated.title, "Vendor call (signed)");
+  assert.equal(updated.content, "edited here");
+  assert.equal(updated.updated_at, "2099-01-01 00:00:00");
+
+  // Deleted here: its copy elsewhere comes back only if it changed afterwards.
+  db.deleteNote(imported.id);
+  sync.flush();
+  writeForeignExport(exportDir, { ...foreign, updated_at: "2026-10-03 00:00:00" }, "Research");
+  assert.equal(sync.importFromFiles().created.length, 0);
+  writeForeignExport(exportDir, { ...foreign, updated_at: "2099-02-01 00:00:00" }, "Research");
+  assert.equal(sync.importFromFiles().created.length, 1);
 });

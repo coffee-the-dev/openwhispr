@@ -1750,7 +1750,7 @@ export default function SettingsPage({
             <div>
               <SectionHeader
                 title={t("settings.noteFiles.title")}
-                description={t("settings.noteFiles.oneWayNotice")}
+                description={t("settings.noteFiles.syncNotice")}
               />
               <SettingsPanel>
                 <SettingsPanelRow>
