@@ -270,6 +270,7 @@ const ARRAY_SETTINGS = new Set([
 const NUMERIC_SETTINGS = new Set([
   "micWarmHoldSeconds",
   "audioRetentionDays",
+  "meetingAudioRetentionDays",
   "transcriptRetentionDays",
   "whisperVadThreshold",
   "whisperVadMinSpeechDurationMs",
@@ -1179,6 +1180,7 @@ export interface SettingsState
 
   setTheme: (value: "light" | "dark" | "auto") => void;
   setAudioRetentionDays: (days: number) => void;
+  setMeetingAudioRetentionDays: (days: number) => void;
   setTranscriptRetentionDays: (days: number) => void;
   setDataRetentionEnabled: (value: boolean) => void;
   setSaveDiscardedTranscriptions: (value: boolean) => void;
@@ -1470,6 +1472,17 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     return "auto" as const;
   })(),
   audioRetentionDays: readNumber("audioRetentionDays", 30),
+  meetingAudioRetentionDays: (() => {
+    // Meeting audio used to follow the audio timer, and only while history was
+    // on. Store that once so later dictation changes don't move it.
+    if (isBrowser && localStorage.getItem("meetingAudioRetentionDays") === null) {
+      const inherited = readBoolean("dataRetentionEnabled", true)
+        ? readNumber("audioRetentionDays", 30)
+        : 0;
+      localStorage.setItem("meetingAudioRetentionDays", String(inherited));
+    }
+    return readNumber("meetingAudioRetentionDays", 30);
+  })(),
   transcriptRetentionDays: readNumber("transcriptRetentionDays", 0),
   dataRetentionEnabled: readBoolean("dataRetentionEnabled", true),
   saveDiscardedTranscriptions: readBoolean("saveDiscardedTranscriptions", false),
@@ -1919,14 +1932,15 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     set({ micWarmHoldSeconds: snapped });
   },
   setAudioRetentionDays: createNumberSetter("audioRetentionDays"),
+  setMeetingAudioRetentionDays: createNumberSetter("meetingAudioRetentionDays"),
   setTranscriptRetentionDays: createNumberSetter("transcriptRetentionDays"),
   setDataRetentionEnabled: (value: boolean) => {
     if (isBrowser) localStorage.setItem("dataRetentionEnabled", String(value));
     set({ dataRetentionEnabled: value });
     logger.info(
       value
-        ? "Data retention enabled — transcriptions and audio will be saved"
-        : "Data retention disabled — transcriptions and audio will not be saved",
+        ? "Dictation history enabled — dictations and their audio will be saved"
+        : "Dictation history disabled — dictations and their audio will not be saved",
       {},
       "settings"
     );
@@ -2793,8 +2807,10 @@ export async function initializeSettings(): Promise<void> {
       const parsed = Number(newValue);
       if (Number.isNaN(parsed)) {
         value =
-          key === "audioRetentionDays" ? 30 : (state as unknown as Record<string, unknown>)[key];
-      } else if (key === "audioRetentionDays") {
+          key === "audioRetentionDays" || key === "meetingAudioRetentionDays"
+            ? 30
+            : (state as unknown as Record<string, unknown>)[key];
+      } else if (key === "audioRetentionDays" || key === "meetingAudioRetentionDays") {
         value = Math.round(parsed);
       } else if (key === "micWarmHoldSeconds") {
         // Same whitelist as the setter — a hand-edited localStorage value

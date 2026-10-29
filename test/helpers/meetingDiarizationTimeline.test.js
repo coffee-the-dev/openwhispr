@@ -77,11 +77,12 @@ function diarizeMeeting({
     diarizationManager,
     databaseManager: { getSpeakerProfiles: () => [] },
     speakerDiarizationEnabled: enabled,
-    // Meeting audio is kept while Audio Retention keeps audio.
+    // Meeting audio follows its own timer, even with dictation history off.
     _retentionSettingsSynced: true,
     _retentionSettings: {
-      dataRetentionEnabled: true,
-      audioRetentionDays: keepMeetingAudio ? 30 : 0,
+      dataRetentionEnabled: false,
+      audioRetentionDays: 0,
+      meetingAudioRetentionDays: keepMeetingAudio ? 30 : 0,
     },
     _archiveMeetingAudio: async (wavPath, archivedNoteId, startedAt) => {
       archived.push({ wavPath, noteId: archivedNoteId, startedAt });

@@ -862,6 +862,7 @@ declare global {
       deleteAllAudio: () => Promise<{ deleted: number }>;
       syncRetentionSettings?: (settings: {
         audioRetentionDays: number;
+        meetingAudioRetentionDays: number;
         transcriptRetentionDays: number;
         dataRetentionEnabled: boolean;
       }) => void;

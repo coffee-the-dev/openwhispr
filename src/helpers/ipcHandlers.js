@@ -788,15 +788,15 @@ class IPCHandlers {
     }, SIX_HOURS_MS);
   }
 
-  // Meeting audio follows Audio Retention: kept while history and audio are on.
+  // Meeting audio has its own timer, independent of the dictation history switch.
   // Unsynced settings are defaults, not the user's choice (#1370).
   _keepsMeetingAudio() {
-    const { dataRetentionEnabled, audioRetentionDays } = this._retentionSettings;
-    return this._retentionSettingsSynced && dataRetentionEnabled && audioRetentionDays > 0;
+    return this._retentionSettingsSynced && this._retentionSettings.meetingAudioRetentionDays > 0;
   }
 
   _runRetentionCleanup() {
-    const { audioRetentionDays, transcriptRetentionDays } = this._retentionSettings;
+    const { audioRetentionDays, meetingAudioRetentionDays, transcriptRetentionDays } =
+      this._retentionSettings;
     try {
       if (transcriptRetentionDays > 0) {
         const { ids, analyticsPurged } =
@@ -809,7 +809,9 @@ class IPCHandlers {
       }
       if (audioRetentionDays > 0) {
         this.audioStorageManager.cleanupExpiredAudio(audioRetentionDays, this.databaseManager);
-        void deleteExpiredMeetingAudio(audioRetentionDays).then((deleted) => {
+      }
+      if (meetingAudioRetentionDays > 0) {
+        void deleteExpiredMeetingAudio(meetingAudioRetentionDays).then((deleted) => {
           if (deleted > 0) debugLogger.info("Expired meeting audio deleted", { deleted });
         });
       }

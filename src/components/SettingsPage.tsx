@@ -140,6 +140,37 @@ const RETENTION_DAY_OPTIONS = [1, 7, 14, 30, 60, 90];
 const RETENTION_SELECT_CLASS =
   "h-7 rounded border border-border/70 bg-surface-1/80 px-2.5 text-xs font-medium text-foreground shadow-sm hover:border-border-hover hover:bg-surface-2/70 focus:outline-none focus:ring-2 focus:ring-ring/30 focus:ring-offset-1 disabled:cursor-not-allowed disabled:opacity-50 transition-colors duration-200";
 
+// Disabled or a number of days; a custom stored value stays selectable.
+function AudioRetentionSelect({
+  value,
+  onChange,
+  disabled = false,
+}: {
+  value: number;
+  onChange: (days: number) => void;
+  disabled?: boolean;
+}) {
+  const { t } = useTranslation();
+  return (
+    <select
+      value={value}
+      disabled={disabled}
+      onChange={(e) => onChange(parseInt(e.target.value, 10))}
+      className={RETENTION_SELECT_CLASS}
+    >
+      <option value={0}>{t("settingsPage.privacy.audioRetentionDisabled")}</option>
+      {value > 0 && !RETENTION_DAY_OPTIONS.includes(value) && (
+        <option value={value}>{t("settingsPage.privacy.retentionDays", { count: value })}</option>
+      )}
+      {RETENTION_DAY_OPTIONS.map((days) => (
+        <option key={days} value={days}>
+          {t("settingsPage.privacy.retentionDays", { count: days })}
+        </option>
+      ))}
+    </select>
+  );
+}
+
 function SectionHeader({
   title,
   description,
@@ -924,6 +955,8 @@ export default function SettingsPage({
     setPanelStartPosition,
     audioRetentionDays,
     setAudioRetentionDays,
+    meetingAudioRetentionDays,
+    setMeetingAudioRetentionDays,
     transcriptRetentionDays,
     setTranscriptRetentionDays,
     dataRetentionEnabled,
@@ -2758,71 +2791,9 @@ EOF`,
               />
             </div>
 
-            {/* Audio Retention */}
+            {/* Dictation history */}
             <div className="border-t border-border/70 pt-6">
-              <SectionHeader
-                title={t("settingsPage.privacy.audioRetention")}
-                description={t("settingsPage.privacy.audioRetentionDescription")}
-              />
-
-              <SettingsPanel>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.privacy.audioRetention")}
-                    description={t("settingsPage.privacy.audioRetentionDescription")}
-                  >
-                    <select
-                      value={audioRetentionDays}
-                      onChange={(e) => {
-                        setAudioRetentionDays(parseInt(e.target.value, 10));
-                      }}
-                      className={RETENTION_SELECT_CLASS}
-                    >
-                      <option value={0}>{t("settingsPage.privacy.audioRetentionDisabled")}</option>
-                      {audioRetentionDays > 0 &&
-                        !RETENTION_DAY_OPTIONS.includes(audioRetentionDays) && (
-                          <option value={audioRetentionDays}>
-                            {t("settingsPage.privacy.retentionDays", {
-                              count: audioRetentionDays,
-                            })}
-                          </option>
-                        )}
-                      {RETENTION_DAY_OPTIONS.map((days) => (
-                        <option key={days} value={days}>
-                          {t("settingsPage.privacy.retentionDays", { count: days })}
-                        </option>
-                      ))}
-                    </select>
-                  </SettingsRow>
-                </SettingsPanelRow>
-                <SettingsPanelRow>
-                  <SettingsRow
-                    label={t("settingsPage.privacy.audioStorageUsage")}
-                    description={
-                      audioStorageUsage.fileCount > 0
-                        ? t("settingsPage.privacy.audioStorageFiles", {
-                            count: audioStorageUsage.fileCount,
-                            size: formatBytes(audioStorageUsage.totalBytes),
-                          })
-                        : t("settingsPage.privacy.audioStorageEmpty")
-                    }
-                  >
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-7 text-xs"
-                      disabled={audioStorageUsage.fileCount === 0}
-                      onClick={handleClearAllAudio}
-                    >
-                      {t("settingsPage.privacy.clearAllAudio")}
-                    </Button>
-                  </SettingsRow>
-                </SettingsPanelRow>
-              </SettingsPanel>
-            </div>
-
-            {/* Data Retention */}
-            <div className="border-t border-border/70 pt-6">
+              <SectionHeader title={t("settingsPage.privacy.dictationHistoryTitle")} />
               <SettingsPanel>
                 <SettingsPanelRow>
                   <SettingsRow
@@ -2856,6 +2827,18 @@ EOF`,
                 </SettingsPanelRow>
                 <SettingsPanelRow>
                   <SettingsRow
+                    label={t("settingsPage.privacy.audioRetention")}
+                    description={t("settingsPage.privacy.audioRetentionDescription")}
+                  >
+                    <AudioRetentionSelect
+                      value={audioRetentionDays}
+                      onChange={setAudioRetentionDays}
+                      disabled={!dataRetentionEnabled}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
+                <SettingsPanelRow>
+                  <SettingsRow
                     label={t("settingsPage.privacy.saveDiscarded")}
                     description={t("settingsPage.privacy.saveDiscardedDescription")}
                   >
@@ -2864,6 +2847,54 @@ EOF`,
                       disabled={!dataRetentionEnabled || audioRetentionDays === 0}
                       onChange={setSaveDiscardedTranscriptions}
                     />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
+            {/* Meetings */}
+            <div className="border-t border-border/70 pt-6">
+              <SectionHeader title={t("settingsPage.privacy.meetingsTitle")} />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.privacy.meetingAudioRetention")}
+                    description={t("settingsPage.privacy.meetingAudioRetentionDescription")}
+                  >
+                    <AudioRetentionSelect
+                      value={meetingAudioRetentionDays}
+                      onChange={setMeetingAudioRetentionDays}
+                    />
+                  </SettingsRow>
+                </SettingsPanelRow>
+              </SettingsPanel>
+            </div>
+
+            {/* Stored audio */}
+            <div className="border-t border-border/70 pt-6">
+              <SectionHeader title={t("settingsPage.privacy.storageTitle")} />
+              <SettingsPanel>
+                <SettingsPanelRow>
+                  <SettingsRow
+                    label={t("settingsPage.privacy.audioStorageUsage")}
+                    description={
+                      audioStorageUsage.fileCount > 0
+                        ? t("settingsPage.privacy.audioStorageFiles", {
+                            count: audioStorageUsage.fileCount,
+                            size: formatBytes(audioStorageUsage.totalBytes),
+                          })
+                        : t("settingsPage.privacy.audioStorageEmpty")
+                    }
+                  >
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 text-xs"
+                      disabled={audioStorageUsage.fileCount === 0}
+                      onClick={handleClearAllAudio}
+                    >
+                      {t("settingsPage.privacy.clearAllAudio")}
+                    </Button>
                   </SettingsRow>
                 </SettingsPanelRow>
               </SettingsPanel>

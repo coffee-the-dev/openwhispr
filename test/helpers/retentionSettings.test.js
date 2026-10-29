@@ -17,6 +17,7 @@ test("reports a change when a retention period is shortened", () => {
       changed: true,
       settings: {
         audioRetentionDays: 1,
+        meetingAudioRetentionDays: 30,
         transcriptRetentionDays: 1,
         dataRetentionEnabled: true,
       },
@@ -35,13 +36,14 @@ test("is idempotent when both values are unchanged — dual-window mount sync", 
 test("keeps the current value when an incoming value is missing or unusable", () => {
   const current = {
     audioRetentionDays: 7,
+    meetingAudioRetentionDays: 14,
     transcriptRetentionDays: 1,
     dataRetentionEnabled: true,
   };
   for (const incoming of [
     undefined,
     {},
-    { audioRetentionDays: "abc", transcriptRetentionDays: -5 },
+    { audioRetentionDays: "abc", meetingAudioRetentionDays: -1, transcriptRetentionDays: -5 },
   ]) {
     assert.deepEqual(applyRetentionSettings(current, incoming), {
       changed: false,
@@ -55,6 +57,7 @@ test("only the main renderer can replace process-global retention settings", () 
   const auxiliaryRenderers = [{}, {}, {}];
   const syncedSettings = {
     audioRetentionDays: 7,
+    meetingAudioRetentionDays: 60,
     transcriptRetentionDays: 30,
     dataRetentionEnabled: true,
   };
@@ -91,6 +94,7 @@ test("only the main renderer can replace process-global retention settings", () 
   );
   assert.deepEqual(current, {
     audioRetentionDays: 90,
+    meetingAudioRetentionDays: 60,
     transcriptRetentionDays: 0,
     dataRetentionEnabled: true,
   });
@@ -156,10 +160,14 @@ test("a disabled retention setting reaches the sweep before it can delete", () =
     },
   });
 
-  handle({ sender: owner }, { audioRetentionDays: 0, transcriptRetentionDays: 0 });
+  handle(
+    { sender: owner },
+    { audioRetentionDays: 0, meetingAudioRetentionDays: 0, transcriptRetentionDays: 0 }
+  );
   assert.deepEqual(sweptWith, [
     {
       audioRetentionDays: 0,
+      meetingAudioRetentionDays: 0,
       transcriptRetentionDays: 0,
       dataRetentionEnabled: true,
     },
@@ -184,4 +192,13 @@ test("carries the effective local-history switch, and reports it changing", () =
   });
   assert.equal(legacy.settings.dataRetentionEnabled, true);
   assert.equal(legacy.changed, false);
+});
+
+test("the meeting audio timer changes on its own", () => {
+  const { changed, settings } = applyRetentionSettings(DEFAULT_RETENTION_SETTINGS, {
+    meetingAudioRetentionDays: 0,
+  });
+  assert.equal(changed, true);
+  assert.equal(settings.meetingAudioRetentionDays, 0);
+  assert.equal(settings.audioRetentionDays, DEFAULT_RETENTION_SETTINGS.audioRetentionDays);
 });

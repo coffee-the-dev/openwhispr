@@ -79,6 +79,7 @@ export interface ApiKeySettings {
 
 export interface PrivacySettings {
   audioRetentionDays: number;
+  meetingAudioRetentionDays: number;
   transcriptRetentionDays: number;
   dataRetentionEnabled: boolean;
   saveDiscardedTranscriptions: boolean;
@@ -166,14 +167,25 @@ function useSettingsInternal() {
   // The history switch is sent alongside the periods because the main process
   // reconstructs Insights history from stored transcripts, and that must answer
   // to the same switch.
-  const { audioRetentionDays, transcriptRetentionDays, dataRetentionEnabled } = store;
+  const {
+    audioRetentionDays,
+    meetingAudioRetentionDays,
+    transcriptRetentionDays,
+    dataRetentionEnabled,
+  } = store;
   useEffect(() => {
     window.electronAPI?.syncRetentionSettings?.({
       audioRetentionDays,
+      meetingAudioRetentionDays,
       transcriptRetentionDays,
       dataRetentionEnabled,
     });
-  }, [audioRetentionDays, transcriptRetentionDays, dataRetentionEnabled]);
+  }, [
+    audioRetentionDays,
+    meetingAudioRetentionDays,
+    transcriptRetentionDays,
+    dataRetentionEnabled,
+  ]);
 
   // Sync startup pre-warming preferences to main process
   const {
@@ -356,6 +368,8 @@ function useSettingsInternal() {
     setWhisperVadSamplesOverlap: store.setWhisperVadSamplesOverlap,
     audioRetentionDays: store.audioRetentionDays,
     setAudioRetentionDays: store.setAudioRetentionDays,
+    meetingAudioRetentionDays: store.meetingAudioRetentionDays,
+    setMeetingAudioRetentionDays: store.setMeetingAudioRetentionDays,
     transcriptRetentionDays: store.transcriptRetentionDays,
     setTranscriptRetentionDays: store.setTranscriptRetentionDays,
     dataRetentionEnabled: store.dataRetentionEnabled,
