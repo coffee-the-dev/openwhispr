@@ -112,6 +112,7 @@ const {
   resolveClusterThreshold,
   dropNegligibleClusters,
   isCollapsedDiarization,
+  capSpeakerClustersByVoice,
 } = require("./diarizationPolicy");
 const { PCM16_MONO_16K_BYTES_PER_SECOND } = require("./transcriptionTimeout");
 const { UPLOAD_AUDIO_EXTENSIONS } = require("../constants/uploadAudioFormats.json");
@@ -2938,7 +2939,6 @@ class IPCHandlers {
 
         const { convertToWav } = require("./ffmpegUtils");
         const { getSafeTempDir } = require("./safeTempDir");
-        const { capSpeakerClustersByVoice } = require("./diarizationPolicy");
         const wavPath = path.join(getSafeTempDir(), `ow-diarize-${Date.now()}.wav`);
 
         try {
@@ -7850,8 +7850,22 @@ class IPCHandlers {
       }
       diarizationSegments = dropNegligibleClusters(diarizationSegments);
     }
-    if (cap != null) {
-      diarizationSegments = this.diarizationManager.capSpeakerClusters(diarizationSegments, cap);
+    if (cap != null && new Set(diarizationSegments.map((s) => s.speaker)).size > cap) {
+      // Fold each extra cluster into the kept one with the closest voice, as
+      // uploads do. Folding into the longest handed a speakerphone call's
+      // second cluster of the user to the other person.
+      const speakerEmbeddings = require("./speakerEmbeddings");
+      let centroids = new Map();
+      try {
+        centroids = await speakerEmbeddings.extractClusterCentroids(wavPath, diarizationSegments);
+      } catch (error) {
+        debugLogger.warn("Speaker voices unavailable; extra clusters fold into the largest", {
+          error: error.message,
+        });
+      }
+      diarizationSegments = capSpeakerClustersByVoice(diarizationSegments, cap, centroids, (a, b) =>
+        speakerEmbeddings.cosineSimilarity(a, b)
+      );
     }
 
     const enrichedSegments = this.diarizationManager.mergeWithTranscript(

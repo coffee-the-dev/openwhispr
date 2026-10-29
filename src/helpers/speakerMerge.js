@@ -128,6 +128,58 @@ function mergeSpeakersWithSegments(diarSegments, textSegments) {
   }));
 }
 
+// A speaker with less than this inside a row is a blip at a turn edge, not a
+// turn: splitting on it would hand a sentence to the wrong person.
+const MIN_TURN_SECONDS = 0.5;
+
+// Meeting rows are fixed ~5 s batches, so one row can hold the end of one
+// person's turn and an interjection from another. Splits such a row at
+// sentence boundaries: each sentence is placed by its character position along
+// the speech heard inside [start, end] (silence skipped, as no text came from
+// it) and takes the speaker heard there; neighbours with the same speaker join
+// up again. Null when the row holds one speaker or one sentence.
+function splitRowAtTurns(text, start, end, diarSegments) {
+  const clipped = diarSegments
+    .map((d) => ({
+      start: Math.max(start, d.start),
+      end: Math.min(end, d.end),
+      speaker: d.speaker,
+    }))
+    .filter((d) => d.end > d.start);
+  const heard = new Map();
+  for (const d of clipped) heard.set(d.speaker, (heard.get(d.speaker) || 0) + d.end - d.start);
+  const speech = clipped
+    .filter((d) => heard.get(d.speaker) >= MIN_TURN_SECONDS)
+    .sort((a, b) => a.start - b.start);
+  if (new Set(speech.map((d) => d.speaker)).size < 2) return null;
+
+  const sentences = splitIntoSentences(text);
+  if (sentences.length < 2) return null;
+
+  const speechSeconds = speech.reduce((sum, d) => sum + d.end - d.start, 0);
+  const totalChars = sentences.reduce((sum, s) => sum + s.length, 0);
+  // Seconds of speech into the row -> where that falls, and who was talking.
+  const locate = (seconds) => {
+    let left = seconds;
+    for (const d of speech) {
+      if (left <= d.end - d.start) return { time: d.start + left, speaker: d.speaker };
+      left -= d.end - d.start;
+    }
+    const last = speech[speech.length - 1];
+    return { time: last.end, speaker: last.speaker };
+  };
+
+  let chars = 0;
+  const assigned = sentences.map((sentence) => {
+    const begin = locate((chars / totalChars) * speechSeconds).time;
+    const { speaker } = locate(((chars + sentence.length / 2) / totalChars) * speechSeconds);
+    chars += sentence.length;
+    return { speaker, text: sentence, start: begin, end: begin };
+  });
+  const runs = consolidateSpeakerRuns(assigned);
+  return runs.length > 1 ? runs : null;
+}
+
 // "Speaker N" labels in order of first appearance, as formatSpeakerTranscript prints them.
 function labelSpeakers(segments) {
   const speakerMap = new Map();
@@ -155,6 +207,7 @@ function formatSpeakerTranscript(mergedSegments) {
 
 module.exports = {
   mergeSpeakersWithText,
+  splitRowAtTurns,
   mergeSpeakersWithSegments,
   consolidateSpeakerRuns,
   labelSpeakers,

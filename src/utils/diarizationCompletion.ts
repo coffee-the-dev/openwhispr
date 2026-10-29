@@ -88,13 +88,46 @@ export function withoutRemovedSegments<
   });
 }
 
+type IncomingSegment = Omit<TranscriptSegment, "id"> & { id?: string; splitFrom?: string };
+
+// Main splits a row that spans a speaker turn into pieces that carry the row's
+// text as `splitFrom`. Swaps this session's copy of that row for the pieces'
+// text, so the merge matches them one to one instead of keeping the whole row
+// and appending the pieces after it.
+export function withSplitRows(
+  rows: TranscriptSegment[],
+  incoming: IncomingSegment[]
+): TranscriptSegment[] {
+  const groups = new Map<string, string[][]>();
+  let current: { key: string; texts: string[] } | null = null;
+  for (const segment of incoming) {
+    if (!segment.splitFrom) {
+      current = null;
+      continue;
+    }
+    const key = `${segment.source}|${segment.splitFrom}`;
+    if (current?.key === key) {
+      current.texts.push(segment.text);
+      continue;
+    }
+    current = { key, texts: [segment.text] };
+    groups.set(key, [...(groups.get(key) ?? []), current.texts]);
+  }
+  if (groups.size === 0) return rows;
+
+  return rows.flatMap((row) => {
+    const texts = groups.get(`${row.source}|${row.text}`)?.shift();
+    return texts ? texts.map((text, k) => ({ ...row, id: `${row.id}-${k}`, text })) : [row];
+  });
+}
+
 // Merges main's result into this session's rows only: the first `seedLength`
 // rows are a resumed note's earlier sessions and stay as saved. `removedCount`
 // is how many of this session's rows were dropped.
 export function mergeSessionDiarization(params: {
   existing: TranscriptSegment[];
   seedLength: number;
-  segments: Array<Omit<TranscriptSegment, "id"> & { id?: string }>;
+  segments: IncomingSegment[];
   removedSegments?: RemovedTranscriptSegment[];
 }): { segments: TranscriptSegment[]; removedCount: number } {
   const { existing, seedLength, segments, removedSegments } = params;
@@ -105,8 +138,11 @@ export function mergeSessionDiarization(params: {
     segments: [
       ...existing.slice(0, seededCount),
       ...mergeTranscriptSegments(
-        keptRows,
-        segments.map((segment, index) => ({ ...segment, id: segment.id || `diarized-${index}` }))
+        withSplitRows(keptRows, segments),
+        segments.map(({ splitFrom: _splitFrom, ...segment }, index) => ({
+          ...segment,
+          id: segment.id || `diarized-${index}`,
+        }))
       ),
     ],
     removedCount: sessionRows.length - keptRows.length,

@@ -63,7 +63,14 @@ const START_MS = 1792414000000;
 
 // Runs main's real _startOrSkipDiarization and resolves with the payload it
 // sends. `outcome` picks the diarized, skipped or failed path.
-const runMainDiarization = (mainSegments, { retracted = [], outcome = "diarized" } = {}) =>
+const runMainDiarization = (
+  mainSegments,
+  {
+    retracted = [],
+    outcome = "diarized",
+    clusters = [{ start: 0, end: 120, speaker: "speaker_00" }],
+  } = {}
+) =>
   new Promise((resolve) => {
     const diarizationManager = new DiarizationManager();
     diarizationManager.isAvailable = () => outcome !== "skipped";
@@ -71,7 +78,7 @@ const runMainDiarization = (mainSegments, { retracted = [], outcome = "diarized"
       if (outcome === "failed") throw new Error("Raw PCM file is empty");
       return "/nonexistent/diarization.wav";
     };
-    diarizationManager.diarize = async () => [{ start: 0, end: 120, speaker: "speaker_00" }];
+    diarizationManager.diarize = async () => clusters;
 
     const handlers = Object.create(IPCHandlers.prototype);
     Object.assign(handlers, {
@@ -154,6 +161,41 @@ test("a bleed-flagged mic segment that duplicates system text never keeps its ep
     ["system", echoed],
   ]);
   assert.ok(merged.every((segment) => segment.speaker));
+});
+
+// A fixed 5 s row can hold one person's sentence and another's interjection.
+// Main splits it at the turn; the renderer must swap its whole-row copy for the
+// pieces, not keep it and append them.
+test("a row spanning a speaker turn comes back as one row per speaker", async () => {
+  const pricing = "Twelve months is seventy six dollars a month.";
+  const live = [
+    { id: "seg-1", source: "system", text: `${pricing} Okay, got it.`, timestamp: START_MS },
+    {
+      id: "seg-2",
+      source: "system",
+      text: "Six months is ninety one.",
+      timestamp: START_MS + 5000,
+    },
+  ];
+  const payload = await runMainDiarization(stripIds(live), {
+    clusters: [
+      { start: 0, end: 3.5, speaker: "speaker_00" },
+      { start: 3.5, end: 5, speaker: "speaker_01" },
+      { start: 5, end: 10, speaker: "speaker_00" },
+    ],
+  });
+  const merged = runRendererCompletion(live, payload);
+
+  assert.deepEqual(rows(merged), [
+    ["system", pricing],
+    ["system", "Okay, got it."],
+    ["system", "Six months is ninety one."],
+  ]);
+  const [first, interjection, third] = merged.map((segment) => segment.speaker);
+  assert.equal(first, third);
+  assert.notEqual(first, interjection);
+  assert.equal(new Set(merged.map((segment) => segment.id)).size, merged.length);
+  assertNoEpochTimestamps(merged);
 });
 
 const racing = "sounds good to me";

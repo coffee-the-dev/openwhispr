@@ -9,7 +9,8 @@ const { resolveBinaryPath, gracefulStopProcess } = require("../utils/serverUtils
 const { getModelsDirForService } = require("./modelDirUtils");
 const { convertToWav } = require("./ffmpegUtils");
 const { getSafeTempDir } = require("./safeTempDir");
-const { applyConfirmedSpeaker } = require("./speakerAssignmentPolicy");
+const { applyConfirmedSpeaker, isSpeakerLocked } = require("./speakerAssignmentPolicy");
+const { splitRowAtTurns } = require("./speakerMerge");
 const { buildSpeakerRenumber } = require("./speakerIndexBase");
 const sidecarPidFile = require("./sidecarPidFile");
 const {
@@ -440,20 +441,6 @@ class DiarizationManager {
     return { kept, removed };
   }
 
-  capSpeakerClusters(segments, cap) {
-    if (!cap || !segments?.length) return segments;
-    const totals = new Map();
-    for (const s of segments) {
-      totals.set(s.speaker, (totals.get(s.speaker) || 0) + (s.end - s.start));
-    }
-    if (totals.size <= cap) return segments;
-
-    const ranked = [...totals.entries()].sort((a, b) => b[1] - a[1]);
-    const keep = new Set(ranked.slice(0, cap).map(([sp]) => sp));
-    const primary = ranked[0][0];
-    return segments.map((s) => (keep.has(s.speaker) ? s : { ...s, speaker: primary }));
-  }
-
   // Expects echo duplicates already removed with splitMicEchoDuplicates, so
   // the caller can report them to the renderer.
   mergeWithTranscript(
@@ -485,7 +472,10 @@ class DiarizationManager {
       return null;
     };
 
-    return transcriptSegments.map((seg, index) => {
+    // A row spanning a turn comes back as several, one per speaker (in order);
+    // each piece carries `splitFrom` (the row's text) so the renderer can swap
+    // its own copy of that row for the pieces. Rows the user labelled stay whole.
+    return transcriptSegments.flatMap((seg, index) => {
       const enriched = { ...seg };
 
       if (seg.source === "mic" && (diarizedSource !== "mic" || micSingleCluster)) {
@@ -499,6 +489,22 @@ class DiarizationManager {
       if (seg.source === diarizedSource && seg.timestamp != null) {
         const segStart = seg.timestamp;
         const segEnd = nextTimestampAt(index, diarizedSource) ?? segStart + 2.5;
+
+        const pieces = isSpeakerLocked(seg)
+          ? null
+          : splitRowAtTurns(seg.text, segStart, segEnd, diarizationSegments);
+        if (pieces) {
+          return pieces.map(({ text, start, speaker }) => {
+            const { id: _id, ...rest } = seg;
+            const piece = { ...rest, text, timestamp: start, splitFrom: seg.text };
+            applyConfirmedSpeaker(piece, {
+              speaker: speakerMap.get(speaker) || speaker,
+              speakerIsPlaceholder: false,
+            });
+            return piece;
+          });
+        }
+
         const midpoint = segStart + (segEnd - segStart) / 2;
         let overlapSpeaker = null;
         let nearestSpeaker = null;

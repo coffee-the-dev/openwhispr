@@ -65,6 +65,7 @@ function diarizeMeeting({
   keepMeetingAudio = false,
   archived = [],
   noteId = null,
+  sessionConfig = null,
 }) {
   const diarizationManager = new DiarizationManager();
   diarizationManager.isAvailable = () => true;
@@ -102,7 +103,7 @@ function diarizeMeeting({
       segments,
       win,
       null,
-      null,
+      sessionConfig,
       noteId,
       diarizedSource
     );
@@ -176,6 +177,40 @@ test("an automatic run drops phantom slivers instead of naming them", async () =
     "speaker_0",
     "speaker_1",
   ]);
+});
+
+// A speakerphone call: the server splits the user into two clusters beside the
+// remote voice. A count of 2 must fold the user's second cluster into the
+// user's first by voice; folding into the longest cluster (the remote voice)
+// labelled most of the call as the other person.
+test("a set count folds extra clusters into the closest voice, not the longest", async (t) => {
+  const speakerEmbeddings = require("../../src/helpers/speakerEmbeddings");
+  const voices = new Map([
+    ["remote", [1, 0]],
+    ["user-a", [0, 1]],
+    ["user-b", [0.2, 0.98]],
+  ]);
+  t.mock.method(speakerEmbeddings, "isAvailable", () => false);
+  t.mock.method(speakerEmbeddings, "extractClusterCentroids", async () => voices);
+
+  const merged = await diarizeMeeting({
+    audioStartedAt: T0,
+    segments: [
+      { text: "remote one", source: "mic", timestamp: T0 + 5_000 },
+      { text: "user one", source: "mic", timestamp: T0 + 35_000 },
+      { text: "user two", source: "mic", timestamp: T0 + 55_000 },
+    ],
+    clusters: [
+      { start: 0, end: 30, speaker: "remote" },
+      { start: 30, end: 50, speaker: "user-a" },
+      { start: 50, end: 65, speaker: "user-b" },
+    ],
+    sessionConfig: { explicit: true, expectedCount: 2 },
+  });
+
+  const speakerOf = (text) => merged.find((segment) => segment.text === text).speaker;
+  assert.equal(speakerOf("user one"), speakerOf("user two"));
+  assert.notEqual(speakerOf("user one"), speakerOf("remote one"));
 });
 
 test("a skipped diarization run still deletes the raw capture", async () => {
