@@ -2,7 +2,6 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const load = () => import("../../src/services/uploadNotes.ts");
-const { MAX_SPEAKER_COUNT } = require("../../src/constants/speakerDetection.json");
 
 test("maps the diarization settings onto the note columns", async () => {
   const { buildUploadNoteMetadata } = await load();
@@ -21,7 +20,7 @@ test("maps the diarization settings onto the note columns", async () => {
 test("the speaker count entered for an upload is never stored on the note", async () => {
   const { buildUploadNoteMetadata } = await load();
 
-  for (const numSpeakers of [null, 2, MAX_SPEAKER_COUNT]) {
+  for (const numSpeakers of [null, 2, 40]) {
     const { noteUpdates } = buildUploadNoteMetadata(
       { enabled: true, ready: true, numSpeakers },
       60

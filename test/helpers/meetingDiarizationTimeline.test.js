@@ -155,6 +155,29 @@ test("segments without an audio start keep their timestamp", async () => {
   assert.equal(merged[0].speaker, "speaker_0");
 });
 
+// No count the user set: the engine decides, and a sub-second sliver cluster
+// is embedding noise, not a person, so it never gets a transcript line.
+test("an automatic run drops phantom slivers instead of naming them", async () => {
+  const merged = await diarizeMeeting({
+    audioStartedAt: T0,
+    segments: [
+      { text: "first", source: "mic", timestamp: T0 + 5_000 },
+      { text: "second", source: "mic", timestamp: T0 + 35_000 },
+      { text: "blip", source: "mic", timestamp: T0 + 60_100 },
+    ],
+    clusters: [
+      { start: 0, end: 30, speaker: "A" },
+      { start: 30, end: 60, speaker: "B" },
+      { start: 60, end: 60.4, speaker: "C" },
+    ],
+  });
+
+  assert.deepEqual([...new Set(merged.map((segment) => segment.speaker))].sort(), [
+    "speaker_0",
+    "speaker_1",
+  ]);
+});
+
 test("a skipped diarization run still deletes the raw capture", async () => {
   const rawPcmPath = path.join(os.tmpdir(), `ow-diarize-raw-mic-test-${process.pid}.pcm`);
   fs.writeFileSync(rawPcmPath, Buffer.alloc(4800));

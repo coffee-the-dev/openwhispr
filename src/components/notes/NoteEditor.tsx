@@ -72,7 +72,7 @@ import {
 } from "../../utils/transcriptSpeakerState";
 import NoteParticipants from "./NoteParticipants";
 import { parseNoteParticipants } from "../../utils/noteAttendees";
-import { resolveExpectedSpeakerCount } from "../../utils/participants";
+import { isExplicitSpeakerCount } from "../../utils/participants";
 import { DEFAULT_EXPECTED_SPEAKER_COUNT } from "../../constants/speakerDetection.json";
 import { observeFloatingChatLayout } from "./floatingChatLayout";
 import {
@@ -1185,7 +1185,14 @@ export default function NoteEditor({
                       <RedetectSpeakersBar
                         key={note.id}
                         initialCount={
-                          resolveExpectedSpeakerCount(note) ?? DEFAULT_EXPECTED_SPEAKER_COUNT
+                          // The count the user set, else the speakers found (you
+                          // included) — never the invite, which lists who was asked.
+                          isExplicitSpeakerCount(note.expected_speaker_count)
+                            ? note.expected_speaker_count
+                            : Math.max(
+                                DEFAULT_EXPECTED_SPEAKER_COUNT,
+                                new Set(displaySegments.map((s) => s.speaker).filter(Boolean)).size
+                              )
                         }
                         onRun={handleRedetectSpeakers}
                       />

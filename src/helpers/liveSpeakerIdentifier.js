@@ -3,13 +3,15 @@ const debugLogger = require("./debugLogger");
 const speakerEmbeddings = require("./speakerEmbeddings");
 const { MAX_EMBEDDING_SECONDS } = speakerEmbeddings;
 const { downsample24kTo16k, pcm16ToFloat32 } = require("../utils/audioUtils");
-const { MAX_SPEAKER_COUNT } = require("../constants/speakerDetection.json");
+const { LIVE_SPEAKER_LIMIT } = require("../constants/speakerDetection.json");
 const { normalizeSpeakerIndexBase } = require("./speakerIndexBase");
 
+// Live labels are provisional (the post-meeting run replaces them), so a loose
+// limit only keeps noise from minting new labels mid-meeting.
 function clampMaxSpeakers(value) {
   const n = Number(value);
-  if (!Number.isFinite(n)) return MAX_SPEAKER_COUNT;
-  return Math.max(1, Math.min(MAX_SPEAKER_COUNT, Math.floor(n)));
+  if (!Number.isFinite(n)) return LIVE_SPEAKER_LIMIT;
+  return Math.max(1, Math.min(LIVE_SPEAKER_LIMIT, Math.floor(n)));
 }
 
 // onnxruntime-node ships no darwin/x64 prebuilt binding since 1.24, so the
@@ -173,7 +175,7 @@ class LiveSpeakerIdentifier {
     this.currentSegmentSpeakerName = null;
     this.lastLiveIdentificationSample = 0;
     this._diarizationManager = null;
-    this.maxSpeakers = MAX_SPEAKER_COUNT;
+    this.maxSpeakers = LIVE_SPEAKER_LIMIT;
     this.enabled = true;
   }
 
@@ -215,7 +217,7 @@ class LiveSpeakerIdentifier {
     const {
       onSpeakerIdentified = null,
       getSpeakerProfiles = null,
-      maxSpeakers = MAX_SPEAKER_COUNT,
+      maxSpeakers = LIVE_SPEAKER_LIMIT,
       enabled = true,
       speakerIndexBase = 0,
     } = resolvedOptions;

@@ -1,4 +1,5 @@
 import type { CalendarAttendee } from "../types/calendar";
+import { LIVE_SPEAKER_LIMIT } from "../constants/speakerDetection.json";
 
 interface ParticipantSpeakerCountSyncInput {
   recordingNoteId: number | null;
@@ -8,11 +9,14 @@ interface ParticipantSpeakerCountSyncInput {
   participants: readonly CalendarAttendee[];
 }
 
+// An invite says roughly how big a meeting is, never how many will talk, so it
+// only sizes live labels (up to LIVE_SPEAKER_LIMIT); post-meeting detection
+// ignores it.
 export const resolveParticipantExpectedSpeakerCount = (
   participants: readonly CalendarAttendee[]
 ): number | null => {
   const others = participants.filter((attendee) => attendee?.self !== true).length;
-  return others > 0 ? others + 1 : null;
+  return others > 0 ? Math.min(others + 1, LIVE_SPEAKER_LIMIT) : null;
 };
 
 // Raise-only, mirroring _refreshMeetingSpeakerConfigFromNote in main: a roster

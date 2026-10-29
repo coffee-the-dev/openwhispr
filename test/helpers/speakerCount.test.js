@@ -2,16 +2,12 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const { normalizeStoredSpeakerCount } = require("../../src/helpers/speakerCount");
-const { MAX_SPEAKER_COUNT } = require("../../src/constants/speakerDetection.json");
 
-test("keeps a usable stored count", () => {
+test("keeps a usable stored count, however large", () => {
   assert.equal(normalizeStoredSpeakerCount(1), 1);
   assert.equal(normalizeStoredSpeakerCount(3), 3);
-  assert.equal(normalizeStoredSpeakerCount(MAX_SPEAKER_COUNT), MAX_SPEAKER_COUNT);
-});
-
-test("clamps above the supported maximum", () => {
-  assert.equal(normalizeStoredSpeakerCount(MAX_SPEAKER_COUNT + 5), MAX_SPEAKER_COUNT);
+  // A count the user chose: a 40-person meeting stays 40.
+  assert.equal(normalizeStoredSpeakerCount(40), 40);
 });
 
 test("rejects values the cloud can persist but the app cannot use", () => {

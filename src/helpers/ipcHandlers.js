@@ -106,8 +106,14 @@ const screenContextCapture = require("./screenContextCapture");
 const { classifyToneAppCategory } = require("./toneAppCategories");
 const {
   DEFAULT_EXPECTED_SPEAKER_COUNT,
-  MAX_SPEAKER_COUNT,
+  LIVE_SPEAKER_LIMIT,
 } = require("../constants/speakerDetection.json");
+const {
+  resolveClusterThreshold,
+  dropNegligibleClusters,
+  isCollapsedDiarization,
+} = require("./diarizationPolicy");
+const { PCM16_MONO_16K_BYTES_PER_SECOND } = require("./transcriptionTimeout");
 const { UPLOAD_AUDIO_EXTENSIONS } = require("../constants/uploadAudioFormats.json");
 const { providerContentType, prepareProviderUpload } = require("./providerUploadAudio");
 const {
@@ -686,7 +692,7 @@ class IPCHandlers {
     }
     const others = this._parseNonSelfParticipants(note?.participants).length;
     if (others > 0) {
-      return Math.min(others + 1, MAX_SPEAKER_COUNT);
+      return Math.min(others + 1, LIVE_SPEAKER_LIMIT);
     }
     return null;
   }
@@ -2927,17 +2933,12 @@ class IPCHandlers {
         if (!realPath) return { success: false, error: "File path not allowed" };
         filePath = realPath;
 
-        const maxSpeakers = normalizeStoredSpeakerCount(options.numSpeakers) ?? MAX_SPEAKER_COUNT;
+        // No count means no cap: the engine decides and phantoms are dropped below.
+        const maxSpeakers = normalizeStoredSpeakerCount(options.numSpeakers) ?? Infinity;
 
         const { convertToWav } = require("./ffmpegUtils");
         const { getSafeTempDir } = require("./safeTempDir");
-        const {
-          resolveClusterThreshold,
-          dropNegligibleClusters,
-          isCollapsedDiarization,
-          capSpeakerClustersByVoice,
-        } = require("./diarizationPolicy");
-        const { PCM16_MONO_16K_BYTES_PER_SECOND } = require("./transcriptionTimeout");
+        const { capSpeakerClustersByVoice } = require("./diarizationPolicy");
         const wavPath = path.join(getSafeTempDir(), `ow-diarize-${Date.now()}.wav`);
 
         try {
@@ -5010,7 +5011,7 @@ class IPCHandlers {
 
     const resolveSessionMaxSpeakers = () => {
       const count = this.activeMeetingSpeakerConfig?.expectedCount;
-      const total = count ? Math.min(count, MAX_SPEAKER_COUNT) : DEFAULT_EXPECTED_SPEAKER_COUNT;
+      const total = count ? Math.min(count, LIVE_SPEAKER_LIMIT) : DEFAULT_EXPECTED_SPEAKER_COUNT;
       return Math.max(1, total - 1);
     };
 
@@ -6985,12 +6986,10 @@ class IPCHandlers {
     ipcMain.handle("meeting-set-session-speaker-config", async (_event, payload) => {
       try {
         const enabled = payload?.enabled !== false;
+        // A stepper count has no upper bound; the live identifier clamps its own labels.
         const expectedCount = Math.max(
           1,
-          Math.min(
-            MAX_SPEAKER_COUNT,
-            Number(payload?.expectedCount) || DEFAULT_EXPECTED_SPEAKER_COUNT
-          )
+          Math.trunc(Number(payload?.expectedCount)) || DEFAULT_EXPECTED_SPEAKER_COUNT
         );
         // Only a stepper-set count is explicit; the diarization toggle reuses this
         // channel and must not freeze the count against roster-driven refreshes.
@@ -7706,42 +7705,28 @@ class IPCHandlers {
     }
   }
 
-  _resolveSpeakerExpectation({ sessionConfig, noteId, observedSpeakerIds, diarizedSource }) {
-    // Only a count the user set explicitly outranks the note: participants added
-    // mid-meeting postdate the config snapshot taken at recording start.
+  // Only a count the user set (the stepper during recording, a stored note
+  // count, Re-detect) is followed exactly. Anything else — an invite, the live
+  // labels, nothing — lets the engine decide (numSpeakers -1, no cap): an invite
+  // lists who may attend, not who talks, and a forced count merges whoever
+  // speaks beyond it.
+  _resolveSpeakerExpectation({ sessionConfig, noteId, diarizedSource }) {
     let expectedTotal = sessionConfig?.explicit ? sessionConfig.expectedCount : null;
-
     if (!expectedTotal && noteId != null) {
       try {
-        expectedTotal = this._noteExpectedSpeakerCountOrNull(this.databaseManager.getNote(noteId));
+        expectedTotal = normalizeStoredSpeakerCount(
+          this.databaseManager.getNote(noteId)?.expected_speaker_count
+        );
       } catch (_) {
         expectedTotal = null;
       }
     }
+    if (!expectedTotal) return { numSpeakers: -1, cap: null };
 
     // Diarizing the mic track (in-person session) means the user is one of the
-    // diarized voices, so the expected total applies without the -1 the
-    // system-audio branches use.
-    const micMode = diarizedSource === "mic";
-
-    if (expectedTotal) {
-      const total = Math.min(expectedTotal, MAX_SPEAKER_COUNT);
-      const numSpeakers = micMode ? total : Math.max(1, total - 1);
-      return { numSpeakers, cap: numSpeakers };
-    }
-
-    if (observedSpeakerIds.size >= 2) {
-      const numSpeakers = Math.min(observedSpeakerIds.size, MAX_SPEAKER_COUNT);
-      return { numSpeakers, cap: numSpeakers };
-    }
-
-    if (micMode) {
-      return { numSpeakers: -1, cap: DEFAULT_EXPECTED_SPEAKER_COUNT };
-    }
-
-    // Only system audio reaches the diarizer (the mic track is "you"), so the cap
-    // counts other speakers — same total - 1 basis as the branches above.
-    return { numSpeakers: -1, cap: Math.max(1, DEFAULT_EXPECTED_SPEAKER_COUNT - 1) };
+    // diarized voices; on a call only the other side reaches the diarizer.
+    const numSpeakers = diarizedSource === "mic" ? expectedTotal : Math.max(1, expectedTotal - 1);
+    return { numSpeakers, cap: numSpeakers };
   }
 
   // Synchronous: the meeting stop path decides before any async work starts.
@@ -7844,10 +7829,27 @@ class IPCHandlers {
     speakerIndexBase = 0,
     liveSpeakerState = null,
   }) {
+    // A count the user set is followed exactly. Otherwise the engine decides,
+    // with the upload path's cleanup: a threshold that grows with length, a
+    // collapsed run discarded, phantom slivers dropped.
+    const auto = !(numSpeakers > 0);
+    const threshold = auto
+      ? resolveClusterThreshold(
+          (fs.statSync(wavPath, { throwIfNoEntry: false })?.size ?? NaN) /
+            PCM16_MONO_16K_BYTES_PER_SECOND
+        )
+      : undefined;
     let diarizationSegments = await this._diarizeWav(
       wavPath,
-      numSpeakers > 0 ? { numSpeakers } : {}
+      auto ? { threshold } : { numSpeakers }
     );
+    if (auto) {
+      if (isCollapsedDiarization(diarizationSegments)) {
+        debugLogger.warn("Discarding meeting diarization: one cluster holds nearly all speech");
+        diarizationSegments = [];
+      }
+      diarizationSegments = dropNegligibleClusters(diarizationSegments);
+    }
     if (cap != null) {
       diarizationSegments = this.diarizationManager.capSpeakerClusters(diarizationSegments, cap);
     }
@@ -8040,7 +8042,6 @@ class IPCHandlers {
     const { numSpeakers, cap } = this._resolveSpeakerExpectation({
       sessionConfig: { explicit: true, expectedCount },
       noteId,
-      observedSpeakerIds: new Set(),
       diarizedSource,
     });
 
@@ -8170,33 +8171,18 @@ class IPCHandlers {
       return;
     }
 
-    const observedSpeakerIds = new Set(
-      transcriptSegments
-        .filter((segment) => segment.source === "system" && segment.speaker)
-        .map((segment) => segment.speaker)
-    );
-    for (const speakerId of Object.keys(liveSpeakerState || {})) {
-      observedSpeakerIds.add(speakerId);
-    }
-
-    if (observedSpeakerIds.size > 10) {
-      debugLogger.warn("Excessive speaker count from live identification", {
-        observedSpeakers: observedSpeakerIds.size,
-      });
-    }
-
     const { numSpeakers, cap } = this._resolveSpeakerExpectation({
       sessionConfig,
       noteId,
-      observedSpeakerIds,
       diarizedSource,
     });
     // Reserved before the async work so a "record more" started while this runs
-    // numbers its speakers past every cluster the result can name.
+    // numbers its speakers past every cluster the result can name. An automatic
+    // run's count is unknown until it lands, so it holds a wide block meanwhile.
     if (noteId != null) {
       this._diarizationSpeakerReservations.set(sessionId, {
         noteId,
-        ceiling: speakerIndexBase + cap,
+        ceiling: speakerIndexBase + (cap ?? 100),
       });
     }
 

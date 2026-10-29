@@ -6,7 +6,6 @@ import { useStickToBottom } from "../../hooks/useStickToBottom";
 import { Popover, PopoverTrigger, PopoverContent } from "../ui/popover";
 import { Toggle } from "../ui/toggle";
 import { cn } from "../lib/utils";
-import { MAX_SPEAKER_COUNT } from "../../constants/speakerDetection.json";
 import type { TranscriptSegment } from "../../stores/meetingRecordingStore";
 import { useSettingsStore } from "../../stores/settingsStore";
 import {
@@ -658,7 +657,7 @@ function SpeakerCountStepper({
       </span>
       <button
         onClick={() => onChange(value + 1)}
-        disabled={disabled || value >= MAX_SPEAKER_COUNT}
+        disabled={disabled}
         className="px-1.5 py-0.5 rounded-e-md hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-30 disabled:pointer-events-none transition-colors"
         aria-label={t("notes.speaker.pill.incAria")}
       >

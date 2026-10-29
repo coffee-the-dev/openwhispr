@@ -1,21 +1,7 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const ts = require("typescript");
 
-let loaded;
-const load = () => {
-  if (!loaded) {
-    const filename = path.join(__dirname, "../../src/utils/participants.ts");
-    const source = fs.readFileSync(filename, "utf8");
-    const output = ts.transpileModule(source, {
-      compilerOptions: { module: ts.ModuleKind.ESNext, target: ts.ScriptTarget.ES2022 },
-    }).outputText;
-    loaded = import(`data:text/javascript;base64,${Buffer.from(output).toString("base64")}`);
-  }
-  return loaded;
-};
+const load = () => import("../../src/utils/participants.ts");
 
 test("participant rosters derive total speakers from non-self attendees plus the recorder", async () => {
   const { resolveParticipantExpectedSpeakerCount } = await load();
@@ -28,6 +14,9 @@ test("participant rosters derive total speakers from non-self attendees plus the
   assert.equal(resolveParticipantExpectedSpeakerCount(participants), 3);
   assert.equal(resolveParticipantExpectedSpeakerCount([participants[0]]), null);
   assert.equal(resolveParticipantExpectedSpeakerCount([]), null);
+  // An all-hands invite only sizes live labels, up to their loose limit.
+  const allHands = Array.from({ length: 358 }, (_, i) => ({ email: `p${i}@example.com` }));
+  assert.equal(resolveParticipantExpectedSpeakerCount(allHands), 20);
 });
 
 test("active participant changes synchronize the session count before a manual override", async () => {

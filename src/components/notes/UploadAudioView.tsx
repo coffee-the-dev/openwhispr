@@ -56,7 +56,6 @@ import type {
   FileTranscriptionResult,
   DiarizationSettings,
 } from "../../services/fileTranscription";
-import { MAX_SPEAKER_COUNT } from "../../constants/speakerDetection.json";
 import BatchQueueView from "./BatchQueueView";
 import { generateNoteTitle } from "../../utils/generateTitle";
 import { getBaseLanguageCode } from "../../utils/languageSupport";
@@ -1024,7 +1023,6 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
                   id="upload-num-speakers"
                   type="number"
                   min="2"
-                  max={MAX_SPEAKER_COUNT}
                   step="1"
                   inputMode="numeric"
                   value={diarizationNumSpeakers}
@@ -1039,7 +1037,7 @@ export default function UploadAudioView({ onNoteCreated, onOpenSettings }: Uploa
                     }
                     const n = Number(raw);
                     if (!Number.isInteger(n)) return;
-                    setDiarizationNumSpeakers(String(Math.max(2, Math.min(MAX_SPEAKER_COUNT, n))));
+                    setDiarizationNumSpeakers(String(Math.max(2, n)));
                   }}
                   placeholder={t("notes.upload.numSpeakersPlaceholder")}
                   className="h-9 w-32 shrink-0 rounded-xl! px-3 text-sm placeholder:text-foreground/45 [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"

@@ -22,10 +22,7 @@ import {
   getFallbackSystemAudioAccess,
   isRendererSystemAudioStrategy,
 } from "../utils/systemAudioAccess";
-import {
-  DEFAULT_EXPECTED_SPEAKER_COUNT,
-  MAX_SPEAKER_COUNT,
-} from "../constants/speakerDetection.json";
+import { DEFAULT_EXPECTED_SPEAKER_COUNT } from "../constants/speakerDetection.json";
 import logger from "../utils/logger";
 import {
   nameTranscriptSpeaker,
@@ -516,7 +513,8 @@ export function setSessionDiarizationEnabled(enabled: boolean): void {
 }
 
 export function setSessionExpectedCount(count: number): void {
-  const clamped = Math.max(1, Math.min(MAX_SPEAKER_COUNT, count));
+  // The user's own count has no upper bound.
+  const clamped = Math.max(1, Math.trunc(count));
   useMeetingRecordingStore.setState({
     sessionExpectedCount: clamped,
     userTouchedStepper: true,
@@ -547,7 +545,7 @@ export function syncSessionExpectedCountFromParticipants(
   });
   if (expectedCount == null) return;
 
-  const clamped = Math.max(1, Math.min(MAX_SPEAKER_COUNT, expectedCount));
+  const clamped = Math.max(1, expectedCount);
   if (clamped === state.sessionExpectedCount) return;
 
   useMeetingRecordingStore.setState({ sessionExpectedCount: clamped });
@@ -773,10 +771,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
       args.diarizationEnabled ??
       (getSettings() as { speakerDiarizationEnabled?: boolean }).speakerDiarizationEnabled ??
       true;
-    const initialCount = Math.max(
-      1,
-      Math.min(MAX_SPEAKER_COUNT, args.expectedCount ?? DEFAULT_EXPECTED_SPEAKER_COUNT)
-    );
+    const initialCount = Math.max(1, args.expectedCount ?? DEFAULT_EXPECTED_SPEAKER_COUNT);
 
     logger.info("Meeting transcription starting...", {}, "meeting");
     const seed = args.seedSegments ?? [];
@@ -1217,7 +1212,7 @@ export async function startRecording(args: StartRecordingArgs): Promise<void> {
       const speakerConfigCleanup = window.electronAPI?.onMeetingSessionSpeakerConfigUpdated?.(
         (config) => {
           if (activeRecordingSessionId !== sessionId) return;
-          const clamped = Math.max(1, Math.min(MAX_SPEAKER_COUNT, config.expectedCount));
+          const clamped = Math.max(1, config.expectedCount);
           useMeetingRecordingStore.setState({ sessionExpectedCount: clamped });
         }
       );
