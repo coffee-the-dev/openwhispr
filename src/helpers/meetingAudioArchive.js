@@ -3,11 +3,12 @@ const path = require("path");
 const { app } = require("electron");
 const { convertToMp3 } = require("./ffmpegUtils");
 
-// Copy of the audio a meeting's speaker detection ran on — system audio for a
-// call, the room mic for an in-person or speakerphone recording — so it can be
-// diarized again later. Kept under Settings > Privacy > Audio Retention like
-// dictation audio. One MP3 per recording session, named after its note so
-// deleting the note can remove it.
+// Copies of a meeting's two captures — system audio and the room mic — so its
+// speakers can be detected again later. The track speaker detection ran on is
+// named by its source (`-system` / `-mic`), the other gets `-alt` and starts at
+// the same instant. Kept under Settings > Privacy > Audio Retention like
+// dictation audio, one session per start stamp, named after its note so
+// deleting the note can remove it. Older builds kept one unsuffixed file.
 
 const getMeetingAudioDir = () => path.join(app.getPath("userData"), "meeting-audio");
 
@@ -19,11 +20,18 @@ const fileStamp = (startedAt) =>
 
 async function archiveMeetingAudio(
   wavPath,
-  { noteId = null, startedAt = null, dir = getMeetingAudioDir(), convert = convertToMp3 } = {}
+  {
+    noteId = null,
+    startedAt = null,
+    track = null,
+    dir = getMeetingAudioDir(),
+    convert = convertToMp3,
+  } = {}
 ) {
   await fs.promises.mkdir(dir, { recursive: true });
   const prefix = noteId != null ? notePrefix(noteId) : "meeting-";
-  const target = path.join(dir, `${prefix}${fileStamp(startedAt)}.mp3`);
+  const suffix = track ? `-${track}` : "";
+  const target = path.join(dir, `${prefix}${fileStamp(startedAt)}${suffix}.mp3`);
   await convert(wavPath, target);
   return target;
 }
@@ -42,23 +50,40 @@ const parseFileStamp = (stamp) => {
   return match ? Date.parse(`${match[1]}T${match[2]}:${match[3]}:${match[4]}.${match[5]}Z`) : null;
 };
 
-// One entry per recording session of the note, oldest first.
+const TRACK_SUFFIX = /-(mic|system)(-alt)?$/;
+
+// One entry per recording session of the note, oldest first: the track speaker
+// detection ran on (`source` null for older single-file archives) and the other
+// capture, if kept.
 async function listMeetingAudioForNote(noteId, { dir = getMeetingAudioDir() } = {}) {
   if (noteId == null) return [];
   const prefix = notePrefix(noteId);
-  return (await readArchive(dir))
-    .filter((name) => name.startsWith(prefix))
-    .map((name) => ({
-      filePath: path.join(dir, name),
-      startedAt: parseFileStamp(name.slice(prefix.length, -".mp3".length)),
-    }))
+  const sessions = new Map();
+  for (const name of await readArchive(dir)) {
+    if (!name.startsWith(prefix)) continue;
+    const rest = name.slice(prefix.length, -".mp3".length);
+    const match = TRACK_SUFFIX.exec(rest);
+    const stamp = match ? rest.slice(0, match.index) : rest;
+    const track = { filePath: path.join(dir, name), source: match?.[1] ?? null };
+    const session = sessions.get(stamp) ?? { startedAt: parseFileStamp(stamp), alternate: null };
+    if (match?.[2]) session.alternate = track;
+    else Object.assign(session, track);
+    sessions.set(stamp, session);
+  }
+  return [...sessions.values()]
+    .map((session) =>
+      // A session whose main track was never written falls back to the other.
+      session.filePath ? session : { ...session, ...session.alternate, alternate: null }
+    )
     .sort((a, b) => (a.startedAt ?? 0) - (b.startedAt ?? 0));
 }
 
 async function deleteMeetingAudioForNote(noteId, { dir = getMeetingAudioDir() } = {}) {
-  const owned = await listMeetingAudioForNote(noteId, { dir });
-  await Promise.all(owned.map(({ filePath }) => fs.promises.unlink(filePath).catch(() => {})));
-  return owned.length;
+  const files = (await listMeetingAudioForNote(noteId, { dir })).flatMap((session) =>
+    [session.filePath, session.alternate?.filePath].filter(Boolean)
+  );
+  await Promise.all(files.map((filePath) => fs.promises.unlink(filePath).catch(() => {})));
+  return files.length;
 }
 
 // Same rule as dictation audio: a file older than the retention period goes.

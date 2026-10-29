@@ -25,20 +25,30 @@ Module._load = originalLoad;
 const tempDir = () => fs.mkdtempSync(path.join(os.tmpdir(), "ow-meeting-audio-test-"));
 const copyConvert = async (input, output) => fs.promises.copyFile(input, output);
 
-test("archives the diarization audio under the note's name", async () => {
+test("archives each track under the note's name and source", async () => {
   const dir = tempDir();
   const wav = path.join(dir, "input.wav");
   fs.writeFileSync(wav, "RIFF");
+  const startedAt = Date.UTC(2026, 9, 6, 12, 31, 38);
 
-  const target = await archiveMeetingAudio(wav, {
+  const main = await archiveMeetingAudio(wav, {
     noteId: 25,
-    startedAt: Date.UTC(2026, 9, 6, 12, 31, 38),
+    startedAt,
+    track: "mic",
+    dir,
+    convert: copyConvert,
+  });
+  const alt = await archiveMeetingAudio(wav, {
+    noteId: 25,
+    startedAt,
+    track: "system-alt",
     dir,
     convert: copyConvert,
   });
 
-  assert.equal(path.basename(target), "note-25-2026-10-06T12-31-38-000Z.mp3");
-  assert.equal(fs.readFileSync(target, "utf8"), "RIFF");
+  assert.equal(path.basename(main), "note-25-2026-10-06T12-31-38-000Z-mic.mp3");
+  assert.equal(path.basename(alt), "note-25-2026-10-06T12-31-38-000Z-system-alt.mp3");
+  assert.equal(fs.readFileSync(main, "utf8"), "RIFF");
 });
 
 test("deleting a note removes only that note's audio", async () => {
@@ -74,6 +84,35 @@ test("lists a note's sessions oldest first with their start times", async () => 
       ["note-7-2026-10-28T21-19-36-500Z.mp3", Date.UTC(2026, 9, 28, 21, 19, 36, 500)],
     ]
   );
+});
+
+test("a session's two tracks list as one session, main track first", async () => {
+  const dir = tempDir();
+  for (const name of [
+    "note-9-2026-10-29T14-09-06-860Z-system-alt.mp3",
+    "note-9-2026-10-29T14-09-06-860Z-mic.mp3",
+    "note-9-2026-10-29T15-00-00-000Z-mic-alt.mp3",
+  ]) {
+    fs.writeFileSync(path.join(dir, name), "");
+  }
+
+  const sessions = await listMeetingAudioForNote(9, { dir });
+  const at = (file) => file && path.basename(file);
+  assert.deepEqual(
+    sessions.map((s) => [at(s.filePath), s.source, at(s.alternate?.filePath), s.startedAt]),
+    [
+      [
+        "note-9-2026-10-29T14-09-06-860Z-mic.mp3",
+        "mic",
+        "note-9-2026-10-29T14-09-06-860Z-system-alt.mp3",
+        Date.UTC(2026, 9, 29, 14, 9, 6, 860),
+      ],
+      // A session whose main track was never written falls back to the other.
+      ["note-9-2026-10-29T15-00-00-000Z-mic-alt.mp3", "mic", undefined, Date.UTC(2026, 9, 29, 15)],
+    ]
+  );
+  assert.equal(await deleteMeetingAudioForNote(9, { dir }), 3);
+  assert.deepEqual(fs.readdirSync(dir), []);
 });
 
 test("expiry, usage and clear-all cover every kept meeting file", async () => {

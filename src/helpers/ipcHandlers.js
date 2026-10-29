@@ -72,7 +72,11 @@ const {
   MEETING_MIC_SILENCE_PEAK,
 } = require("./meetingMicGate");
 const { deriveDetectorPreferences } = require("./meetingDetectionPreferencePolicy");
-const { resolveDiarizationInput } = require("./meetingDiarizationInput");
+const {
+  isCallAudio,
+  measurePcmAudio,
+  resolveDiarizationInput,
+} = require("./meetingDiarizationInput");
 const { applySmartSpacing } = require("./smartSpacing");
 const { applyAutoLearnSetting } = require("./autoLearnSetting");
 const {
@@ -4827,22 +4831,30 @@ class IPCHandlers {
       meetingSystemAudioHandover.reset();
       meetingDiarizationSegments = [];
       meetingRetractedMicSegments = [];
-      const { pcmPath, startedAt, diarizedSource, cleanupPcmPaths } = resolveDiarizationInput({
+      let systemIsCall = systemAudioHeard;
+      if (systemPcmPath && micPcmPath) {
+        try {
+          const systemAudio = await measurePcmAudio(systemPcmPath);
+          systemIsCall = isCallAudio(systemAudio);
+          debugLogger.info("Meeting diarization source chosen", { ...systemAudio, systemIsCall });
+        } catch (error) {
+          debugLogger.warn("Measuring meeting system audio failed", { error: error.message });
+        }
+      }
+      const { pcmPath, startedAt, diarizedSource, alternate } = resolveDiarizationInput({
         systemPcmPath,
         micPcmPath,
-        systemAudioHeard,
+        systemIsCall,
         systemStartedAt,
         micStartedAt,
       });
-      for (const stalePath of cleanupPcmPaths) {
-        fs.unlink(stalePath, () => {});
-      }
       return {
         diarizationPcmPath: pcmPath,
         diarizationSegments,
         retractedSegments,
         diarizationStartedAt: startedAt,
         diarizedSource,
+        alternateCapture: alternate,
       };
     };
 
@@ -5925,11 +5937,7 @@ class IPCHandlers {
           const { rms, peak } = computeChunkStats(outboundBuffer);
           const audible = rms >= MEETING_MIC_SILENCE_RMS || peak >= MEETING_MIC_SILENCE_PEAK;
           meetingSystemAudioWatchdog.recordChunk(audible);
-          if (audible && !meetingSystemAudioHeard) {
-            // A call is audibly underway, so stop paying the mic capture's disk cost.
-            meetingSystemAudioHeard = true;
-            dropMeetingMicDiarizationCapture();
-          }
+          if (audible) meetingSystemAudioHeard = true;
         }
 
         dispatchMeetingAudioBuffer(outboundBuffer, "system", synthetic);
@@ -5937,22 +5945,20 @@ class IPCHandlers {
       }
 
       if (source === "mic") {
-        // Until the session proves to be a call (audible system audio), keep a
-        // raw mic capture so an in-person recording can be diarized. Written
-        // pre-AEC/pre-gate so the timeline stays continuous, like the system
-        // capture above.
-        if (!meetingSystemAudioHeard) {
-          if (!meetingMicDiarizationStream) {
-            const receivedAt = Date.now();
-            meetingMicDiarizationPath = path.join(
-              os.tmpdir(),
-              `ow-diarize-raw-mic-${receivedAt}.pcm`
-            );
-            meetingMicDiarizationStream = fs.createWriteStream(meetingMicDiarizationPath);
-            meetingMicDiarizationStartedAt = receivedAt;
-          }
-          meetingMicDiarizationStream.write(outboundBuffer);
+        // Keep a raw mic capture for the whole session beside the system one:
+        // a speakerphone call puts both sides on the mic, and a chime on the
+        // system channel must not cost it. Written pre-AEC/pre-gate so the
+        // timeline stays continuous, like the system capture above.
+        if (!meetingMicDiarizationStream) {
+          const receivedAt = Date.now();
+          meetingMicDiarizationPath = path.join(
+            os.tmpdir(),
+            `ow-diarize-raw-mic-${receivedAt}.pcm`
+          );
+          meetingMicDiarizationStream = fs.createWriteStream(meetingMicDiarizationPath);
+          meetingMicDiarizationStartedAt = receivedAt;
         }
+        meetingMicDiarizationStream.write(outboundBuffer);
 
         if (processMeetingMicWithAec(outboundBuffer)) {
           return;
@@ -6180,6 +6186,7 @@ class IPCHandlers {
           retractedSegments,
           diarizationStartedAt,
           diarizedSource,
+          alternateCapture,
         } = await captureMeetingDiarizationState();
         const transcript =
           buildOrderedTranscriptText(diarizationSegments) || meetingLocalTranscript;
@@ -6201,7 +6208,8 @@ class IPCHandlers {
           noteIdSnapshot,
           diarizedSource,
           speakerIndexBaseSnapshot,
-          retractedSegments
+          retractedSegments,
+          alternateCapture
         );
 
         return { success: true, transcript, diarizationSessionId };
@@ -7792,9 +7800,9 @@ class IPCHandlers {
     }
   }
 
-  async _archiveMeetingAudio(wavPath, noteId, startedAt) {
+  async _archiveMeetingAudio(wavPath, noteId, startedAt, track) {
     try {
-      const filePath = await archiveMeetingAudio(wavPath, { noteId, startedAt });
+      const filePath = await archiveMeetingAudio(wavPath, { noteId, startedAt, track });
       debugLogger.info("Meeting audio kept", { noteId, filePath });
       broadcastToWindows("meeting-audio-saved", { noteId });
     } catch (error) {
@@ -7802,12 +7810,17 @@ class IPCHandlers {
     }
   }
 
-  async _releaseSkippedMeetingCapture(rawPcmPath, noteId, startedAt) {
+  // Archives a raw capture diarization didn't run on (the skipped session's
+  // track, or the other channel), then deletes it. offsetMs lines it up with
+  // the session's start stamp.
+  async _releaseMeetingCapture(rawPcmPath, noteId, startedAt, { track, offsetMs = 0 } = {}) {
     let wavPath = null;
     try {
       if (this._keepsMeetingAudio() && this.diarizationManager) {
-        wavPath = await this.diarizationManager.convertRawPcmToWav(rawPcmPath, 24000);
-        await this._archiveMeetingAudio(wavPath, noteId, startedAt);
+        wavPath = await this.diarizationManager.convertRawPcmToWav(rawPcmPath, 24000, {
+          offsetMs,
+        });
+        await this._archiveMeetingAudio(wavPath, noteId, startedAt, track);
       }
     } catch (error) {
       debugLogger.warn("Keeping meeting audio failed", { noteId, error: error.message });
@@ -7972,9 +7985,35 @@ class IPCHandlers {
       return { success: false, code: "NO_TRANSCRIPT" };
     }
 
-    // A call diarized the other side; a recording without system audio, the room.
-    const diarizedSource = segments.some((s) => s.source === "system") ? "system" : "mic";
-    const { startedAt } = archives[0];
+    const [session] = archives;
+    // Older archives kept one unsuffixed track: a call diarized the other side;
+    // a recording without system audio, the room.
+    const inferredSource = segments.some((s) => s.source === "system") ? "system" : "mic";
+    // The track diarization chose first; the other capture if that finds nobody
+    // (a speakerphone call's system channel holds only chimes).
+    for (const track of [session, session.alternate].filter(Boolean)) {
+      const result = await this._rediarizeMeetingTrack({
+        noteId,
+        filePath: track.filePath,
+        diarizedSource: track.source ?? inferredSource,
+        startedAt: session.startedAt,
+        segments,
+        expectedCount,
+      });
+      if (result) return { success: true, segments: result };
+    }
+    return { success: false, code: "FAILED" };
+  }
+
+  // One re-detect attempt on one kept track; null when it finds no speakers.
+  async _rediarizeMeetingTrack({
+    noteId,
+    filePath,
+    diarizedSource,
+    startedAt,
+    segments,
+    expectedCount,
+  }) {
     const rows = segments.map((segment) => {
       const row = { ...segment };
       // Rows saved without diarization keep epoch-ms timestamps (#2781).
@@ -8006,7 +8045,7 @@ class IPCHandlers {
     const { convertToWav } = require("./ffmpegUtils");
     const wavPath = path.join(os.tmpdir(), `ow-rediarize-${noteId}-${Date.now()}.wav`);
     try {
-      await convertToWav(archives[0].filePath, wavPath, { sampleRate: 16000, channels: 1 });
+      await convertToWav(filePath, wavPath, { sampleRate: 16000, channels: 1 });
       const {
         enrichedSegments,
         speakerEmbeddingsMap,
@@ -8018,18 +8057,30 @@ class IPCHandlers {
         cap,
         diarizedSource,
       });
-      if (found === 0) return { success: false, code: "FAILED" };
+      if (found === 0) {
+        debugLogger.info("Re-detect found no speakers", { noteId, diarizedSource });
+        return null;
+      }
 
       const embeddings = {};
       for (const [speakerId, values] of Object.entries(speakerEmbeddingsMap || {})) {
         embeddings[speakerId] = Buffer.from(new Float32Array(values).buffer);
       }
       this.databaseManager.replaceNoteSpeakers(noteId, embeddings);
-      debugLogger.info("Meeting speakers detected again", { noteId, expectedCount, found });
-      return { success: true, segments: enrichedSegments };
+      debugLogger.info("Meeting speakers detected again", {
+        noteId,
+        expectedCount,
+        found,
+        diarizedSource,
+      });
+      return enrichedSegments;
     } catch (error) {
-      debugLogger.warn("Detecting meeting speakers again failed", { noteId, error: error.message });
-      return { success: false, code: "FAILED" };
+      debugLogger.warn("Detecting meeting speakers again failed", {
+        noteId,
+        diarizedSource,
+        error: error.message,
+      });
+      return null;
     } finally {
       fs.promises.unlink(wavPath).catch(() => {});
     }
@@ -8046,7 +8097,8 @@ class IPCHandlers {
     noteId = null,
     diarizedSource = "system",
     speakerIndexBase = 0,
-    retractedSegments = []
+    retractedSegments = [],
+    alternateCapture = null
   ) {
     const startMs =
       (Number.isFinite(audioStartedAt) && audioStartedAt) ||
@@ -8095,11 +8147,23 @@ class IPCHandlers {
           .filter((_, index) => !isEchoDuplicate(index)),
       });
 
+    // The channel diarization doesn't use is kept too, so re-detect can fall back to it.
+    if (alternateCapture?.pcmPath) {
+      void this._releaseMeetingCapture(alternateCapture.pcmPath, noteId, audioStartedAt, {
+        track: `${alternateCapture.source}-alt`,
+        offsetMs: alternateCapture.startedAt - audioStartedAt,
+      });
+    }
+
     const diarizationEnabled = (sessionConfig?.enabled ?? this.speakerDiarizationEnabled) !== false;
 
     if (!diarizationEnabled || !this._canDiarize() || !rawPcmPath) {
       // The capture is written for every session, so a skipped run still owns it.
-      if (rawPcmPath) void this._releaseSkippedMeetingCapture(rawPcmPath, noteId, audioStartedAt);
+      if (rawPcmPath) {
+        void this._releaseMeetingCapture(rawPcmPath, noteId, audioStartedAt, {
+          track: diarizedSource,
+        });
+      }
       sendUndiarized();
       return;
     }
@@ -8166,7 +8230,7 @@ class IPCHandlers {
         sendUndiarized();
       } finally {
         if (tmpWav && this._keepsMeetingAudio()) {
-          await this._archiveMeetingAudio(tmpWav, noteId, audioStartedAt);
+          await this._archiveMeetingAudio(tmpWav, noteId, audioStartedAt, diarizedSource);
         }
         try {
           fs.unlinkSync(rawPcmPath);

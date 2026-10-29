@@ -541,11 +541,17 @@ class DiarizationManager {
     });
   }
 
-  async convertRawPcmToWav(rawPcmPath, inputSampleRate) {
+  // offsetMs > 0 pads silence in front (the capture started later than the
+  // timeline it joins); < 0 trims its head, so another track lines up with it.
+  async convertRawPcmToWav(rawPcmPath, inputSampleRate, { offsetMs = 0 } = {}) {
     const stat = await fsPromises.stat(rawPcmPath);
     if (stat.size === 0) {
       throw new Error("Raw PCM file is empty");
     }
+    const bytesPerMs = (inputSampleRate * 2) / 1000;
+    const shiftBytes = Number.isFinite(offsetMs) ? Math.round(offsetMs * bytesPerMs) & ~1 : 0;
+    const padBytes = Math.max(0, shiftBytes);
+    const skipBytes = Math.min(stat.size, Math.max(0, -shiftBytes));
 
     const tempDir = getSafeTempDir();
     // Random suffix: concurrent conversions (meeting + upload) must never collide.
@@ -554,11 +560,12 @@ class DiarizationManager {
     const wavPath = path.join(tempDir, `ow-diarize-${runId}.wav`);
 
     // Stream: write 44-byte WAV header, then pipe raw PCM — avoids loading entire file into memory
-    const header = this._createWavHeader(stat.size, inputSampleRate, 1);
+    const header = this._createWavHeader(stat.size - skipBytes + padBytes, inputSampleRate, 1);
     await new Promise((resolve, reject) => {
       const out = fs.createWriteStream(inputWavPath);
       out.write(header);
-      const pcmStream = fs.createReadStream(rawPcmPath);
+      if (padBytes) out.write(Buffer.alloc(padBytes));
+      const pcmStream = fs.createReadStream(rawPcmPath, { start: skipBytes });
       pcmStream.pipe(out);
       out.on("finish", resolve);
       out.on("error", reject);
