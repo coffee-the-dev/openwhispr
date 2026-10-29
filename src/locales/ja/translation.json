@@ -69,10 +69,6 @@
         "serverDescription": "会議やアップロードしたファイルで、誰がいつ話したかを判別します。保存済みの声との照合は常にこのデバイス上で行われます。",
         "selfHostedDesc": "ネットワーク上の自前の話者分離サーバー。",
         "serverUrlHelp": "POST /audio/diarizations に応答するサーバーのベース URL（NeMo-Speech.cpp など）。文字起こしの API キーを使用します。"
-      },
-      "keepAudio": {
-        "title": "会議の音声を保存",
-        "description": "話者検出に使った音声（通話の相手側、または対面時の部屋全体）をMP3として保存し、あとで話者を再検出できるようにします。ノートを削除すると一緒に削除されます。"
       }
     }
   },
@@ -1366,7 +1362,7 @@
       "transcriptRetentionDescription": "保存された文字起こし、その音声、およびその Insights カウンターを、この期間の経過後に自動的に削除します。",
       "transcriptRetentionForever": "無期限",
       "audioRetention": "音声の保持",
-      "audioRetentionDescription": "再文字起こしやダウンロードのために、ディクテーションの音声をローカルに保存します。ファイルは保持期間が過ぎると自動的に削除されます。会議の音声は保存されません。",
+      "audioRetentionDescription": "ディクテーションの音声（再文字起こしとダウンロード用）と会議の音声（話者の再検出用）をローカルに保存します。保存期間が過ぎると自動的に削除されます。",
       "audioRetentionDisabled": "無効",
       "retentionDays_one": "{{count}}日",
       "retentionDays_other": "{{count}}日",
@@ -1991,7 +1987,20 @@
       "nameOrEmailPlaceholder": "名前またはメールを入力",
       "addContact": "連絡先を追加",
       "save": "保存",
-      "cancel": "キャンセル"
+      "cancel": "キャンセル",
+      "selectRangeHint": "行を選択（Shift + クリックで範囲選択）",
+      "redetect": {
+        "prompt": "話者が違いますか？保存された音声から再検出できます。",
+        "peopleLabel": "人数",
+        "action": "再検出",
+        "running": "話者を検出しています…",
+        "errors": {
+          "noAudio": "この会議の音声はもう保存されていません。",
+          "multipleSessions": "このメモは複数回に分けて録音されているため、まだ再検出できません。",
+          "unavailable": "話者検出は利用できません。",
+          "failed": "話者を検出できませんでした。もう一度お試しください。"
+        }
+      }
     },
     "overview": {
       "subtitle": {

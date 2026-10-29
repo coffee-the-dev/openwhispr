@@ -329,6 +329,8 @@ test("a stopped session's diarization reserves its speaker ids until its result 
     _diarizationSpeakerReservations: new Map(),
     diarizationRoute: { transport: "local" },
     speakerDiarizationEnabled: true,
+    _retentionSettingsSynced: true,
+    _retentionSettings: { dataRetentionEnabled: true, audioRetentionDays: 0 },
     diarizationManager,
     databaseManager: {
       // Four expected speakers: up to three remote clusters.

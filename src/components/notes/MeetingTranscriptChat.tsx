@@ -1,4 +1,4 @@
-import { memo, useMemo, useState } from "react";
+import { memo, useMemo, useState, type ReactNode } from "react";
 import { useTranslation } from "react-i18next";
 import { useVirtualizer } from "@tanstack/react-virtual";
 import { Check, Loader2, Sparkles, Users, X } from "../icons";
@@ -164,10 +164,14 @@ interface SpeakerPickerProps {
 
 function AddContactButton({
   profile,
+  participants,
+  speakerProfiles,
   onAttachEmail,
   t,
 }: {
   profile: { id: number; display_name: string };
+  participants?: Array<{ email: string; displayName: string | null; self?: boolean }>;
+  speakerProfiles?: SpeakerProfileLite[];
   onAttachEmail: (profileId: number, email: string | null) => void;
   t: (key: string, opts?: Record<string, unknown>) => string;
 }) {
@@ -175,11 +179,19 @@ function AddContactButton({
   const [draft, setDraft] = useState("");
 
   const canSave = isLikelyEmail(draft);
+  // Attendees no speaker is linked to yet: linking one ties this voice to it.
+  const attendees = (participants || []).filter(
+    (p) =>
+      !p.self && !speakerProfiles?.some((sp) => sp.email?.toLowerCase() === p.email.toLowerCase())
+  );
+
+  const attach = (email: string) => {
+    onAttachEmail(profile.id, email.trim().toLowerCase());
+    setOpen(false);
+  };
 
   const submit = () => {
-    if (!canSave) return;
-    onAttachEmail(profile.id, draft.trim().toLowerCase());
-    setOpen(false);
+    if (canSave) attach(draft);
   };
 
   return (
@@ -206,6 +218,24 @@ function AddContactButton({
         <div dir="auto" className="text-xs font-medium text-foreground truncate mb-2">
           {profile.display_name}
         </div>
+        {attendees.length > 0 && (
+          <div className="mb-2 -mx-1">
+            <div className="px-1 pb-1 text-[11px] text-muted-foreground">
+              {t("notes.speaker.meetingAttendees")}
+            </div>
+            {attendees.slice(0, 5).map((p) => (
+              <button
+                key={p.email}
+                onClick={() => attach(p.email)}
+                className="flex w-full items-center px-1 py-1 rounded text-start text-xs text-foreground/70 hover:bg-foreground/5 hover:text-foreground transition-colors cursor-pointer"
+              >
+                <span dir="auto" className="truncate">
+                  {p.displayName || p.email}
+                </span>
+              </button>
+            ))}
+          </div>
+        )}
         <input
           dir="ltr"
           value={draft}
@@ -573,19 +603,22 @@ function SpeakerLabel({
 function SelectCheckbox({
   isSelected,
   onToggle,
+  title,
   className,
 }: {
   isSelected: boolean;
-  onToggle: () => void;
+  onToggle: (extend: boolean) => void;
+  title?: string;
   className?: string;
 }) {
   return (
     <button
       onClick={(e) => {
         e.stopPropagation();
-        onToggle();
+        onToggle(e.shiftKey);
       }}
       aria-pressed={isSelected}
+      title={title}
       className={cn(
         "w-4 h-4 rounded-full border flex items-center justify-center transition-all cursor-pointer",
         isSelected
@@ -596,6 +629,99 @@ function SelectCheckbox({
     >
       {isSelected && <Check size={10} strokeWidth={3} />}
     </button>
+  );
+}
+
+function SpeakerCountStepper({
+  value,
+  onChange,
+  disabled = false,
+  t,
+}: {
+  value: number;
+  onChange: (count: number) => void;
+  disabled?: boolean;
+  t: (key: string, opts?: Record<string, unknown>) => string;
+}) {
+  return (
+    <div className="flex items-center gap-0.5 rounded-md border border-border bg-surface-2/60">
+      <button
+        onClick={() => onChange(value - 1)}
+        disabled={disabled || value <= 1}
+        className="px-1.5 py-0.5 rounded-s-md hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-30 disabled:pointer-events-none transition-colors"
+        aria-label={t("notes.speaker.pill.decAria")}
+      >
+        −
+      </button>
+      <span className="px-1.5 tabular-nums" aria-live="polite">
+        {value === 1 ? t("notes.speaker.pill.justYou") : value}
+      </span>
+      <button
+        onClick={() => onChange(value + 1)}
+        disabled={disabled || value >= MAX_SPEAKER_COUNT}
+        className="px-1.5 py-0.5 rounded-e-md hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-30 disabled:pointer-events-none transition-colors"
+        aria-label={t("notes.speaker.pill.incAria")}
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+// After a meeting: detect speakers again from its kept audio with a corrected
+// head count. onRun resolves to an error message, or null on success.
+export function RedetectSpeakersBar({
+  initialCount,
+  onRun,
+}: {
+  initialCount: number;
+  onRun: (count: number) => Promise<string | null>;
+}) {
+  const { t } = useTranslation();
+  const [count, setCount] = useState(initialCount);
+  const [running, setRunning] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const run = async () => {
+    setRunning(true);
+    setError(null);
+    try {
+      setError(await onRun(count));
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 rounded-lg border border-border/70 bg-surface-2/40 text-xs text-foreground">
+      <div className="flex items-center gap-1.5 min-w-0">
+        {running ? (
+          <Loader2 size={12} className="animate-spin text-muted-foreground shrink-0" />
+        ) : (
+          <Users size={12} className="shrink-0 text-muted-foreground" />
+        )}
+        <span
+          className={cn("truncate", error ? "text-destructive" : "text-muted-foreground")}
+          role={error ? "alert" : undefined}
+        >
+          {running
+            ? t("notes.speaker.redetect.running")
+            : error || t("notes.speaker.redetect.prompt")}
+        </span>
+      </div>
+      <div className="flex-1" />
+      <div className="flex items-center gap-1.5">
+        <span className="text-muted-foreground">{t("notes.speaker.redetect.peopleLabel")}</span>
+        <SpeakerCountStepper value={count} onChange={setCount} disabled={running} t={t} />
+        <button
+          onClick={run}
+          disabled={running}
+          className="px-2 py-0.5 rounded-md border border-border bg-surface-2/60 hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-40 disabled:pointer-events-none transition-colors"
+        >
+          {t("notes.speaker.redetect.action")}
+        </button>
+      </div>
+    </div>
   );
 }
 
@@ -680,7 +806,7 @@ interface SegmentRowProps {
   onConfirmSuggestion?: (speakerId: string, suggestedName: string, profileId: number) => void;
   onDismissSuggestion?: (speakerId: string) => void;
   onAttachSpeakerEmail?: (profileId: number, email: string | null) => void;
-  onToggleSelect?: (segmentId: string) => void;
+  onToggleSelect?: (segmentId: string, extend?: boolean) => void;
   t: (key: string, opts?: Record<string, unknown>) => string;
 }
 
@@ -746,6 +872,8 @@ const SegmentRow = memo(function SegmentRow({
       {canAddContact && matchedProfile && matchedProfile.id != null && (
         <AddContactButton
           profile={{ id: matchedProfile.id, display_name: matchedProfile.display_name }}
+          participants={participants}
+          speakerProfiles={speakerProfiles}
           onAttachEmail={onAttachSpeakerEmail!}
           t={t}
         />
@@ -797,7 +925,8 @@ const SegmentRow = memo(function SegmentRow({
         {selectable && (
           <SelectCheckbox
             isSelected={isSelected}
-            onToggle={() => onToggleSelect?.(segment.id)}
+            onToggle={(extend) => onToggleSelect?.(segment.id, extend)}
+            title={t("notes.speaker.selectRangeHint")}
             className={cn("absolute top-1.5", selfSide ? "-start-6" : "-end-6")}
           />
         )}
@@ -832,7 +961,9 @@ interface MeetingTranscriptChatProps {
   onConfirmSuggestion?: (speakerId: string, suggestedName: string, profileId: number) => void;
   onDismissSuggestion?: (speakerId: string) => void;
   onAttachSpeakerEmail?: (profileId: number, email: string | null) => void;
-  onToggleSelect?: (segmentId: string) => void;
+  onToggleSelect?: (segmentId: string, extend?: boolean) => void;
+  /** Shown above a finished meeting's transcript, e.g. to detect speakers again. */
+  toolbar?: ReactNode;
   contentClassName?: string;
 }
 
@@ -858,6 +989,7 @@ export function MeetingTranscriptChat({
   onDismissSuggestion,
   onAttachSpeakerEmail,
   onToggleSelect,
+  toolbar,
   contentClassName,
 }: MeetingTranscriptChatProps) {
   const { t } = useTranslation();
@@ -961,6 +1093,9 @@ export function MeetingTranscriptChat({
 
   return (
     <div className="h-full flex flex-col">
+      {toolbar && !isRecording && !isDiarizing && (
+        <div className={cn("shrink-0 px-4 pt-2 mb-1.5", contentClassName)}>{toolbar}</div>
+      )}
       {(isRecording || isDiarizing) && (
         <div className={cn("shrink-0 px-4 pt-2 mb-1.5", contentClassName)}>
           <div className="flex flex-wrap items-center gap-x-3 gap-y-1 px-3 py-1.5 rounded-lg border border-border/70 bg-surface-2/40 text-xs text-foreground">
@@ -995,29 +1130,11 @@ export function MeetingTranscriptChat({
                 <span className="text-muted-foreground">
                   {t("notes.speaker.pill.speakersLabel")}
                 </span>
-                <div className="flex items-center gap-0.5 rounded-md border border-border bg-surface-2/60">
-                  <button
-                    onClick={() => onSetSessionExpectedCount?.(sessionExpectedCount - 1)}
-                    disabled={sessionExpectedCount <= 1}
-                    className="px-1.5 py-0.5 rounded-s-md hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                    aria-label={t("notes.speaker.pill.decAria")}
-                  >
-                    −
-                  </button>
-                  <span className="px-1.5 tabular-nums" aria-live="polite">
-                    {sessionExpectedCount === 1
-                      ? t("notes.speaker.pill.justYou")
-                      : sessionExpectedCount}
-                  </span>
-                  <button
-                    onClick={() => onSetSessionExpectedCount?.(sessionExpectedCount + 1)}
-                    disabled={sessionExpectedCount >= MAX_SPEAKER_COUNT}
-                    className="px-1.5 py-0.5 rounded-e-md hover:bg-accent focus-visible:bg-accent focus-visible:outline-none disabled:opacity-30 disabled:pointer-events-none transition-colors"
-                    aria-label={t("notes.speaker.pill.incAria")}
-                  >
-                    +
-                  </button>
-                </div>
+                <SpeakerCountStepper
+                  value={sessionExpectedCount}
+                  onChange={(count) => onSetSessionExpectedCount?.(count)}
+                  t={t}
+                />
               </div>
             )}
             {!isDiarizing && (

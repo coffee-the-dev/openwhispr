@@ -69,10 +69,6 @@
         "serverDescription": "Individua chi ha parlato e quando nelle riunioni e nei file caricati. Il confronto con le voci salvate avviene sempre su questo dispositivo.",
         "selfHostedDesc": "Il tuo server di diarizzazione nella tua rete.",
         "serverUrlHelp": "URL di base di un server che risponde a POST /audio/diarizations, ad esempio NeMo-Speech.cpp. Usa la chiave API della trascrizione."
-      },
-      "keepAudio": {
-        "title": "Conserva l’audio delle riunioni",
-        "description": "Salva come MP3 l’audio usato dal rilevamento dei parlanti (l’altro lato di una chiamata, o l’intera stanza di persona), così da poter rilevare di nuovo i parlanti in seguito. Viene eliminato con la sua nota."
       }
     }
   },
@@ -1366,7 +1362,7 @@
       "transcriptRetentionDescription": "Elimina automaticamente le trascrizioni salvate, il relativo audio e i relativi contatori di Insights dopo questo periodo.",
       "transcriptRetentionForever": "Per sempre",
       "audioRetention": "Conservazione audio",
-      "audioRetentionDescription": "Salva l'audio di dettatura localmente per la ritrascrizione e il download. I file vengono eliminati automaticamente al termine del periodo di conservazione. L'audio delle riunioni non viene mai salvato.",
+      "audioRetentionDescription": "Salva in locale l'audio delle dettature (per ritrascriverle e scaricarle) e delle riunioni (per rilevare di nuovo chi parla). I file vengono eliminati automaticamente al termine del periodo di conservazione.",
       "audioRetentionDisabled": "Disattivato",
       "retentionDays_one": "{{count}} giorno",
       "retentionDays_other": "{{count}} giorni",
@@ -1991,7 +1987,20 @@
         "incAria": "Aumenta il numero di partecipanti previsti",
         "decAria": "Diminuisci il numero di partecipanti previsti"
       },
-      "consentNotice": "Ottieni sempre il consenso quando registri altre persone"
+      "consentNotice": "Ottieni sempre il consenso quando registri altre persone",
+      "selectRangeHint": "Seleziona riga (Maiusc + clic seleziona un intervallo)",
+      "redetect": {
+        "prompt": "Interlocutori sbagliati? Rilevali di nuovo dall'audio salvato.",
+        "peopleLabel": "Persone",
+        "action": "Rileva di nuovo",
+        "running": "Rilevamento degli interlocutori…",
+        "errors": {
+          "noAudio": "L'audio di questa riunione non è più salvato.",
+          "multipleSessions": "Questa nota è stata registrata in più parti, che non si possono ancora rilevare di nuovo.",
+          "unavailable": "Il rilevamento degli interlocutori non è disponibile.",
+          "failed": "Rilevamento degli interlocutori non riuscito. Riprova."
+        }
+      }
     },
     "overview": {
       "subtitle": {

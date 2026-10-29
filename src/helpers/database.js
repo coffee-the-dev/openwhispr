@@ -3563,7 +3563,7 @@ class DatabaseManager {
             .prepare("SELECT * FROM speaker_profiles WHERE lower(email) = ? AND id != ?")
             .get(normalizedEmail, existing.id);
           if (collision) {
-            return this.mergeSpeakerProfiles(resolved, collision);
+            return this.mergeSpeakerProfiles(resolved, collision, name);
           }
         }
         return resolved;
@@ -3598,7 +3598,9 @@ class DatabaseManager {
 
       const collision = this._findProfileByEmail(normalizedEmail);
       if (collision && collision.id !== profileId) {
-        return this.mergeSpeakerProfiles(collision, profile);
+        // The user linked the email to this speaker, so this speaker's name wins
+        // over whatever the email's profile was called (often its local part).
+        return this.mergeSpeakerProfiles(collision, profile, profile.display_name);
       }
 
       this.db
@@ -3617,7 +3619,7 @@ class DatabaseManager {
     }
   }
 
-  mergeSpeakerProfiles(a, b) {
+  mergeSpeakerProfiles(a, b, keepName = null) {
     const winner = (a.sample_count || 0) >= (b.sample_count || 0) ? a : b;
     const loser = winner === a ? b : a;
 
@@ -3640,7 +3642,7 @@ class DatabaseManager {
     }
 
     const finalEmail = winner.email || loser.email || null;
-    const finalName = winner.display_name || loser.display_name;
+    const finalName = keepName || winner.display_name || loser.display_name;
     const affectedNotes = this.db
       .prepare("SELECT DISTINCT note_id FROM speaker_mappings WHERE profile_id = ?")
       .all(loser.id);
@@ -3766,6 +3768,23 @@ class DatabaseManager {
       );
       throw error;
     }
+  }
+
+  // Detecting a meeting's speakers again renumbers its clusters, so names and
+  // voices stored for the old ones would land on different people.
+  replaceNoteSpeakers(noteId, embeddings) {
+    if (!this.db) throw new Error("Database not initialized");
+    const insert = this.db.prepare(
+      "INSERT INTO note_speaker_embeddings (note_id, speaker_id, embedding) VALUES (?, ?, ?)"
+    );
+    this.db.transaction(() => {
+      this.db.prepare("DELETE FROM speaker_mappings WHERE note_id = ?").run(noteId);
+      this.db.prepare("DELETE FROM note_speaker_embeddings WHERE note_id = ?").run(noteId);
+      for (const [speakerId, buffer] of Object.entries(embeddings)) {
+        insert.run(noteId, speakerId, buffer);
+      }
+    })();
+    this._emitNoteChange({ type: "upsert", noteId });
   }
 
   removeSpeakerMapping(noteId, speakerId) {

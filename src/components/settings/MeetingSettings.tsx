@@ -24,21 +24,6 @@ export function MeetingSpeakerDetectionRow() {
   );
 }
 
-export function MeetingKeepAudioRow() {
-  const { t } = useTranslation();
-  const keepMeetingAudio = useSettingsStore((s) => s.keepMeetingAudio);
-  const setKeepMeetingAudio = useSettingsStore((s) => s.setKeepMeetingAudio);
-
-  return (
-    <SettingsRow
-      label={t("settings.meeting.keepAudio.title")}
-      description={t("settings.meeting.keepAudio.description")}
-    >
-      <Toggle checked={keepMeetingAudio} onChange={setKeepMeetingAudio} />
-    </SettingsRow>
-  );
-}
-
 function MeetingEchoCancellationRow() {
   const { t } = useTranslation();
   const meetingAecEnabled = useSettingsStore((s) => s.meetingAecEnabled);
@@ -209,7 +194,6 @@ export function MeetingTranscriptionPanel() {
       )}
       <MeetingSpeakerDetectionRow />
       <MeetingEchoCancellationRow />
-      <MeetingKeepAudioRow />
       <SpeakerDetectionServerPanel />
     </div>
   );

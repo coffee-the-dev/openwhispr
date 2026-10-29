@@ -5,6 +5,7 @@ import type { PermissionGuideState, PermissionGuideAction } from "./permissionGu
 import type { DictationTone, ToneAppCategory } from "../config/toneStyle";
 import type { ProviderSettingsTarget } from "../utils/describeProviderError";
 import type { RemovedTranscriptSegment } from "../utils/diarizationCompletion";
+import type { TranscriptSegment } from "../stores/meetingRecordingStore";
 
 export type LocalTranscriptionProvider = "whisper" | "nvidia" | "cohere";
 
@@ -1116,6 +1117,7 @@ declare global {
       onNoteAdded?: (callback: (note: NoteItem) => void) => () => void;
       onNoteUpdated?: (callback: (note: NoteItem) => void) => () => void;
       onNoteDeleted?: (callback: (payload: { id: number }) => void) => () => void;
+      onMeetingAudioSaved?: (callback: (payload: { noteId: number | null }) => void) => () => void;
       onFolderDeleted?: (callback: (payload: { id: number }) => void) => () => void;
 
       // Database event listeners
@@ -1891,6 +1893,23 @@ declare global {
           sample_count: number;
         };
       }>;
+      getMeetingAudioInfo?: (noteId: number) => Promise<{ sessions: number; canDiarize: boolean }>;
+      rediarizeMeetingNote?: (
+        noteId: number,
+        speakerCount: number
+      ) => Promise<
+        | { success: true; segments: TranscriptSegment[] }
+        | {
+            success: false;
+            code:
+              | "INVALID_COUNT"
+              | "UNAVAILABLE"
+              | "NO_AUDIO"
+              | "MULTIPLE_SESSIONS"
+              | "NO_TRANSCRIPT"
+              | "FAILED";
+          }
+      >;
       saveNoteSpeakerEmbeddings?: (
         noteId: number,
         embeddings: Record<string, number[]>
@@ -1915,7 +1934,6 @@ declare global {
       setSpeakerDiarizationEnabled?: (
         enabled: boolean
       ) => Promise<{ success: boolean; error?: string }>;
-      setKeepMeetingAudio?: (enabled: boolean) => Promise<{ success: boolean }>;
       setDiarizationEndpoint?: (config: {
         mode: TranscriptionMode;
         url: string;

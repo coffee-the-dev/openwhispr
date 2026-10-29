@@ -69,10 +69,6 @@
         "serverDescription": "辨識會議和上傳檔案中誰在何時發言。與已儲存聲音的比對一律在本裝置上進行。",
         "selfHostedDesc": "你網路上的自有語者分離伺服器。",
         "serverUrlHelp": "回應 POST /audio/diarizations 的伺服器基礎 URL，例如 NeMo-Speech.cpp。使用轉錄的 API 金鑰。"
-      },
-      "keepAudio": {
-        "title": "保留會議音訊",
-        "description": "將說話者偵測所用的音訊（通話的對方一側，或面對面時的整個房間）儲存為 MP3，以便之後重新偵測說話者。刪除筆記時一併刪除。"
       }
     }
   },
@@ -1366,7 +1362,7 @@
       "transcriptRetentionDescription": "在此期限後自動刪除已儲存的轉錄、其音訊及其 Insights 計數。",
       "transcriptRetentionForever": "永久",
       "audioRetention": "音訊保留",
-      "audioRetentionDescription": "將語音輸入音訊儲存在本機以便重新轉錄和下載。檔案會在保留期限過後自動刪除。會議音訊絕不會被儲存。",
+      "audioRetentionDescription": "在本機儲存聽寫音訊（用於重新轉錄和下載）與會議音訊（用於重新辨識發言者）。檔案會在保留期結束後自動刪除。",
       "audioRetentionDisabled": "已停用",
       "retentionDays_one": "{{count}} 天",
       "retentionDays_other": "{{count}} 天",
@@ -1991,7 +1987,20 @@
         "incAria": "增加預期發言人數",
         "decAria": "減少預期發言人數"
       },
-      "consentNotice": "錄製他人時請務必徵得同意"
+      "consentNotice": "錄製他人時請務必徵得同意",
+      "selectRangeHint": "選取此行（按住 Shift 點擊可選取範圍）",
+      "redetect": {
+        "prompt": "發言者不對？可從儲存的音訊重新辨識。",
+        "peopleLabel": "人數",
+        "action": "重新辨識",
+        "running": "正在辨識發言者…",
+        "errors": {
+          "noAudio": "此會議的音訊已不再保存。",
+          "multipleSessions": "此筆記分多段錄製，暫不支援重新辨識。",
+          "unavailable": "發言者辨識無法使用。",
+          "failed": "發言者辨識失敗，請再試一次。"
+        }
+      }
     },
     "overview": {
       "subtitle": {

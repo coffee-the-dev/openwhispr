@@ -14,7 +14,11 @@ Module._load = function loadWithMocks(request, parent, isMain) {
 };
 const {
   archiveMeetingAudio,
+  listMeetingAudioForNote,
   deleteMeetingAudioForNote,
+  deleteExpiredMeetingAudio,
+  deleteAllMeetingAudio,
+  getMeetingAudioUsage,
 } = require("../../src/helpers/meetingAudioArchive");
 Module._load = originalLoad;
 
@@ -50,4 +54,41 @@ test("deleting a note removes only that note's audio", async () => {
 test("deleting audio for a note without an archive folder is a no-op", async () => {
   const missing = path.join(os.tmpdir(), `ow-meeting-audio-missing-${process.pid}`);
   assert.equal(await deleteMeetingAudioForNote(3, { dir: missing }), 0);
+});
+
+test("lists a note's sessions oldest first with their start times", async () => {
+  const dir = tempDir();
+  for (const name of [
+    "note-7-2026-10-28T21-19-36-500Z.mp3",
+    "note-7-2026-10-28T20-00-00-000Z.mp3",
+    "note-70-2026-10-28T20-00-00-000Z.mp3",
+  ]) {
+    fs.writeFileSync(path.join(dir, name), "");
+  }
+
+  const sessions = await listMeetingAudioForNote(7, { dir });
+  assert.deepEqual(
+    sessions.map(({ filePath, startedAt }) => [path.basename(filePath), startedAt]),
+    [
+      ["note-7-2026-10-28T20-00-00-000Z.mp3", Date.UTC(2026, 9, 28, 20, 0, 0)],
+      ["note-7-2026-10-28T21-19-36-500Z.mp3", Date.UTC(2026, 9, 28, 21, 19, 36, 500)],
+    ]
+  );
+});
+
+test("expiry, usage and clear-all cover every kept meeting file", async () => {
+  const dir = tempDir();
+  const now = Date.now();
+  const old = path.join(dir, "note-1-a.mp3");
+  const fresh = path.join(dir, "note-2-b.mp3");
+  fs.writeFileSync(old, "12345");
+  fs.writeFileSync(fresh, "123");
+  const tenDaysAgo = (now - 10 * 86400000) / 1000;
+  fs.utimesSync(old, tenDaysAgo, tenDaysAgo);
+
+  assert.deepEqual(await getMeetingAudioUsage({ dir }), { fileCount: 2, totalBytes: 8 });
+  assert.equal(await deleteExpiredMeetingAudio(7, { dir, now }), 1);
+  assert.deepEqual(fs.readdirSync(dir), ["note-2-b.mp3"]);
+  assert.equal(await deleteAllMeetingAudio({ dir }), 1);
+  assert.deepEqual(fs.readdirSync(dir), []);
 });

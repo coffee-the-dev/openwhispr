@@ -78,6 +78,8 @@ const runMainDiarization = (mainSegments, { retracted = [], outcome = "diarized"
       diarizationRoute: { transport: "local" },
       diarizationManager,
       speakerDiarizationEnabled: true,
+      _retentionSettingsSynced: true,
+      _retentionSettings: { dataRetentionEnabled: true, audioRetentionDays: 0 },
       _diarizationSpeakerReservations: new Map(),
       _resolveSpeakerExpectation: () => ({ numSpeakers: 0, cap: null }),
       _reconcileLiveSpeakerState: () => new Map(),

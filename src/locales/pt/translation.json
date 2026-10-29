@@ -69,10 +69,6 @@
         "serverDescription": "Identifica quem falou e quando em reuniões e arquivos enviados. A comparação com vozes salvas sempre roda neste dispositivo.",
         "selfHostedDesc": "Seu servidor de diarização na sua rede.",
         "serverUrlHelp": "URL base de um servidor que responde a POST /audio/diarizations, como o NeMo-Speech.cpp. Usa a chave de API da transcrição."
-      },
-      "keepAudio": {
-        "title": "Manter o áudio das reuniões",
-        "description": "Salva como MP3 o áudio usado pela detecção de falantes (o outro lado de uma chamada, ou a sala inteira presencialmente), para que os falantes possam ser detectados novamente depois. Excluído junto com a nota."
       }
     }
   },
@@ -1360,7 +1356,7 @@
       "transcriptRetentionDescription": "Excluir automaticamente as transcrições salvas, o áudio delas e os contadores do Insights delas após este período.",
       "transcriptRetentionForever": "Para sempre",
       "audioRetention": "Retenção de áudio",
-      "audioRetentionDescription": "Armazena o áudio de ditado localmente para retranscrição e download. Os arquivos são excluídos automaticamente após o período de retenção. O áudio de reuniões nunca é armazenado.",
+      "audioRetentionDescription": "Armazena localmente o áudio dos ditados (para retranscrever e baixar) e das reuniões (para detectar os falantes novamente). Os arquivos são excluídos automaticamente após o período de retenção.",
       "audioRetentionDisabled": "Desativado",
       "retentionDays_one": "{{count}} dia",
       "retentionDays_other": "{{count}} dias",
@@ -1991,7 +1987,20 @@
         "incAria": "Aumentar número esperado de participantes",
         "decAria": "Diminuir número esperado de participantes"
       },
-      "consentNotice": "Sempre obtenha consentimento ao gravar outras pessoas"
+      "consentNotice": "Sempre obtenha consentimento ao gravar outras pessoas",
+      "selectRangeHint": "Selecionar linha (Shift + clique seleciona um intervalo)",
+      "redetect": {
+        "prompt": "Falantes errados? Detecte-os novamente a partir do áudio salvo.",
+        "peopleLabel": "Pessoas",
+        "action": "Detectar novamente",
+        "running": "Detectando falantes…",
+        "errors": {
+          "noAudio": "O áudio desta reunião não está mais salvo.",
+          "multipleSessions": "Esta nota foi gravada em várias partes, o que ainda não é compatível.",
+          "unavailable": "A detecção de falantes não está disponível.",
+          "failed": "A detecção de falantes falhou. Tente novamente."
+        }
+      }
     },
     "overview": {
       "subtitle": {

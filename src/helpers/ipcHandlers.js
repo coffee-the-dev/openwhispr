@@ -42,7 +42,14 @@ const { i18nMain, changeLanguage } = require("./i18nMain");
 const { ONBOARDING_DEMO_KINDS, ONBOARDING_DEMO_STATUSES } = require("./onboardingInputPolicy");
 const { focusWindowsHotkeyCaptureWindow } = require("./hotkeyCaptureFocus");
 const AudioStorageManager = require("./audioStorage");
-const { archiveMeetingAudio, deleteMeetingAudioForNote } = require("./meetingAudioArchive");
+const {
+  archiveMeetingAudio,
+  listMeetingAudioForNote,
+  deleteMeetingAudioForNote,
+  deleteExpiredMeetingAudio,
+  deleteAllMeetingAudio,
+  getMeetingAudioUsage,
+} = require("./meetingAudioArchive");
 const { NoteFilesSync } = require("./noteFilesSync");
 const LocalModelDownloadStatus = require("./localModelDownloadStatus");
 const createMeetingTranscriptionLifecycle = require("./meetingTranscriptionLifecycle");
@@ -300,8 +307,6 @@ class IPCHandlers {
     this._granolaImportPending = null;
     this._analyticsHistoryBackfillPromise = null;
     this.speakerDiarizationEnabled = true;
-    // Opt-in: keep the audio each meeting's speaker detection ran on. Synced from the renderer.
-    this.keepMeetingAudio = false;
     this.databaseManager?.addNoteChangeListener?.((change) => {
       if (change?.type === "delete") void deleteMeetingAudioForNote(change.noteId);
     });
@@ -779,6 +784,13 @@ class IPCHandlers {
     }, SIX_HOURS_MS);
   }
 
+  // Meeting audio follows Audio Retention: kept while history and audio are on.
+  // Unsynced settings are defaults, not the user's choice (#1370).
+  _keepsMeetingAudio() {
+    const { dataRetentionEnabled, audioRetentionDays } = this._retentionSettings;
+    return this._retentionSettingsSynced && dataRetentionEnabled && audioRetentionDays > 0;
+  }
+
   _runRetentionCleanup() {
     const { audioRetentionDays, transcriptRetentionDays } = this._retentionSettings;
     try {
@@ -793,6 +805,9 @@ class IPCHandlers {
       }
       if (audioRetentionDays > 0) {
         this.audioStorageManager.cleanupExpiredAudio(audioRetentionDays, this.databaseManager);
+        void deleteExpiredMeetingAudio(audioRetentionDays).then((deleted) => {
+          if (deleted > 0) debugLogger.info("Expired meeting audio deleted", { deleted });
+        });
       }
     } catch (error) {
       debugLogger.error("Retention cleanup failed", { error: error.message }, "audio-storage");
@@ -1360,7 +1375,12 @@ class IPCHandlers {
     });
 
     ipcMain.handle("get-audio-storage-usage", async () => {
-      return this.audioStorageManager.getStorageUsage();
+      const dictation = this.audioStorageManager.getStorageUsage();
+      const meetings = await getMeetingAudioUsage();
+      return {
+        fileCount: dictation.fileCount + meetings.fileCount,
+        totalBytes: dictation.totalBytes + meetings.totalBytes,
+      };
     });
 
     ipcMain.on(
@@ -1383,6 +1403,7 @@ class IPCHandlers {
 
     ipcMain.handle("delete-all-audio", async () => {
       const result = this.audioStorageManager.deleteAllAudio();
+      result.deleted += await deleteAllMeetingAudio();
       try {
         const rows = this.databaseManager.db
           .prepare("SELECT id FROM transcriptions WHERE has_audio = 1")
@@ -6921,11 +6942,6 @@ class IPCHandlers {
       }
     });
 
-    ipcMain.handle("meeting-set-keep-audio", async (_event, payload) => {
-      this.keepMeetingAudio = payload?.enabled === true;
-      return { success: true };
-    });
-
     ipcMain.handle("set-diarization-endpoint", async (_event, payload) => {
       try {
         const { resolveDiarizationRoute } = await import("./diarizationRoute.ts");
@@ -7385,6 +7401,15 @@ class IPCHandlers {
       }
     });
 
+    ipcMain.handle("get-meeting-audio-info", async (_event, noteId) => {
+      const sessions = await listMeetingAudioForNote(noteId);
+      return { sessions: sessions.length, canDiarize: this._canDiarize() };
+    });
+
+    ipcMain.handle("rediarize-meeting-note", async (_event, noteId, speakerCount) =>
+      this._rediarizeMeetingNote(noteId, speakerCount)
+    );
+
     ipcMain.handle("save-note-speaker-embeddings", async (_event, noteId, embeddingsObj) => {
       const buffers = {};
       for (const [speakerId, arr] of Object.entries(embeddingsObj)) {
@@ -7771,6 +7796,7 @@ class IPCHandlers {
     try {
       const filePath = await archiveMeetingAudio(wavPath, { noteId, startedAt });
       debugLogger.info("Meeting audio kept", { noteId, filePath });
+      broadcastToWindows("meeting-audio-saved", { noteId });
     } catch (error) {
       debugLogger.warn("Keeping meeting audio failed", { noteId, error: error.message });
     }
@@ -7779,7 +7805,7 @@ class IPCHandlers {
   async _releaseSkippedMeetingCapture(rawPcmPath, noteId, startedAt) {
     let wavPath = null;
     try {
-      if (this.keepMeetingAudio && this.diarizationManager) {
+      if (this._keepsMeetingAudio() && this.diarizationManager) {
         wavPath = await this.diarizationManager.convertRawPcmToWav(rawPcmPath, 24000);
         await this._archiveMeetingAudio(wavPath, noteId, startedAt);
       }
@@ -7788,6 +7814,224 @@ class IPCHandlers {
     } finally {
       fs.unlink(rawPcmPath, () => {});
       if (wavPath) fs.unlink(wavPath, () => {});
+    }
+  }
+
+  // Diarizes a 16 kHz mono WAV, labels the transcript rows of the diarized
+  // source from it and names clusters from saved voice profiles. Shared by the
+  // meeting stop path and re-detecting a saved meeting's speakers.
+  async _diarizeTranscript({
+    wavPath,
+    segments,
+    numSpeakers,
+    cap,
+    diarizedSource,
+    speakerIndexBase = 0,
+    liveSpeakerState = null,
+  }) {
+    let diarizationSegments = await this._diarizeWav(
+      wavPath,
+      numSpeakers > 0 ? { numSpeakers } : {}
+    );
+    if (cap != null) {
+      diarizationSegments = this.diarizationManager.capSpeakerClusters(diarizationSegments, cap);
+    }
+
+    const enrichedSegments = this.diarizationManager.mergeWithTranscript(
+      segments,
+      diarizationSegments,
+      { diarizedSource, speakerIndexBase }
+    );
+
+    const speakerSet = new Set(diarizationSegments.map((d) => d.speaker));
+    const speakerRenumber = buildSpeakerRenumber(speakerSet, speakerIndexBase);
+    // Mirrors the mic-mode single-cluster softening in mergeWithTranscript:
+    // every segment stays "you", so persisting an embedding keyed to a
+    // cluster id that owns no segments would leave the note inconsistent.
+    const micSingleClusterSoftened = diarizedSource === "mic" && speakerSet.size === 1;
+
+    let speakerEmbeddingsMap = null;
+    const speakerEmb = require("./speakerEmbeddings");
+    try {
+      if (!micSingleClusterSoftened && speakerEmb.isAvailable() && wavPath) {
+        const speakerIds = [...new Set(diarizationSegments.map((s) => s.speaker))];
+        speakerEmbeddingsMap = {};
+
+        for (const spk of speakerIds) {
+          const segs = diarizationSegments.filter((s) => s.speaker === spk);
+          const sorted = segs.sort((a, b) => b.end - b.start - (a.end - a.start)).slice(0, 3);
+          const embeddings = [];
+          for (const seg of sorted) {
+            if (seg.end - seg.start < 1.5) continue;
+            const emb = await speakerEmb.extractEmbedding(wavPath, seg.start, seg.end);
+            if (emb) embeddings.push(emb);
+          }
+          if (embeddings.length > 0) {
+            const centroid = speakerEmb.computeCentroid(embeddings);
+            const mappedId = speakerRenumber.get(spk) || spk;
+            speakerEmbeddingsMap[mappedId] = Array.from(centroid);
+          }
+        }
+      }
+    } catch (err) {
+      debugLogger.debug("Speaker embedding extraction skipped", { error: err.message });
+    }
+
+    const reconciledSpeakers = this._reconcileLiveSpeakerState(
+      liveSpeakerState,
+      speakerEmbeddingsMap,
+      enrichedSegments
+    );
+
+    if (speakerEmbeddingsMap) {
+      try {
+        const profiles = this.databaseManager.getSpeakerProfiles(true);
+
+        if (profiles.length > 0) {
+          for (const [mappedId, embArr] of Object.entries(speakerEmbeddingsMap)) {
+            const alreadyMapped = enrichedSegments.some(
+              (segment) => segment.speaker === mappedId && segment.speakerName
+            );
+            if (reconciledSpeakers.has(mappedId) || alreadyMapped) {
+              continue;
+            }
+
+            const emb = new Float32Array(embArr);
+            let bestProfile = null;
+            let bestSim = 0;
+
+            for (const profile of profiles) {
+              const profileEmb = new Float32Array(
+                profile.embedding.buffer,
+                profile.embedding.byteOffset,
+                profile.embedding.byteLength / 4
+              );
+              const sim = speakerEmb.cosineSimilarity(emb, profileEmb);
+              if (sim > bestSim) {
+                bestSim = sim;
+                bestProfile = profile;
+              }
+            }
+
+            if (bestProfile && bestSim > 0.6) {
+              for (const seg of enrichedSegments) {
+                if (seg.speaker === mappedId) {
+                  applyConfirmedSpeaker(seg, {
+                    speakerName: bestProfile.display_name,
+                    speakerIsPlaceholder: false,
+                    suggestedName: undefined,
+                    suggestedProfileId: undefined,
+                  });
+                }
+              }
+            } else if (bestProfile && bestSim > 0.5) {
+              for (const seg of enrichedSegments) {
+                if (seg.speaker === mappedId) {
+                  if (isSpeakerLocked(seg)) {
+                    continue;
+                  }
+                  applySuggestedSpeaker(seg, {
+                    suggestedName: bestProfile.display_name,
+                    suggestedProfileId: bestProfile.id,
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {
+        debugLogger.debug("Auto speaker recognition skipped", { error: err.message });
+      }
+    }
+
+    return {
+      enrichedSegments,
+      speakerEmbeddingsMap,
+      speakerCount: speakerRenumber.size,
+    };
+  }
+
+  // Runs speaker detection again on a meeting's kept audio with the number of
+  // people the user gives (a total that includes them). Old cluster names and
+  // voices are dropped; the caller persists the returned transcript.
+  async _rediarizeMeetingNote(noteId, speakerCount) {
+    const expectedCount = normalizeStoredSpeakerCount(speakerCount);
+    if (expectedCount == null) return { success: false, code: "INVALID_COUNT" };
+    if (!this._canDiarize()) return { success: false, code: "UNAVAILABLE" };
+    const archives = await listMeetingAudioForNote(noteId);
+    if (archives.length === 0) return { success: false, code: "NO_AUDIO" };
+    // shortcut: a note recorded in several sessions keeps one file per session but
+    // not which rows each covers; support it once session boundaries are stored.
+    if (archives.length > 1) return { success: false, code: "MULTIPLE_SESSIONS" };
+
+    let segments = [];
+    try {
+      segments = JSON.parse(this.databaseManager.getNote(noteId)?.transcript || "[]");
+    } catch (_) {}
+    if (!Array.isArray(segments) || segments.length === 0) {
+      return { success: false, code: "NO_TRANSCRIPT" };
+    }
+
+    // A call diarized the other side; a recording without system audio, the room.
+    const diarizedSource = segments.some((s) => s.source === "system") ? "system" : "mic";
+    const { startedAt } = archives[0];
+    const rows = segments.map((segment) => {
+      const row = { ...segment };
+      // Rows saved without diarization keep epoch-ms timestamps (#2781).
+      if (row.timestamp > 1e9 && Number.isFinite(startedAt)) {
+        row.timestamp = (row.timestamp - startedAt) / 1000;
+      }
+      // Lines the user assigned by hand stay theirs.
+      if (row.source === diarizedSource && !isSpeakerLocked(row)) {
+        for (const key of [
+          "speaker",
+          "speakerName",
+          "speakerIsPlaceholder",
+          "speakerStatus",
+          "suggestedName",
+          "suggestedProfileId",
+        ]) {
+          delete row[key];
+        }
+      }
+      return row;
+    });
+    const { numSpeakers, cap } = this._resolveSpeakerExpectation({
+      sessionConfig: { explicit: true, expectedCount },
+      noteId,
+      observedSpeakerIds: new Set(),
+      diarizedSource,
+    });
+
+    const { convertToWav } = require("./ffmpegUtils");
+    const wavPath = path.join(os.tmpdir(), `ow-rediarize-${noteId}-${Date.now()}.wav`);
+    try {
+      await convertToWav(archives[0].filePath, wavPath, { sampleRate: 16000, channels: 1 });
+      const {
+        enrichedSegments,
+        speakerEmbeddingsMap,
+        speakerCount: found,
+      } = await this._diarizeTranscript({
+        wavPath,
+        segments: rows,
+        numSpeakers,
+        cap,
+        diarizedSource,
+      });
+      if (found === 0) return { success: false, code: "FAILED" };
+
+      const embeddings = {};
+      for (const [speakerId, values] of Object.entries(speakerEmbeddingsMap || {})) {
+        embeddings[speakerId] = Buffer.from(new Float32Array(values).buffer);
+      }
+      this.databaseManager.replaceNoteSpeakers(noteId, embeddings);
+      debugLogger.info("Meeting speakers detected again", { noteId, expectedCount, found });
+      return { success: true, segments: enrichedSegments };
+    } catch (error) {
+      debugLogger.warn("Detecting meeting speakers again failed", { noteId, error: error.message });
+      return { success: false, code: "FAILED" };
+    } finally {
+      fs.promises.unlink(wavPath).catch(() => {});
     }
   }
 
@@ -7894,131 +8138,23 @@ class IPCHandlers {
       let tmpWav = null;
       try {
         tmpWav = await this.diarizationManager.convertRawPcmToWav(rawPcmPath, 24000);
-        let diarizationSegments = await this._diarizeWav(
-          tmpWav,
-          numSpeakers > 0 ? { numSpeakers } : {}
-        );
-        if (cap != null) {
-          diarizationSegments = this.diarizationManager.capSpeakerClusters(
-            diarizationSegments,
-            cap
-          );
-        }
-
-        const enrichedSegments = this.diarizationManager.mergeWithTranscript(
-          kept,
-          diarizationSegments,
-          { diarizedSource, speakerIndexBase }
-        );
-
-        const speakerSet = new Set(diarizationSegments.map((d) => d.speaker));
-        const speakerRenumber = buildSpeakerRenumber(speakerSet, speakerIndexBase);
+        const { enrichedSegments, speakerEmbeddingsMap, speakerCount } =
+          await this._diarizeTranscript({
+            wavPath: tmpWav,
+            segments: kept,
+            numSpeakers,
+            cap,
+            diarizedSource,
+            speakerIndexBase,
+            liveSpeakerState,
+          });
         // Narrowed to the ids the result actually names; kept until quit, since the
         // renderer persists them only after this send.
         if (noteId != null) {
           this._diarizationSpeakerReservations.set(sessionId, {
             noteId,
-            ceiling: speakerIndexBase + speakerRenumber.size,
+            ceiling: speakerIndexBase + speakerCount,
           });
-        }
-
-        // Mirrors the mic-mode single-cluster softening in mergeWithTranscript:
-        // every segment stays "you", so persisting an embedding keyed to a
-        // cluster id that owns no segments would leave the note inconsistent.
-        const micSingleClusterSoftened = diarizedSource === "mic" && speakerSet.size === 1;
-
-        let speakerEmbeddingsMap = null;
-        const speakerEmb = require("./speakerEmbeddings");
-        try {
-          if (!micSingleClusterSoftened && speakerEmb.isAvailable() && tmpWav) {
-            const speakerIds = [...new Set(diarizationSegments.map((s) => s.speaker))];
-            speakerEmbeddingsMap = {};
-
-            for (const spk of speakerIds) {
-              const segs = diarizationSegments.filter((s) => s.speaker === spk);
-              const sorted = segs.sort((a, b) => b.end - b.start - (a.end - a.start)).slice(0, 3);
-              const embeddings = [];
-              for (const seg of sorted) {
-                if (seg.end - seg.start < 1.5) continue;
-                const emb = await speakerEmb.extractEmbedding(tmpWav, seg.start, seg.end);
-                if (emb) embeddings.push(emb);
-              }
-              if (embeddings.length > 0) {
-                const centroid = speakerEmb.computeCentroid(embeddings);
-                const mappedId = speakerRenumber.get(spk) || spk;
-                speakerEmbeddingsMap[mappedId] = Array.from(centroid);
-              }
-            }
-          }
-        } catch (err) {
-          debugLogger.debug("Speaker embedding extraction skipped", { error: err.message });
-        }
-
-        const reconciledSpeakers = this._reconcileLiveSpeakerState(
-          liveSpeakerState,
-          speakerEmbeddingsMap,
-          enrichedSegments
-        );
-
-        if (speakerEmbeddingsMap) {
-          try {
-            const profiles = this.databaseManager.getSpeakerProfiles(true);
-
-            if (profiles.length > 0) {
-              for (const [mappedId, embArr] of Object.entries(speakerEmbeddingsMap)) {
-                const alreadyMapped = enrichedSegments.some(
-                  (segment) => segment.speaker === mappedId && segment.speakerName
-                );
-                if (reconciledSpeakers.has(mappedId) || alreadyMapped) {
-                  continue;
-                }
-
-                const emb = new Float32Array(embArr);
-                let bestProfile = null;
-                let bestSim = 0;
-
-                for (const profile of profiles) {
-                  const profileEmb = new Float32Array(
-                    profile.embedding.buffer,
-                    profile.embedding.byteOffset,
-                    profile.embedding.byteLength / 4
-                  );
-                  const sim = speakerEmb.cosineSimilarity(emb, profileEmb);
-                  if (sim > bestSim) {
-                    bestSim = sim;
-                    bestProfile = profile;
-                  }
-                }
-
-                if (bestProfile && bestSim > 0.6) {
-                  for (const seg of enrichedSegments) {
-                    if (seg.speaker === mappedId) {
-                      applyConfirmedSpeaker(seg, {
-                        speakerName: bestProfile.display_name,
-                        speakerIsPlaceholder: false,
-                        suggestedName: undefined,
-                        suggestedProfileId: undefined,
-                      });
-                    }
-                  }
-                } else if (bestProfile && bestSim > 0.5) {
-                  for (const seg of enrichedSegments) {
-                    if (seg.speaker === mappedId) {
-                      if (isSpeakerLocked(seg)) {
-                        continue;
-                      }
-                      applySuggestedSpeaker(seg, {
-                        suggestedName: bestProfile.display_name,
-                        suggestedProfileId: bestProfile.id,
-                      });
-                    }
-                  }
-                }
-              }
-            }
-          } catch (err) {
-            debugLogger.debug("Auto speaker recognition skipped", { error: err.message });
-          }
         }
 
         send({ segments: enrichedSegments, speakerEmbeddings: speakerEmbeddingsMap });
@@ -8029,7 +8165,7 @@ class IPCHandlers {
         // failed run falls back to the skip result rather than an empty one.
         sendUndiarized();
       } finally {
-        if (tmpWav && this.keepMeetingAudio) {
+        if (tmpWav && this._keepsMeetingAudio()) {
           await this._archiveMeetingAudio(tmpWav, noteId, audioStartedAt);
         }
         try {

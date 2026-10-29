@@ -69,10 +69,6 @@
         "serverDescription": "识别会议和上传文件中谁在何时发言。与已保存声音的匹配始终在本设备上进行。",
         "selfHostedDesc": "你网络上的自有说话人分离服务器。",
         "serverUrlHelp": "响应 POST /audio/diarizations 的服务器基础 URL，例如 NeMo-Speech.cpp。使用转录的 API 密钥。"
-      },
-      "keepAudio": {
-        "title": "保留会议音频",
-        "description": "将说话人检测所用的音频（通话的对方一侧，或面对面时的整个房间）保存为 MP3，以便之后重新检测说话人。删除笔记时一并删除。"
       }
     }
   },
@@ -1366,7 +1362,7 @@
       "transcriptRetentionDescription": "在此期限后自动删除已保存的转录、其音频及其 Insights 计数。",
       "transcriptRetentionForever": "永久",
       "audioRetention": "音频保留",
-      "audioRetentionDescription": "在本地存储听写音频以便重新转录和下载。文件会在保留期过后自动删除。会议音频绝不会被存储。",
+      "audioRetentionDescription": "在本地保存听写音频（用于重新转录和下载）和会议音频（用于重新识别发言人）。文件会在保留期结束后自动删除。",
       "audioRetentionDisabled": "已禁用",
       "retentionDays_one": "{{count}} 天",
       "retentionDays_other": "{{count}} 天",
@@ -1991,7 +1987,20 @@
         "incAria": "增加预计发言人数",
         "decAria": "减少预计发言人数"
       },
-      "consentNotice": "录制他人时请务必征得同意"
+      "consentNotice": "录制他人时请务必征得同意",
+      "selectRangeHint": "选择此行（按住 Shift 点击可选择范围）",
+      "redetect": {
+        "prompt": "发言人不对？可从保存的音频重新识别。",
+        "peopleLabel": "人数",
+        "action": "重新识别",
+        "running": "正在识别发言人…",
+        "errors": {
+          "noAudio": "此会议的音频已不再保存。",
+          "multipleSessions": "此笔记分多段录制，暂不支持重新识别。",
+          "unavailable": "发言人识别不可用。",
+          "failed": "发言人识别失败，请重试。"
+        }
+      }
     },
     "overview": {
       "subtitle": {

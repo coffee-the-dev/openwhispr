@@ -69,10 +69,6 @@
         "serverDescription": "Détermine qui a parlé et quand dans les réunions et les fichiers importés. La correspondance avec les voix enregistrées se fait toujours sur cet appareil.",
         "selfHostedDesc": "Votre serveur de diarisation sur votre réseau.",
         "serverUrlHelp": "URL de base d'un serveur qui répond à POST /audio/diarizations, comme NeMo-Speech.cpp. Utilise la clé API de transcription."
-      },
-      "keepAudio": {
-        "title": "Conserver l’audio des réunions",
-        "description": "Enregistre en MP3 l’audio utilisé par la détection des intervenants (l’autre côté d’un appel, ou toute la pièce en présentiel), pour pouvoir relancer la détection plus tard. Supprimé avec sa note."
       }
     }
   },
@@ -1380,7 +1376,7 @@
       "description": "Contrôlez quelles données quittent votre appareil. Tout est désactivé par défaut.",
       "title": "Confidentialité",
       "audioRetention": "Conservation de l'audio",
-      "audioRetentionDescription": "Stocke l'audio de dictée localement pour la retranscription et le téléchargement. Les fichiers sont automatiquement supprimés après la période de conservation. L'audio des réunions n'est jamais stocké.",
+      "audioRetentionDescription": "Conserve localement l'audio des dictées (pour les retranscrire et les télécharger) et des réunions (pour détecter à nouveau les intervenants). Les fichiers sont supprimés automatiquement à la fin de la période de conservation.",
       "audioRetentionDisabled": "Désactivé",
       "retentionDays_one": "{{count}} jour",
       "retentionDays_other": "{{count}} jours",
@@ -2071,7 +2067,20 @@
         "incAria": "Augmenter le nombre d'intervenants attendus",
         "decAria": "Diminuer le nombre d'intervenants attendus"
       },
-      "consentNotice": "Obtenez toujours le consentement avant d'enregistrer d'autres personnes"
+      "consentNotice": "Obtenez toujours le consentement avant d'enregistrer d'autres personnes",
+      "selectRangeHint": "Sélectionner la ligne (Maj + clic sélectionne une plage)",
+      "redetect": {
+        "prompt": "Intervenants incorrects ? Détectez-les à nouveau à partir de l'audio enregistré.",
+        "peopleLabel": "Personnes",
+        "action": "Redétecter",
+        "running": "Détection des intervenants…",
+        "errors": {
+          "noAudio": "L'audio de cette réunion n'est plus conservé.",
+          "multipleSessions": "Cette note a été enregistrée en plusieurs parties, ce qui n'est pas encore pris en charge.",
+          "unavailable": "La détection des intervenants n'est pas disponible.",
+          "failed": "La détection des intervenants a échoué. Réessayez."
+        }
+      }
     },
     "overview": {
       "subtitle": {

@@ -236,7 +236,6 @@ const BOOLEAN_SETTINGS = new Set([
   "startMinimized",
   "meetingProcessDetection",
   "speakerDiarizationEnabled",
-  "keepMeetingAudio",
   "dictationSileroEnabled",
   "noteRecordingSileroEnabled",
   "meetingSileroEnabled",
@@ -974,7 +973,6 @@ export interface SettingsState
   appleCalendarConnected: boolean;
   meetingProcessDetection: boolean;
   speakerDiarizationEnabled: boolean;
-  keepMeetingAudio: boolean;
   diarizationMode: TranscriptionMode;
   diarizationRemoteUrl: string;
   dictationSileroEnabled: boolean;
@@ -1194,7 +1192,6 @@ export interface SettingsState
   setAppleCalendarConnected: (value: boolean) => void;
   setMeetingProcessDetection: (value: boolean) => void;
   setSpeakerDiarizationEnabled: (value: boolean) => void;
-  setKeepMeetingAudio: (value: boolean) => void;
   setDiarizationMode: (mode: TranscriptionMode) => void;
   setDiarizationRemoteUrl: (url: string) => void;
   setDictationSileroEnabled: (value: boolean) => void;
@@ -1486,7 +1483,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
   appleCalendarConnected: readBoolean("appleCalendarConnected", false),
   meetingProcessDetection: readBoolean("meetingProcessDetection", true),
   speakerDiarizationEnabled: readBoolean("speakerDiarizationEnabled", true),
-  keepMeetingAudio: readBoolean("keepMeetingAudio", false),
   diarizationMode: readTranscriptionMode("diarizationMode"),
   diarizationRemoteUrl: readString("diarizationRemoteUrl", ""),
   // Off by default: VAD on pause-heavy dictations can strip the speech and make
@@ -1967,13 +1963,6 @@ export const useSettingsStore = create<SettingsState>()((set, get) => ({
     useSettingsStore.setState({ speakerDiarizationEnabled: value });
     if (isBrowser) {
       window.electronAPI?.setSpeakerDiarizationEnabled?.(value);
-    }
-  },
-  setKeepMeetingAudio: (value: boolean) => {
-    if (isBrowser) localStorage.setItem("keepMeetingAudio", String(value));
-    useSettingsStore.setState({ keepMeetingAudio: value });
-    if (isBrowser) {
-      window.electronAPI?.setKeepMeetingAudio?.(value);
     }
   },
   setDiarizationMode: (mode: TranscriptionMode) => {
@@ -2715,7 +2704,6 @@ export async function initializeSettings(): Promise<void> {
       await window.electronAPI.setSpeakerDiarizationEnabled?.(
         currentState.speakerDiarizationEnabled
       );
-      await window.electronAPI.setKeepMeetingAudio?.(currentState.keepMeetingAudio);
     } catch (err) {
       logger.warn(
         "Failed to sync speaker diarization preference on startup",

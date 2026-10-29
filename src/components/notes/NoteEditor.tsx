@@ -18,7 +18,7 @@ import {
 } from "../icons";
 import { RichTextEditor } from "../ui/RichTextEditor";
 import type { Editor } from "@tiptap/react";
-import { MeetingTranscriptChat, SelectionBar } from "./MeetingTranscriptChat";
+import { MeetingTranscriptChat, RedetectSpeakersBar, SelectionBar } from "./MeetingTranscriptChat";
 import {
   useMeetingRecordingStore,
   type TranscriptSegment,
@@ -72,6 +72,8 @@ import {
 } from "../../utils/transcriptSpeakerState";
 import NoteParticipants from "./NoteParticipants";
 import { parseNoteParticipants } from "../../utils/noteAttendees";
+import { resolveExpectedSpeakerCount } from "../../utils/participants";
+import { DEFAULT_EXPECTED_SPEAKER_COUNT } from "../../constants/speakerDetection.json";
 import { observeFloatingChatLayout } from "./floatingChatLayout";
 import {
   NOTE_META_CHIP_CLASS,
@@ -101,6 +103,20 @@ export interface Enhancement {
 }
 
 type MeetingViewMode = "raw" | "transcript" | "enhanced";
+
+const REDETECT_ERROR_KEYS: Record<string, string> = {
+  NO_AUDIO: "noAudio",
+  MULTIPLE_SESSIONS: "multipleSessions",
+  UNAVAILABLE: "unavailable",
+};
+
+const speakerNamesOf = (segments: TranscriptSegment[]): Record<string, string> => {
+  const names: Record<string, string> = {};
+  for (const s of segments) {
+    if (s.speakerName && s.speaker) names[s.speaker] = s.speakerName;
+  }
+  return names;
+};
 
 type SpeakerProfileOption = { id?: number; display_name: string; email: string | null };
 
@@ -267,10 +283,18 @@ export default function NoteEditor({
   >([]);
   const editorRef = useRef<Editor | null>(null);
 
-  const parsedParticipants = useMemo(
-    () => parseNoteParticipants(note.participants),
-    [note.participants]
-  );
+  // An attendee whose email a speaker profile carries shows that speaker's
+  // name, so the attendee and the voice in the transcript read as one person.
+  const parsedParticipants = useMemo(() => {
+    const nameByEmail = new Map(
+      speakerProfiles.flatMap((p) =>
+        p.email ? [[p.email.toLowerCase(), p.display_name] as const] : []
+      )
+    );
+    return parseNoteParticipants(note.participants).map((p) =>
+      p.displayName ? p : { ...p, displayName: nameByEmail.get(p.email.toLowerCase()) ?? null }
+    );
+  }, [note.participants, speakerProfiles]);
 
   const titleRef = useRef<HTMLDivElement>(null);
   const prevNoteIdRef = useRef<number>(note.id);
@@ -485,14 +509,60 @@ export default function NoteEditor({
     if (enriched.length === 0) return;
     setDiarizedSegments(enriched);
 
-    const autoMappings: Record<string, string> = {};
-    for (const s of enriched) {
-      if (s.speakerName && s.speaker) autoMappings[s.speaker] = s.speakerName;
-    }
+    const autoMappings = speakerNamesOf(enriched);
     if (Object.keys(autoMappings).length > 0) {
       setSpeakerMappings((prev) => ({ ...autoMappings, ...prev }));
     }
   }, [completedDiarization, note.id]);
+
+  // Kept meeting audio lets a finished meeting's speakers be detected again.
+  const [meetingAudio, setMeetingAudio] = useState<{
+    noteId: number;
+    sessions: number;
+    canDiarize: boolean;
+  } | null>(null);
+  useEffect(() => {
+    if (isRecording) return;
+    const noteId = note.id;
+    let cancelled = false;
+    const load = () =>
+      window.electronAPI?.getMeetingAudioInfo?.(noteId).then((info) => {
+        if (!cancelled && info) setMeetingAudio({ noteId, ...info });
+      });
+    void load();
+    const unsubscribe = window.electronAPI?.onMeetingAudioSaved?.((payload) => {
+      if (payload?.noteId === noteId) void load();
+    });
+    return () => {
+      cancelled = true;
+      unsubscribe?.();
+    };
+  }, [note.id, isRecording]);
+
+  const handleRedetectSpeakers = useCallback(
+    async (count: number): Promise<string | null> => {
+      const noteId = note.id;
+      const result = await window.electronAPI?.rediarizeMeetingNote?.(noteId, count);
+      if (!result?.success) {
+        const code = result?.success === false ? result.code : "FAILED";
+        return t(`notes.speaker.redetect.errors.${REDETECT_ERROR_KEYS[code] ?? "failed"}`);
+      }
+      // Main returns the rows as stored, so ids are assigned the same way a load does.
+      const segments = parseTranscriptSegments(JSON.stringify(result.segments));
+      await window.electronAPI?.updateNote(noteId, {
+        transcript: serializeTranscriptSegments(segments),
+        expected_speaker_count: count,
+      });
+      if (prevNoteIdRef.current === noteId) {
+        setDiarizedSegments(segments);
+        // Main dropped the old clusters' names along with their voices.
+        setSpeakerMappings(speakerNamesOf(segments));
+        setSelectedSegmentIds(new Set());
+      }
+      return null;
+    },
+    [note.id, t]
+  );
 
   const persistDisplaySegments = useCallback(
     async (nextSegments: TranscriptSegment[], updateOverlay = true) => {
@@ -593,14 +663,29 @@ export default function NoteEditor({
     setSelectedSegmentIds(new Set());
   }
 
-  const handleToggleSelect = useCallback((segmentId: string) => {
-    setSelectedSegmentIds((prev) => {
-      const next = new Set(prev);
-      if (next.has(segmentId)) next.delete(segmentId);
-      else next.add(segmentId);
-      return next;
-    });
-  }, []);
+  // Shift-click selects every line between the last clicked one and this one.
+  const selectAnchorRef = useRef<string | null>(null);
+  const handleToggleSelect = useCallback(
+    (segmentId: string, extend = false) => {
+      const anchor = selectAnchorRef.current;
+      selectAnchorRef.current = segmentId;
+      setSelectedSegmentIds((prev) => {
+        const next = new Set(prev);
+        const ids = displaySegments.map((segment) => segment.id);
+        const from = anchor ? ids.indexOf(anchor) : -1;
+        const to = ids.indexOf(segmentId);
+        if (extend && from >= 0 && to >= 0) {
+          for (const id of ids.slice(Math.min(from, to), Math.max(from, to) + 1)) next.add(id);
+        } else if (next.has(segmentId)) {
+          next.delete(segmentId);
+        } else {
+          next.add(segmentId);
+        }
+        return next;
+      });
+    },
+    [displaySegments]
+  );
 
   const handleClearSelection = useCallback(() => {
     setSelectedSegmentIds(new Set());
@@ -1107,6 +1192,19 @@ export default function NoteEditor({
                   onAttachSpeakerEmail={handleAttachSpeakerEmail}
                   selectedSegmentIds={selectedSegmentIds}
                   onToggleSelect={handleToggleSelect}
+                  toolbar={
+                    meetingAudio?.noteId === note.id &&
+                    meetingAudio.sessions > 0 &&
+                    meetingAudio.canDiarize && (
+                      <RedetectSpeakersBar
+                        key={note.id}
+                        initialCount={
+                          resolveExpectedSpeakerCount(note) ?? DEFAULT_EXPECTED_SPEAKER_COUNT
+                        }
+                        onRun={handleRedetectSpeakers}
+                      />
+                    )
+                  }
                 />
               )
             ) : viewMode === "transcript" && hasMeetingTranscript ? (

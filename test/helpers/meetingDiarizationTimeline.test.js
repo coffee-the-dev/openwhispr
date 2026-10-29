@@ -77,7 +77,12 @@ function diarizeMeeting({
     diarizationManager,
     databaseManager: { getSpeakerProfiles: () => [] },
     speakerDiarizationEnabled: enabled,
-    keepMeetingAudio,
+    // Meeting audio is kept while Audio Retention keeps audio.
+    _retentionSettingsSynced: true,
+    _retentionSettings: {
+      dataRetentionEnabled: true,
+      audioRetentionDays: keepMeetingAudio ? 30 : 0,
+    },
     _archiveMeetingAudio: async (wavPath, archivedNoteId, startedAt) => {
       archived.push({ wavPath, noteId: archivedNoteId, startedAt });
     },
@@ -190,7 +195,7 @@ test("kept meeting audio is archived from the diarizer's WAV", async () => {
   assert.deepEqual(archived, [{ wavPath: "/tmp/ow-test-missing.wav", noteId: 25, startedAt: T0 }]);
 });
 
-test("meeting audio is not archived unless the setting is on", async () => {
+test("meeting audio is not archived while Audio Retention is disabled", async () => {
   const archived = [];
   await diarizeMeeting({
     audioStartedAt: T0,

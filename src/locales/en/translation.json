@@ -69,10 +69,6 @@
         "serverDescription": "Finds who spoke when in meetings and uploaded files. Matching speakers to saved voices always runs on this device.",
         "selfHostedDesc": "Your own diarization server on your network.",
         "serverUrlHelp": "Base URL of a server that answers POST /audio/diarizations, such as NeMo-Speech.cpp. Uses the speech-to-text API key."
-      },
-      "keepAudio": {
-        "title": "Keep meeting audio",
-        "description": "Saves the audio speaker detection used (the other side of a call, or the whole room in person) as an MP3, so speakers can be detected again later. Deleted with its note."
       }
     }
   },
@@ -1380,7 +1376,7 @@
       "description": "Control what data leaves your device. Everything is off by default.",
       "title": "Privacy",
       "audioRetention": "Audio Retention",
-      "audioRetentionDescription": "Store dictation audio locally for re-transcription and download. Files are automatically deleted after the retention period. Meeting audio is never stored.",
+      "audioRetentionDescription": "Store dictation audio (for re-transcription and download) and meeting audio (for detecting speakers again) locally. Files are automatically deleted after the retention period.",
       "audioRetentionDisabled": "Disabled",
       "retentionDays_one": "{{count}} day",
       "retentionDays_other": "{{count}} days",
@@ -2071,7 +2067,20 @@
         "incAria": "Increase expected speaker count",
         "decAria": "Decrease expected speaker count"
       },
-      "consentNotice": "Always get consent when recording others"
+      "consentNotice": "Always get consent when recording others",
+      "selectRangeHint": "Select line (Shift-click selects a range)",
+      "redetect": {
+        "prompt": "Wrong speakers? Detect them again from the saved audio.",
+        "peopleLabel": "People",
+        "action": "Re-detect",
+        "running": "Detecting speakers…",
+        "errors": {
+          "noAudio": "This meeting's audio is no longer saved.",
+          "multipleSessions": "This note was recorded in several parts, which can't be detected again yet.",
+          "unavailable": "Speaker detection isn't available.",
+          "failed": "Speaker detection failed. Try again."
+        }
+      }
     },
     "overview": {
       "subtitle": {

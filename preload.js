@@ -279,6 +279,11 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.on("note-deleted", listener);
     return () => ipcRenderer.removeListener("note-deleted", listener);
   },
+  onMeetingAudioSaved: (callback) => {
+    const listener = (_event, data) => callback?.(data);
+    ipcRenderer.on("meeting-audio-saved", listener);
+    return () => ipcRenderer.removeListener("meeting-audio-saved", listener);
+  },
   onFolderDeleted: (callback) => {
     const listener = (_event, data) => callback?.(data);
     ipcRenderer.on("folder-deleted", listener);
@@ -452,6 +457,9 @@ contextBridge.exposeInMainWorld("electronAPI", {
   getSpeakerProfiles: () => ipcRenderer.invoke("get-speaker-profiles"),
   attachSpeakerEmail: (profileId, email) =>
     ipcRenderer.invoke("attach-speaker-email", profileId, email),
+  getMeetingAudioInfo: (noteId) => ipcRenderer.invoke("get-meeting-audio-info", noteId),
+  rediarizeMeetingNote: (noteId, speakerCount) =>
+    ipcRenderer.invoke("rediarize-meeting-note", noteId, speakerCount),
   saveNoteSpeakerEmbeddings: (noteId, embeddings) =>
     ipcRenderer.invoke("save-note-speaker-embeddings", noteId, embeddings),
 
@@ -832,7 +840,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     ipcRenderer.invoke("sync-notification-preferences", prefs),
   setSpeakerDiarizationEnabled: (enabled) =>
     ipcRenderer.invoke("meeting-set-speaker-diarization-enabled", { enabled }),
-  setKeepMeetingAudio: (enabled) => ipcRenderer.invoke("meeting-set-keep-audio", { enabled }),
   setDiarizationEndpoint: (config) => ipcRenderer.invoke("set-diarization-endpoint", config),
   setMeetingSessionSpeakerConfig: (config) =>
     ipcRenderer.invoke("meeting-set-session-speaker-config", config),

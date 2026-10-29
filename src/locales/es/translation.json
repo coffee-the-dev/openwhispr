@@ -69,10 +69,6 @@
         "serverDescription": "Detecta quién habló y cuándo en reuniones y archivos subidos. La comparación con voces guardadas siempre se hace en este dispositivo.",
         "selfHostedDesc": "Tu servidor de diarización en tu red.",
         "serverUrlHelp": "URL base de un servidor que responde a POST /audio/diarizations, como NeMo-Speech.cpp. Usa la clave API de transcripción."
-      },
-      "keepAudio": {
-        "title": "Conservar el audio de la reunión",
-        "description": "Guarda como MP3 el audio que usó la detección de hablantes (el otro lado de una llamada, o toda la sala en persona) para poder volver a detectar hablantes más tarde. Se elimina junto con su nota."
       }
     }
   },
@@ -1366,7 +1362,7 @@
       "transcriptRetentionDescription": "Eliminar automáticamente las transcripciones guardadas, su audio y sus contadores de Insights después de este período.",
       "transcriptRetentionForever": "Para siempre",
       "audioRetention": "Retención de audio",
-      "audioRetentionDescription": "Almacena el audio de dictado localmente para volver a transcribir y descargar. Los archivos se eliminan automáticamente tras el periodo de retención. El audio de las reuniones nunca se almacena.",
+      "audioRetentionDescription": "Guarda localmente el audio de los dictados (para volver a transcribirlo y descargarlo) y de las reuniones (para volver a detectar a los hablantes). Los archivos se eliminan automáticamente al terminar el período de retención.",
       "saveDiscarded": "Guardar dictados descartados",
       "saveDiscardedDescription": "Cuando cancelas un dictado con Escape, conserva su audio en el historial para poder recuperarlo. Requiere tener activadas la retención de datos y de audio.",
       "audioRetentionDisabled": "Desactivado",
@@ -1991,7 +1987,20 @@
         "incAria": "Aumentar número de participantes esperados",
         "decAria": "Disminuir número de participantes esperados"
       },
-      "consentNotice": "Pide siempre consentimiento al grabar a otras personas"
+      "consentNotice": "Pide siempre consentimiento al grabar a otras personas",
+      "selectRangeHint": "Seleccionar línea (Mayús + clic selecciona un rango)",
+      "redetect": {
+        "prompt": "¿Hablantes incorrectos? Vuelve a detectarlos con el audio guardado.",
+        "peopleLabel": "Personas",
+        "action": "Volver a detectar",
+        "running": "Detectando hablantes…",
+        "errors": {
+          "noAudio": "El audio de esta reunión ya no está guardado.",
+          "multipleSessions": "Esta nota se grabó en varias partes; aún no se pueden volver a detectar.",
+          "unavailable": "La detección de hablantes no está disponible.",
+          "failed": "No se pudo detectar a los hablantes. Inténtalo de nuevo."
+        }
+      }
     },
     "overview": {
       "subtitle": {

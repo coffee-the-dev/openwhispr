@@ -69,10 +69,6 @@
         "serverDescription": "Erkennt in Meetings und hochgeladenen Dateien, wer wann gesprochen hat. Der Abgleich mit gespeicherten Stimmen läuft immer auf diesem Gerät.",
         "selfHostedDesc": "Eigener Diarisierungsserver in Ihrem Netzwerk.",
         "serverUrlHelp": "Basis-URL eines Servers, der POST /audio/diarizations beantwortet, z. B. NeMo-Speech.cpp. Verwendet den API-Schlüssel der Transkription."
-      },
-      "keepAudio": {
-        "title": "Besprechungsaudio behalten",
-        "description": "Speichert das Audio, das die Sprechererkennung verwendet hat (die Gegenseite eines Anrufs oder den ganzen Raum vor Ort), als MP3, damit Sprecher später erneut erkannt werden können. Wird mit der Notiz gelöscht."
       }
     }
   },
@@ -1380,7 +1376,7 @@
       "description": "Steuern Sie, welche Daten Ihr Gerät verlassen. Standardmäßig ist alles deaktiviert.",
       "title": "Datenschutz",
       "audioRetention": "Audio-Aufbewahrung",
-      "audioRetentionDescription": "Diktat-Audio lokal für erneute Transkription und Download speichern. Dateien werden nach Ablauf der Aufbewahrungsfrist automatisch gelöscht. Meeting-Audio wird niemals gespeichert.",
+      "audioRetentionDescription": "Diktat-Audio (zum erneuten Transkribieren und Herunterladen) und Meeting-Audio (zur erneuten Sprechererkennung) lokal speichern. Dateien werden nach Ablauf der Aufbewahrungsfrist automatisch gelöscht.",
       "audioRetentionDisabled": "Deaktiviert",
       "retentionDays_one": "{{count}} Tag",
       "retentionDays_other": "{{count}} Tage",
@@ -2071,7 +2067,20 @@
         "incAria": "Erwartete Sprecheranzahl erhöhen",
         "decAria": "Erwartete Sprecheranzahl verringern"
       },
-      "consentNotice": "Hole immer die Zustimmung ein, wenn du andere aufnimmst"
+      "consentNotice": "Hole immer die Zustimmung ein, wenn du andere aufnimmst",
+      "selectRangeHint": "Zeile auswählen (Umschalt-Klick wählt einen Bereich)",
+      "redetect": {
+        "prompt": "Falsche Sprecher? Erneut aus der gespeicherten Aufnahme erkennen.",
+        "peopleLabel": "Personen",
+        "action": "Neu erkennen",
+        "running": "Sprecher werden erkannt…",
+        "errors": {
+          "noAudio": "Die Aufnahme dieses Meetings ist nicht mehr gespeichert.",
+          "multipleSessions": "Diese Notiz wurde in mehreren Teilen aufgenommen; das wird noch nicht unterstützt.",
+          "unavailable": "Die Sprechererkennung ist nicht verfügbar.",
+          "failed": "Die Sprechererkennung ist fehlgeschlagen. Versuche es erneut."
+        }
+      }
     },
     "overview": {
       "subtitle": {
