@@ -101,6 +101,8 @@ interface MeetingRecordingState {
   diarizationSessionId: string | null;
   /** Latest diarization result published for UI mirroring; consumed (nulled) by the editor that applies it. */
   completedDiarization: { noteId: number; segments: TranscriptSegment[] } | null;
+  /** A stopped session still detecting speakers, until its result is handled. */
+  diarizing: { sessionId: string; noteId: number } | null;
   sessionDiarizationEnabled: boolean;
   sessionExpectedCount: number;
   userTouchedStepper: boolean;
@@ -426,6 +428,8 @@ const seedLengthByDiarizationSession = new Map<
 >();
 // The stopping session's seed, until its stop call returns and keys it above.
 let stoppingSeed: { noteId: number | null; seedLength: number } | null = null;
+// Results handled before their stop call returned (main sends a skipped run at once).
+const settledDuringStop = new Set<string>();
 let ipcCleanups: Array<() => void> = [];
 let speakerIdentifications: SpeakerIdentification[] = [];
 let nextPlaceholderSpeakerIndex = 0;
@@ -456,6 +460,7 @@ export const useMeetingRecordingStore = create<MeetingRecordingState>()(() => ({
   systemPartialSpeakerName: null,
   diarizationSessionId: null,
   completedDiarization: null,
+  diarizing: null,
   sessionDiarizationEnabled:
     (getSettings() as { speakerDiarizationEnabled?: boolean }).speakerDiarizationEnabled ?? true,
   sessionExpectedCount: DEFAULT_EXPECTED_SPEAKER_COUNT,
@@ -1643,6 +1648,11 @@ export async function stopRecording(expectedSessionId?: string): Promise<StopRec
             useMeetingRecordingStore.setState({
               diarizationSessionId: stoppedDiarizationSessionId,
             });
+            if (!settledDuringStop.delete(stoppedDiarizationSessionId) && recordingNoteId != null) {
+              useMeetingRecordingStore.setState({
+                diarizing: { sessionId: stoppedDiarizationSessionId, noteId: recordingNoteId },
+              });
+            }
           }
           if (result?.success && result.transcript) {
             useMeetingRecordingStore.setState({ transcript: result.transcript });
@@ -1814,13 +1824,23 @@ if (typeof window !== "undefined") {
       if (data.speakerEmbeddings) {
         await window.electronAPI?.saveNoteSpeakerEmbeddings?.(targetNoteId, data.speakerEmbeddings);
       }
-    }).catch((error) => {
-      logger.error(
-        "Diarization completion handling failed",
-        { error: (error as Error).message },
-        "meeting"
-      );
-    });
+    })
+      .catch((error) => {
+        logger.error(
+          "Diarization completion handling failed",
+          { error: (error as Error).message },
+          "meeting"
+        );
+      })
+      .finally(() => {
+        const sessionId = data?.sessionId;
+        if (!sessionId) return;
+        if (useMeetingRecordingStore.getState().diarizing?.sessionId === sessionId) {
+          useMeetingRecordingStore.setState({ diarizing: null });
+        } else if (stoppingSeed) {
+          settledDuringStop.add(sessionId);
+        }
+      });
   });
 }
 

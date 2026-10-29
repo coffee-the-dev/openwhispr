@@ -207,7 +207,6 @@ interface NoteEditorProps {
   actionName?: string | null;
   actionProgress?: NoteActionProgress | null;
   onCancelAction?: () => void;
-  diarizationSessionId?: string | null;
   onLiveSpeakerLock?: (speakerId: string, displayName: string) => void;
   sessionDiarizationEnabled?: boolean;
   sessionExpectedCount?: number;
@@ -239,7 +238,6 @@ export default function NoteEditor({
   actionName,
   actionProgress,
   onCancelAction,
-  diarizationSessionId,
   onLiveSpeakerLock,
   sessionDiarizationEnabled,
   sessionExpectedCount,
@@ -275,7 +273,7 @@ export default function NoteEditor({
   const [folderSearch, setFolderSearch] = useState("");
   const [isCreatingFolder, setIsCreatingFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
-  const [isDiarizing, setIsDiarizing] = useState(false);
+  const isDiarizing = useMeetingRecordingStore((s) => s.diarizing?.noteId === note.id);
   const [diarizedSegments, setDiarizedSegments] = useState<TranscriptSegment[] | null>(null);
   const [speakerMappings, setSpeakerMappings] = useState<Record<string, string>>({});
   const [speakerProfiles, setSpeakerProfiles] = useState<
@@ -459,7 +457,6 @@ export default function NoteEditor({
         setChatMode("hidden");
         setChatDraft("");
         setDiarizedSegments(null);
-        setIsDiarizing(false);
         setSpeakerMappings({});
         setSelectedViewMode(defaultViewMode);
         if (titleRef.current && titleRef.current.textContent !== note.title) {
@@ -485,16 +482,6 @@ export default function NoteEditor({
     }
   }, [note.title]);
 
-  const prevRecordingForDiarizationRef = useRef(false);
-  useEffect(() => {
-    if (prevRecordingForDiarizationRef.current && !isRecording && diarizationSessionId) {
-      const cancelScheduledUpdate = scheduleUiUpdate(() => setIsDiarizing(true));
-      prevRecordingForDiarizationRef.current = isRecording;
-      return cancelScheduledUpdate;
-    }
-    prevRecordingForDiarizationRef.current = isRecording;
-  }, [diarizationSessionId, isRecording, scheduleUiUpdate]);
-
   // Persistence happens in meetingRecordingStore's module-level listener
   // (#1495); this only mirrors a published result into the rendered note's UI.
   const completedDiarization = useMeetingRecordingStore((s) => s.completedDiarization);
@@ -503,7 +490,6 @@ export default function NoteEditor({
     // Consume so a remount can't repaint this overlay over newer edits; the
     // transcript itself is already persisted.
     useMeetingRecordingStore.setState({ completedDiarization: null });
-    setIsDiarizing(false);
 
     const enriched = completedDiarization.segments;
     if (enriched.length === 0) return;

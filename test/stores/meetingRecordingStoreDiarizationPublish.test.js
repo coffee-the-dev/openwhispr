@@ -379,3 +379,36 @@ test("a skipped diarization sent before stop returns still leaves the seeded row
 
   assert.deepEqual(rowsOf(note)[0], ["Yeah.", 1.0, "Carol"]);
 });
+
+// The editor shows "Finalizing speakers" from this flag; the session id alone
+// arrives only after isRecording has already gone false.
+test("a stopped note shows as detecting speakers until its result is handled", async (t) => {
+  const { api, state } = createElectronAPI({ stopDiarizationSessionId: "diar-pending" });
+  const store = await loadStore(t, api);
+
+  await store.startRecording(START_ARGS);
+  await store.stopRecording();
+  assert.deepEqual(store.useMeetingRecordingStore.getState().diarizing, {
+    sessionId: "diar-pending",
+    noteId: NOTE_ID,
+  });
+
+  state.diarizationCallback({ noteId: NOTE_ID, sessionId: "diar-pending", segments: ENRICHED });
+  await settle();
+  assert.equal(store.useMeetingRecordingStore.getState().diarizing, null);
+});
+
+test("a skipped run handled before stop returns never shows as detecting", async (t) => {
+  const { api, state } = createElectronAPI({ stopDiarizationSessionId: "diar-instant" });
+  const store = await loadStore(t, api);
+  const stop = api.meetingTranscriptionStop;
+  api.meetingTranscriptionStop = async (sessionId) => {
+    state.diarizationCallback({ noteId: NOTE_ID, sessionId: "diar-instant", segments: [] });
+    await settle();
+    return stop(sessionId);
+  };
+
+  await store.startRecording(START_ARGS);
+  await store.stopRecording();
+  assert.equal(store.useMeetingRecordingStore.getState().diarizing, null);
+});

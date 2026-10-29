@@ -232,7 +232,6 @@ export default function PersonalNotesView({
   const { isComplete: isOnboardingComplete, complete: completeOnboarding } = useNotesOnboarding();
 
   const isTranscribing = useMeetingRecordingStore((s) => s.isRecording);
-  const diarizationSessionId = useMeetingRecordingStore((s) => s.diarizationSessionId);
   const recordingNoteId = useMeetingRecordingStore((s) => s.recordingNoteId);
   const sessionDiarizationEnabled = useMeetingRecordingStore((s) => s.sessionDiarizationEnabled);
   const sessionExpectedCount = useMeetingRecordingStore((s) => s.sessionExpectedCount);
@@ -739,7 +738,6 @@ export default function PersonalNotesView({
                     }
                   : undefined
               }
-              diarizationSessionId={diarizationSessionId}
               onLiveSpeakerLock={lockSpeaker}
               sessionDiarizationEnabled={sessionDiarizationEnabled}
               sessionExpectedCount={sessionExpectedCount}
